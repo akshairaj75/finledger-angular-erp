@@ -1,0 +1,63 @@
+<div class="app-layout">
+  <!-- Toast Notification Container -->
+  <div class="toast-container" *ngIf="notificationService.messages().length > 0">
+    <div
+      *ngFor="let toast of notificationService.messages()"
+      class="toast"
+      [ngClass]="'toast-' + toast.type"
+    >
+      <span>{{ toast.message }}</span>
+      <button (click)="notificationService.remove(toast.id)" class="toast-close">&times;</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">FL</div>
+      <div class="brand-text">
+        <span class="brand-name">FinLedger</span>
+        <span class="brand-tag">ERP v2.0</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">General Ledger</div>
+      <a routerLink="/accounting/journals" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">Journal Entries</span>
+      </a>
+      <a routerLink="/accounting/journals/new" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">✏️</span>
+        <span class="nav-label">New Journal Entry</span>
+      </a>
+      <a routerLink="/accounting/ledger" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">General Ledger Enquiry</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="tenant-selector">
+        <span class="tenant-badge">BSB Trading LLC</span>
+        <span class="currency-tag">Base: AED</span>
+      </div>
+      <div class="user-profile">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+          <span class="user-name">Administrator</span>
+          <span class="user-email">admin@finledger.com</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page View Outlet -->
+    <main class="content-area">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

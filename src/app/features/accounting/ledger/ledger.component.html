@@ -1,0 +1,150 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">General Ledger Enquiry</h1>
+      <p class="page-subtitle">Account-level chronological transaction ledger and running balances</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/accounting/journals/new" class="btn btn-outline">
+        + New Journal
+      </a>
+      <a routerLink="/accounting/journals" class="btn btn-outline">
+        View Journals
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Selector Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="form-group flex-2">
+        <label for="accountSelect">Target Account *</label>
+        <select id="accountSelect" [(ngModel)]="selectedAccountId" (change)="fetchReport()" class="form-control">
+          <option [ngValue]="null" disabled>Select Account...</option>
+          <option *ngFor="let acc of accounts" [value]="acc.id">
+            {{ acc.code }} - {{ acc.name }} ({{ acc.accountType }}, {{ acc.normalBalance }})
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fromDate">From Date</label>
+        <input type="date" id="fromDate" [(ngModel)]="fromDate" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="toDate">To Date</label>
+        <input type="date" id="toDate" [(ngModel)]="toDate" class="form-control" />
+      </div>
+
+      <div class="filter-buttons">
+        <button (click)="fetchReport()" class="btn btn-primary">Run Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Body -->
+  <div *ngIf="loading" class="loading-state card">
+    <div class="spinner"></div>
+    <p>Calculating general ledger balances...</p>
+  </div>
+
+  <div *ngIf="!loading && report" class="report-content">
+    <!-- Account Summary Metrics -->
+    <div class="summary-cards-grid">
+      <div class="stat-card">
+        <span class="stat-label">Opening Balance</span>
+        <span class="stat-value font-mono">{{ report.openingBalance | number:'1.2-2' }}</span>
+        <span class="stat-sub">Before {{ report.fromDate }}</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Period Debits</span>
+        <span class="stat-value font-mono text-success">+{{ report.totalDebit | number:'1.2-2' }}</span>
+        <span class="stat-sub">Sum of debits</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Period Credits</span>
+        <span class="stat-value font-mono text-danger">-{{ report.totalCredit | number:'1.2-2' }}</span>
+        <span class="stat-sub">Sum of credits</span>
+      </div>
+
+      <div class="stat-card highlight">
+        <span class="stat-label">Closing Balance</span>
+        <span class="stat-value font-mono">{{ report.closingBalance | number:'1.2-2' }}</span>
+        <span class="stat-sub">As of {{ report.toDate }} ({{ report.normalBalance }})</span>
+      </div>
+    </div>
+
+    <!-- Transactions Table Card -->
+    <div class="table-card">
+      <div class="card-header-flex">
+        <div>
+          <h2 class="card-title">
+            {{ report.accountCode }} - {{ report.accountName }}
+          </h2>
+          <span class="account-meta">
+            {{ report.accountType }} &bull; Normal Balance: {{ report.normalBalance }} &bull; Period: {{ report.fromDate }} to {{ report.toDate }}
+          </span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 12%">Date</th>
+              <th style="width: 15%">Voucher / Entry No</th>
+              <th style="width: 15%">Reference</th>
+              <th style="width: 28%">Description</th>
+              <th style="width: 10%" class="text-right">Debit</th>
+              <th style="width: 10%" class="text-right">Credit</th>
+              <th style="width: 10%" class="text-right">Running Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Opening Balance Row -->
+            <tr class="row-opening">
+              <td>{{ report.fromDate }}</td>
+              <td colspan="3"><strong>Opening Balance Brought Forward</strong></td>
+              <td class="text-right">—</td>
+              <td class="text-right">—</td>
+              <td class="text-right font-mono font-bold">{{ report.openingBalance | number:'1.2-2' }}</td>
+            </tr>
+
+            <!-- Line Items -->
+            <tr *ngFor="let line of report.lines">
+              <td>{{ line.date }}</td>
+              <td>
+                <span class="font-mono text-primary font-bold">{{ line.entryNo }}</span>
+              </td>
+              <td>{{ line.reference || '—' }}</td>
+              <td>{{ line.description || '—' }}</td>
+              <td class="text-right font-mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '—' }}</td>
+              <td class="text-right font-mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '—' }}</td>
+              <td class="text-right font-mono font-bold">{{ line.runningBalance | number:'1.2-2' }}</td>
+            </tr>
+
+            <!-- Empty Lines State -->
+            <tr *ngIf="report.lines.length === 0">
+              <td colspan="7" class="text-center py-4 text-muted">
+                No transaction movements posted during this period.
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="row-footer">
+              <td colspan="4" class="text-right font-bold">Period Totals & Closing Balance:</td>
+              <td class="text-right font-mono font-bold">{{ report.totalDebit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold">{{ report.totalCredit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold text-highlight">{{ report.closingBalance | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+

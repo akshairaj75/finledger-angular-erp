@@ -1,0 +1,208 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">Journal Entries</h1>
+      <p class="page-subtitle">General ledger transaction vouchers and audit trail</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/accounting/journals/new" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        New Journal Entry
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="form-group">
+        <label for="filterFrom">From Date</label>
+        <input type="date" id="filterFrom" [(ngModel)]="filterFrom" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="filterTo">To Date</label>
+        <input type="date" id="filterTo" [(ngModel)]="filterTo" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="filterStatus">Status</label>
+        <select id="filterStatus" [(ngModel)]="filterStatus" class="form-control">
+          <option value="">All Statuses</option>
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="filterSource">Source</label>
+        <select id="filterSource" [(ngModel)]="filterSourceType" class="form-control">
+          <option value="">All Sources</option>
+          <option *ngFor="let src of sourceTypes" [value]="src">{{ src }}</option>
+        </select>
+      </div>
+
+      <div class="filter-buttons">
+        <button (click)="applyFilters()" class="btn btn-secondary">Filter</button>
+        <button (click)="resetFilters()" class="btn btn-outline">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table Card -->
+  <div class="table-card">
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading journal entries...</p>
+    </div>
+
+    <div *ngIf="!loading && journalsPage.content.length === 0" class="empty-state">
+      <p>No journal entries found matching the criteria.</p>
+    </div>
+
+    <div *ngIf="!loading && journalsPage.content.length > 0" class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Entry No</th>
+            <th>Date</th>
+            <th>Reference</th>
+            <th>Source</th>
+            <th>Currency</th>
+            <th class="text-right">Total Debit</th>
+            <th class="text-right">Total Credit</th>
+            <th>Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let j of journalsPage.content">
+            <td>
+              <a (click)="viewDetails(j)" class="link-entry">{{ j.entryNo }}</a>
+            </td>
+            <td>{{ j.entryDate }}</td>
+            <td>{{ j.reference || '—' }}</td>
+            <td><span class="source-badge">{{ j.sourceType }}</span></td>
+            <td>{{ j.currencyCode }}</td>
+            <td class="text-right font-mono">{{ j.totalDebit | number:'1.2-2' }}</td>
+            <td class="text-right font-mono">{{ j.totalCredit | number:'1.2-2' }}</td>
+            <td>
+              <span class="badge" [ngClass]="getStatusClass(j.status)">{{ j.status }}</span>
+            </td>
+            <td class="text-center">
+              <button (click)="viewDetails(j)" class="btn-icon" title="View lines">
+                👁
+              </button>
+              <button *ngIf="j.status === 'DRAFT'" (click)="postDraft(j)" class="btn-sm btn-success" title="Post Entry">
+                Post
+              </button>
+              <button *ngIf="j.status === 'POSTED'" (click)="openReversalModal(j)" class="btn-sm btn-danger" title="Reverse Entry">
+                Reverse
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination Footer -->
+      <div class="pagination-footer">
+        <span class="pagination-info">
+          Showing {{ journalsPage.content.length }} of {{ journalsPage.totalElements }} entries (Page {{ currentPage + 1 }} of {{ journalsPage.totalPages || 1 }})
+        </span>
+        <div class="pagination-controls">
+          <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0" class="btn btn-outline btn-sm">
+            Previous
+          </button>
+          <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= journalsPage.totalPages - 1" class="btn btn-outline btn-sm">
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Drawer / Modal -->
+  <div *ngIf="selectedJournal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>Journal Entry: {{ selectedJournal.entryNo }}</h2>
+          <span class="badge" [ngClass]="getStatusClass(selectedJournal.status)">{{ selectedJournal.status }}</span>
+        </div>
+        <button (click)="closeDetails()" class="btn-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="info-grid">
+          <div><strong>Date:</strong> {{ selectedJournal.entryDate }}</div>
+          <div><strong>Reference:</strong> {{ selectedJournal.reference || '—' }}</div>
+          <div><strong>Source:</strong> {{ selectedJournal.sourceType }}</div>
+          <div><strong>Currency:</strong> {{ selectedJournal.currencyCode }} (Rate: {{ selectedJournal.exchangeRate }})</div>
+          <div><strong>Narration:</strong> {{ selectedJournal.narration || '—' }}</div>
+          <div *ngIf="selectedJournal.reversalOfId"><strong>Reversal Of:</strong> Entry #{{ selectedJournal.reversalOfId }}</div>
+        </div>
+
+        <h3 class="lines-title">Journal Lines</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Account</th>
+              <th>Description</th>
+              <th class="text-right">Debit ({{ selectedJournal.currencyCode }})</th>
+              <th class="text-right">Credit ({{ selectedJournal.currencyCode }})</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of selectedJournal.lines">
+              <td>{{ line.lineNo }}</td>
+              <td>{{ line.accountCode }} - {{ line.accountName }}</td>
+              <td>{{ line.description || '—' }}</td>
+              <td class="text-right font-mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '—' }}</td>
+              <td class="text-right font-mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '—' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="font-bold">
+              <td colspan="3" class="text-right">Total:</td>
+              <td class="text-right font-mono">{{ selectedJournal.totalDebit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono">{{ selectedJournal.totalCredit | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button *ngIf="selectedJournal.status === 'DRAFT'" (click)="postDraft(selectedJournal)" class="btn btn-primary">
+          Post This Entry
+        </button>
+        <button *ngIf="selectedJournal.status === 'POSTED'" (click)="openReversalModal(selectedJournal)" class="btn btn-danger">
+          Reverse Entry
+        </button>
+        <button (click)="closeDetails()" class="btn btn-outline">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reversal Modal -->
+  <div *ngIf="showReversalModal && journalToReverse" class="modal-overlay">
+    <div class="modal-card sm">
+      <div class="modal-header">
+        <h2>Reverse Journal {{ journalToReverse.entryNo }}</h2>
+        <button (click)="closeReversalModal()" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>This action will mark entry <strong>{{ journalToReverse.entryNo }}</strong> as VOID and create a linked reversing double-entry transaction.</p>
+        <div class="form-group">
+          <label for="reversalReason">Reason for Reversal (Optional):</label>
+          <input type="text" id="reversalReason" [(ngModel)]="reversalReason" placeholder="e.g. Invoicing error, customer return" class="form-control" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button (click)="confirmReversal()" class="btn btn-danger">Confirm Reversal</button>
+        <button (click)="closeReversalModal()" class="btn btn-outline">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+

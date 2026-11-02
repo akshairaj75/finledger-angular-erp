@@ -1,0 +1,192 @@
+<div class="page-container">
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">New Journal Entry</h1>
+      <p class="page-subtitle">Record manual double-entry financial voucher</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/accounting/journals" class="btn btn-outline">Cancel</a>
+    </div>
+  </div>
+
+  <form [formGroup]="journalForm">
+    <!-- Header Details Card -->
+    <div class="card">
+      <h2 class="card-title">Voucher Header</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="entryDate">Entry Date *</label>
+          <input type="date" id="entryDate" formControlName="entryDate" class="form-control" />
+          <span *ngIf="journalForm.get('entryDate')?.touched && journalForm.get('entryDate')?.invalid" class="field-error">
+            Date is required
+          </span>
+          <span *ngIf="backendFieldErrors['entryDate']" class="field-error">
+            {{ backendFieldErrors['entryDate'] }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="reference">Reference</label>
+          <input type="text" id="reference" formControlName="reference" placeholder="e.g. INV-902, Bank Adv" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label for="currencyCode">Currency *</label>
+          <select id="currencyCode" formControlName="currencyCode" class="form-control">
+            <option *ngFor="let cur of currencies" [value]="cur">{{ cur }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="exchangeRate">Exchange Rate</label>
+          <input type="number" id="exchangeRate" formControlName="exchangeRate" step="0.000001" min="0.000001" class="form-control" />
+        </div>
+
+        <div class="form-group full-width">
+          <label for="narration">Narration / Memo</label>
+          <input type="text" id="narration" formControlName="narration" placeholder="Explain the business purpose of this entry" class="form-control" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Lines Grid Card -->
+    <div class="card">
+      <div class="card-header-flex">
+        <h2 class="card-title">Journal Lines (Debits & Credits)</h2>
+        <button type="button" (click)="addLine()" class="btn btn-sm btn-outline">
+          + Add Line
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th style="width: 5%">#</th>
+              <th style="width: 35%">Account *</th>
+              <th style="width: 20%">Cost Center</th>
+              <th style="width: 15%" class="text-right">Debit</th>
+              <th style="width: 15%" class="text-right">Credit</th>
+              <th style="width: 10%">Action</th>
+            </tr>
+          </thead>
+          <tbody formArrayName="lines">
+            <tr *ngFor="let line of lines.controls; let i = index" [formGroupName]="i">
+              <td class="text-center font-mono">{{ i + 1 }}</td>
+              <td>
+                <select formControlName="accountId" class="form-control">
+                  <option [ngValue]="null" disabled>Select Account...</option>
+                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                    {{ acc.code }} - {{ acc.name }} ({{ acc.accountType }})
+                  </option>
+                </select>
+                <span *ngIf="line.get('accountId')?.touched && line.get('accountId')?.invalid" class="field-error">
+                  Account is required
+                </span>
+              </td>
+              <td>
+                <select formControlName="costCenterId" class="form-control">
+                  <option [ngValue]="null">None</option>
+                  <option *ngFor="let cc of costCenters" [value]="cc.id">
+                    {{ cc.code }} - {{ cc.name }}
+                  </option>
+                </select>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="debit"
+                  (input)="onDebitChange(i)"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  class="form-control text-right font-mono"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="credit"
+                  (input)="onCreditChange(i)"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  class="form-control text-right font-mono"
+                />
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  (click)="removeLine(i)"
+                  class="btn-icon text-danger"
+                  title="Remove Line"
+                  [disabled]="lines.length <= 2"
+                >
+                  ✕
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Balance Status Bar -->
+      <div class="balance-summary-bar">
+        <div class="status-indicator">
+          <div *ngIf="isBalanced" class="indicator-badge badge-balanced">
+            ✓ Balanced (Total: {{ totalDebit | number:'1.2-2' }})
+          </div>
+          <div *ngIf="!isBalanced && lines.length < 2" class="indicator-badge badge-unbalanced">
+            ⚠ Minimum 2 lines required
+          </div>
+          <div *ngIf="!isBalanced && lines.length >= 2 && difference > 0" class="indicator-badge badge-unbalanced">
+            ⚠ Out of balance by {{ difference | number:'1.2-2' }}
+          </div>
+          <div *ngIf="!isBalanced && lines.length >= 2 && totalDebit === 0 && totalCredit === 0" class="indicator-badge badge-unbalanced">
+            ⚠ Enter debit and credit amounts
+          </div>
+        </div>
+
+        <div class="totals-display">
+          <div class="total-item">
+            <span class="total-label">Total Debit:</span>
+            <span class="total-val font-mono">{{ totalDebit | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">Total Credit:</span>
+            <span class="total-val font-mono">{{ totalCredit | number:'1.2-2' }}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">Difference:</span>
+            <span class="total-val font-mono" [class.text-danger]="difference > 0">
+              {{ difference | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="form-actions">
+      <button
+        type="button"
+        (click)="submit(false)"
+        [disabled]="!canSubmit"
+        class="btn btn-secondary"
+      >
+        Save as Draft
+      </button>
+
+      <button
+        type="button"
+        (click)="submit(true)"
+        [disabled]="!canSubmit"
+        class="btn btn-primary"
+      >
+        <span *ngIf="submitting" class="spinner-sm"></span>
+        Post Entry
+      </button>
+    </div>
+  </form>
+</div>
+
