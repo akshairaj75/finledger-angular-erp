@@ -72,6 +72,16 @@
         <span class="nav-label">Stock Transfer</span>
       </a>
 
+      <div class="nav-section-title mt-3">Expenses & Approvals</div>
+      <a routerLink="/expenses" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+        <span class="nav-icon">🧾</span>
+        <span class="nav-label">Expenses & Approvals</span>
+      </a>
+      <a routerLink="/expenses/new" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">New Expense Claim</span>
+      </a>
+
       <div class="nav-section-title mt-3">General Ledger</div>
       <a routerLink="/accounting/journals" routerLinkActive="active" class="nav-item">
         <span class="nav-icon">📖</span>

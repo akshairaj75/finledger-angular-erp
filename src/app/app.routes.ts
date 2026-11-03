@@ -18,5 +18,9 @@ export const routes: Routes = [
     path: 'inventory',
     loadChildren: () => import('./features/inventory/inventory.routes').then(m => m.INVENTORY_ROUTES)
   },
+  {
+    path: 'expenses',
+    loadChildren: () => import('./features/expenses/expenses.routes').then(m => m.EXPENSES_ROUTES)
+  },
   { path: '**', redirectTo: 'sales/invoices' }
 ];

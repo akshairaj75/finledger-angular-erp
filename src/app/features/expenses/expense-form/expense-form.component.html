@@ -1,0 +1,464 @@
+<div class="page-container">
+  <!-- Top Navigation & Action Header -->
+  <div class="form-header">
+    <div class="header-left">
+      <a routerLink="/expenses" class="back-link">
+        <span>←</span> Back to Expenses
+      </a>
+      <h1 class="page-title">
+        {{ expenseId ? 'Edit Expense Claim #' + expenseId : 'New Expense Claim' }}
+      </h1>
+      <p class="page-subtitle">Submit expenditures for company reimbursement or record direct company spending</p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="saveDraft()"
+        [disabled]="savingDraft || submitting"
+      >
+        <span *ngIf="savingDraft" class="spinner-sm"></span>
+        <span>💾</span> Save Draft
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="submitForApproval()"
+        [disabled]="savingDraft || submitting"
+      >
+        <span *ngIf="submitting" class="spinner-sm"></span>
+        <span>🚀</span> Submit for Approval
+      </button>
+    </div>
+  </div>
+
+  <!-- Real-Time Policy Alert Banner (FinLedger v2.0 Section 4.11) -->
+  <div class="policy-alert-banner" *ngIf="policyWarnings.length > 0">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-content">
+      <h4 class="alert-title">Corporate Expense Policy Notice</h4>
+      <ul class="alert-list">
+        <li *ngFor="let w of policyWarnings">
+          <strong>{{ w.type === 'RECEIPT' ? 'Missing Receipt Requirement:' : 'Per-Claim Limit Warning:' }}</strong>
+          {{ w.message }}
+        </li>
+      </ul>
+      <span class="alert-hint">Please upload receipts in the right panel or adjust item amounts to comply with expense limits.</span>
+    </div>
+  </div>
+
+  <!-- Form Layout: 2 Columns (Main Form on Left, Supporting Panel on Right) -->
+  <form [formGroup]="expenseForm" class="form-grid">
+    <!-- Left Column: Form Details & Expense Lines -->
+    <div class="main-column">
+      <!-- Section 1: Payment Method Toggle & Header Info -->
+      <div class="card p-4 mb-4">
+        <div class="payment-toggle-container">
+          <label class="toggle-label">Expense Payment Type:</label>
+          <div class="segmented-control">
+            <button
+              type="button"
+              class="segment-btn"
+              [class.active]="expenseForm.get('paidBy')?.value === 'EMPLOYEE'"
+              (click)="setPaidBy('EMPLOYEE')"
+            >
+              <span class="segment-icon">👤</span>
+              <div class="segment-text">
+                <strong>Employee-Reimbursable</strong>
+                <small>Claim for out-of-pocket spend to be paid back</small>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="segment-btn"
+              [class.active]="expenseForm.get('paidBy')?.value === 'COMPANY'"
+              (click)="setPaidBy('COMPANY')"
+            >
+              <span class="segment-icon">🏢</span>
+              <div class="segment-text">
+                <strong>Company-Paid</strong>
+                <small>Paid directly from corporate bank, cash, or card</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row-grid mt-4">
+          <!-- When EMPLOYEE: Select Employee -->
+          <div class="form-group" *ngIf="expenseForm.get('paidBy')?.value === 'EMPLOYEE'">
+            <label class="form-label">Employee (Claimant) <span class="required">*</span></label>
+            <select formControlName="employeeUserId" class="form-control">
+              <option [ngValue]="null" disabled>Select Employee</option>
+              <option *ngFor="let emp of employees" [ngValue]="emp.id">
+                {{ emp.fullName }} ({{ emp.email }})
+              </option>
+            </select>
+          </div>
+
+          <!-- When COMPANY: Select Bank / Cash / Card Account -->
+          <div class="form-group" *ngIf="expenseForm.get('paidBy')?.value === 'COMPANY'">
+            <label class="form-label">Paid From Account <span class="required">*</span></label>
+            <select formControlName="bankAccountId" class="form-control">
+              <option [ngValue]="null" disabled>Select Bank / Cash / Card Account</option>
+              <option *ngFor="let b of bankAccounts" [ngValue]="b.id">
+                {{ b.name }} ({{ b.currencyCode }}) [{{ b.accountKind }}]
+              </option>
+            </select>
+          </div>
+
+          <!-- Payee / Vendor Free text (optional) -->
+          <div class="form-group">
+            <label class="form-label">Merchant / Payee Name</label>
+            <input
+              type="text"
+              formControlName="payeeName"
+              placeholder="e.g. Emirates Airlines, ADNOC Fuel, Zoom Mart..."
+              class="form-control"
+            />
+          </div>
+
+          <!-- Expense Date -->
+          <div class="form-group">
+            <label class="form-label">Expense Date <span class="required">*</span></label>
+            <input type="date" formControlName="expenseDate" class="form-control" />
+          </div>
+
+          <!-- Currency & Exchange Rate -->
+          <div class="form-group">
+            <label class="form-label">Currency</label>
+            <input type="text" formControlName="currencyCode" class="form-control text-uppercase" readonly />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Expense Line Grid (FinLedger v2.0 Section 4.11) -->
+      <div class="card p-4">
+        <div class="lines-header">
+          <div>
+            <h3 class="section-title">Expense Line Items</h3>
+            <p class="section-subtitle">Specify categories, descriptions, amounts, and VAT codes</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline" (click)="addLine()">
+            <span>➕</span> Add Line
+          </button>
+        </div>
+
+        <div class="lines-table-container mt-3">
+          <table class="table line-table">
+            <thead>
+              <tr>
+                <th style="width: 25%">Category <span class="required">*</span></th>
+                <th style="width: 25%">Description <span class="required">*</span></th>
+                <th style="width: 15%">Cost Center</th>
+                <th style="width: 15%">Billable Customer</th>
+                <th style="width: 10%" class="text-right">Net (AED) <span class="required">*</span></th>
+                <th style="width: 10%">VAT Code</th>
+                <th style="width: 50px" class="text-center"></th>
+              </tr>
+            </thead>
+            <tbody formArrayName="lines">
+              <tr
+                *ngFor="let line of lines.controls; let i = index"
+                [formGroupName]="i"
+                [class.line-warning-row]="isLineOverLimit(i)"
+              >
+                <!-- Category -->
+                <td>
+                  <select
+                    formControlName="categoryId"
+                    class="form-control form-control-sm"
+                    (change)="onCategoryChange(i)"
+                  >
+                    <option [ngValue]="null" disabled>Select Category</option>
+                    <option *ngFor="let cat of categories" [ngValue]="cat.id">
+                      {{ cat.name }} (Max: {{ cat.limitPerClaim ? 'AED ' + cat.limitPerClaim : 'No limit' }})
+                    </option>
+                  </select>
+                </td>
+
+                <!-- Description -->
+                <td>
+                  <input
+                    type="text"
+                    formControlName="description"
+                    placeholder="e.g. Client lunch meeting"
+                    class="form-control form-control-sm"
+                  />
+                  <!-- Per-line policy warning indicator -->
+                  <div *ngIf="getLineWarning(i)" class="line-warning-badge">
+                    <span>⚠️</span> {{ getLineWarning(i) }}
+                  </div>
+                </td>
+
+                <!-- Cost Center -->
+                <td>
+                  <select formControlName="costCenterId" class="form-control form-control-sm">
+                    <option [ngValue]="null">None</option>
+                    <option *ngFor="let cc of costCenters" [ngValue]="cc.id">
+                      {{ cc.name }}
+                    </option>
+                  </select>
+                </td>
+
+                <!-- Billable Customer -->
+                <td>
+                  <div class="customer-picker">
+                    <select formControlName="customerId" class="form-control form-control-sm">
+                      <option [ngValue]="null">Non-billable</option>
+                      <option *ngFor="let c of customers" [ngValue]="c.id">
+                        {{ c.name }}
+                      </option>
+                    </select>
+                    <label class="billable-checkbox" *ngIf="line.get('customerId')?.value">
+                      <input type="checkbox" formControlName="isBillable" /> Billable
+                    </label>
+                  </div>
+                </td>
+
+                <!-- Net Amount -->
+                <td class="text-right">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    formControlName="amount"
+                    placeholder="0.00"
+                    class="form-control form-control-sm text-right font-medium"
+                    [class.border-danger]="isLineOverLimit(i)"
+                  />
+                </td>
+
+                <!-- VAT Code -->
+                <td>
+                  <select formControlName="taxRateId" class="form-control form-control-sm">
+                    <option [ngValue]="null">0% None</option>
+                    <option *ngFor="let tr of taxRates" [ngValue]="tr.id">
+                      {{ tr.code }} ({{ tr.rate }}%)
+                    </option>
+                  </select>
+                </td>
+
+                <!-- Remove Line -->
+                <td class="text-center">
+                  <button
+                    type="button"
+                    class="btn-delete-line"
+                    title="Remove line"
+                    (click)="removeLine(i)"
+                    [disabled]="lines.length <= 1"
+                  >
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totals Summary Bar -->
+        <div class="totals-bar mt-4">
+          <div class="totals-row">
+            <span class="totals-label">Subtotal (Net):</span>
+            <span class="totals-value">AED {{ subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">Recoverable VAT Total:</span>
+            <span class="totals-value">AED {{ taxTotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="totals-row grand-total-row">
+            <span class="totals-label">Grand Total:</span>
+            <span class="totals-value">AED {{ grandTotal | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Receipt Upload & Visual Stepper & Journal Entry Preview -->
+    <div class="side-column">
+      <!-- Panel 1: Receipt Upload Area (FinLedger v2.0 Section 4.11) -->
+      <div class="card p-4 mb-4">
+        <h3 class="panel-title">
+          <span>📎</span> Receipt Upload
+        </h3>
+        <p class="panel-subtitle">Attach receipt photo or PDF invoice for policy validation</p>
+
+        <!-- Drag & Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.drag-active]="isDragging"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)"
+        >
+          <div class="drop-icon">📸</div>
+          <p class="drop-text">Drag & drop receipt files here, or</p>
+
+          <div class="upload-buttons">
+            <!-- Standard File Picker -->
+            <label class="btn btn-sm btn-outline cursor-pointer">
+              <span>📁</span> Browse Files
+              <input
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                (change)="onFileSelected($event)"
+                class="hidden-input"
+              />
+            </label>
+
+            <!-- Mobile Camera Capture (input accept="image/*" capture="environment") -->
+            <label class="btn btn-sm btn-outline cursor-pointer">
+              <span>📷</span> Take Photo
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                (change)="onFileSelected($event)"
+                class="hidden-input"
+              />
+            </label>
+          </div>
+        </div>
+
+        <!-- Files Staged for Upload -->
+        <div class="file-list mt-3" *ngIf="pendingFiles.length > 0">
+          <h5 class="file-list-heading">Queued for Upload ({{ pendingFiles.length }})</h5>
+          <div class="file-item" *ngFor="let pf of pendingFiles; let i = index">
+            <!-- Thumbnail if image -->
+            <img *ngIf="pf.previewUrl" [src]="pf.previewUrl" class="file-thumb" alt="Receipt preview" />
+            <span *ngIf="!pf.previewUrl" class="file-icon">📄</span>
+
+            <div class="file-meta">
+              <span class="file-name">{{ pf.name }}</span>
+              <span class="file-size">{{ (pf.size / 1024) | number:'1.0-1' }} KB</span>
+            </div>
+
+            <button type="button" class="btn-remove-file" (click)="removePendingFile(i)">&times;</button>
+          </div>
+        </div>
+
+        <!-- Already Uploaded Attachments (if editing) -->
+        <div class="file-list mt-3" *ngIf="existingAttachments.length > 0">
+          <h5 class="file-list-heading">Attached Receipts ({{ existingAttachments.length }})</h5>
+          <div class="file-item" *ngFor="let att of existingAttachments">
+            <span class="file-icon">📎</span>
+            <div class="file-meta">
+              <span class="file-name">{{ att.fileName }}</span>
+              <span class="file-size">{{ (att.sizeBytes / 1024) | number:'1.0-1' }} KB</span>
+            </div>
+            <button
+              type="button"
+              class="btn-remove-file"
+              (click)="removeExistingAttachment(att.id)"
+              title="Delete attachment"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Visual Approval Flow Stepper (Section 4.11) -->
+      <div class="card p-4 mb-4">
+        <h3 class="panel-title">
+          <span>🚦</span> Approval Flow
+        </h3>
+        <p class="panel-subtitle">Configured approval pathway based on spend threshold</p>
+
+        <div class="stepper-container">
+          <!-- Step 1: Line Manager -->
+          <div class="stepper-step completed">
+            <div class="step-circle">1</div>
+            <div class="step-details">
+              <strong>Line Manager Approval</strong>
+              <small>Departmental verification of expenditure</small>
+            </div>
+          </div>
+
+          <div class="stepper-connector" [class.active-connector]="grandTotal > financeThreshold"></div>
+
+          <!-- Step 2: Finance Review (Triggered if > 2,000 AED) -->
+          <div
+            class="stepper-step"
+            [ngClass]="grandTotal > financeThreshold ? 'active-step' : 'bypassed-step'"
+          >
+            <div class="step-circle">{{ grandTotal > financeThreshold ? '2' : '—' }}</div>
+            <div class="step-details">
+              <strong>Finance Review</strong>
+              <small *ngIf="grandTotal > financeThreshold" class="text-highlight">
+                Required (Amount exceeds AED {{ financeThreshold | number:'1.2-2' }} threshold)
+              </small>
+              <small *ngIf="grandTotal <= financeThreshold" class="text-muted">
+                Not required for claims ≤ AED {{ financeThreshold | number:'1.2-2' }}
+              </small>
+            </div>
+          </div>
+
+          <div class="stepper-connector"></div>
+
+          <!-- Step 3: Posting & Reimbursement -->
+          <div class="stepper-step">
+            <div class="step-circle">✓</div>
+            <div class="step-details">
+              <strong>Posting & Settlement</strong>
+              <small>{{ expenseForm.get('paidBy')?.value === 'COMPANY' ? 'Posts directly to bank GL' : 'Eligible for batch reimbursement' }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Journal Entry Preview (Section 4.11) -->
+      <div class="card p-4">
+        <div class="preview-header">
+          <h3 class="panel-title mb-0">
+            <span>📖</span> Journal Entry Preview
+          </h3>
+          <span class="balanced-badge">⚖️ Balanced</span>
+        </div>
+        <p class="panel-subtitle">Simulated general ledger posting generated upon final approval</p>
+
+        <div class="journal-preview-table mt-2">
+          <table class="table preview-table">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th class="text-right">Debit</th>
+                <th class="text-right">Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="getJournalPreviewLines().length === 0">
+                <td colspan="3" class="text-center text-muted py-2">
+                  Enter items to preview GL posting
+                </td>
+              </tr>
+              <tr *ngFor="let j of getJournalPreviewLines()">
+                <td>
+                  <div class="acc-code">{{ j.accountCode }} - {{ j.accountName }}</div>
+                  <div class="acc-desc">{{ j.description }}</div>
+                </td>
+                <td class="text-right font-medium">
+                  {{ j.debit > 0 ? (j.debit | number:'1.2-2') : '' }}
+                </td>
+                <td class="text-right font-medium">
+                  {{ j.credit > 0 ? (j.credit | number:'1.2-2') : '' }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot *ngIf="getJournalPreviewLines().length > 0">
+              <tr class="preview-total-row">
+                <td class="font-bold">Total (AED):</td>
+                <td class="text-right font-bold">{{ grandTotal | number:'1.2-2' }}</td>
+                <td class="text-right font-bold">{{ grandTotal | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+

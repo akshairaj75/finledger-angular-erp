@@ -1,0 +1,557 @@
+<div class="page-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">Expenses & Approvals</h1>
+      <p class="page-subtitle">Track, approve, and reimburse employee claims and company-paid expenditures</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/expenses/new" class="btn btn-primary">
+        <span>➕</span> New Expense Claim
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards (FinLedger v2.0 Section 4.10) -->
+  <div class="summary-cards-grid">
+    <!-- Posted Spend -->
+    <div class="summary-card card-posted">
+      <div class="card-icon">💸</div>
+      <div class="card-content">
+        <span class="card-label">Posted Spend</span>
+        <span class="card-value">AED {{ summary.postedSpend | number:'1.2-2' }}</span>
+        <span class="card-subtext">Recognized GL expense</span>
+      </div>
+    </div>
+
+    <!-- Amount Awaiting Approval -->
+    <div class="summary-card card-awaiting">
+      <div class="card-icon">⏳</div>
+      <div class="card-content">
+        <span class="card-label">Awaiting Approval</span>
+        <span class="card-value">AED {{ summary.awaitingApprovalAmount | number:'1.2-2' }}</span>
+        <span class="card-subtext">{{ summary.awaitingApprovalCount }} claim(s) pending review</span>
+      </div>
+    </div>
+
+    <!-- Owed to Employees -->
+    <div class="summary-card card-owed">
+      <div class="card-icon">👥</div>
+      <div class="card-content">
+        <span class="card-label">Owed to Employees</span>
+        <span class="card-value">AED {{ summary.owedToEmployees | number:'1.2-2' }}</span>
+        <span class="card-subtext">{{ summary.owedToEmployeesCount }} approved claim(s)</span>
+      </div>
+    </div>
+
+    <!-- Top Expense Category -->
+    <div class="summary-card card-category">
+      <div class="card-icon">🏷️</div>
+      <div class="card-content">
+        <span class="card-label">Top Expense Category</span>
+        <span class="card-value category-name">{{ summary.topCategoryName }}</span>
+        <span class="card-subtext">AED {{ summary.topCategoryAmount | number:'1.2-2' }} total</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs (FinLedger v2.0 Section 4.10) -->
+  <div class="tabs-nav">
+    <button
+      *ngFor="let tab of tabs"
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab === tab.key"
+      (click)="switchTab(tab.key)"
+    >
+      <span class="tab-icon">{{ tab.icon }}</span>
+      <span class="tab-label">{{ tab.label }}</span>
+    </button>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="toolbar-card">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="loadExpenses()"
+        placeholder="Search expense #, claimant, payee, description..."
+        class="form-control"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Status:</label>
+      <select
+        [(ngModel)]="filterStatus"
+        (change)="onFilterChange()"
+        class="form-control filter-select"
+      >
+        <option value="">All Statuses</option>
+        <option *ngFor="let st of statuses" [value]="st">{{ st }}</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">From:</label>
+      <input
+        type="date"
+        [(ngModel)]="filterFrom"
+        (change)="onFilterChange()"
+        class="form-control date-input"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">To:</label>
+      <input
+        type="date"
+        [(ngModel)]="filterTo"
+        (change)="onFilterChange()"
+        class="form-control date-input"
+      />
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  <div class="bulk-actions-bar" *ngIf="selectedIds.size > 0">
+    <div class="bulk-info">
+      <strong>{{ selectedIds.size }}</strong> expense(s) selected
+    </div>
+    <div class="bulk-buttons">
+      <button
+        type="button"
+        class="btn btn-sm btn-success"
+        (click)="bulkApprove()"
+      >
+        <span>✓</span> Approve Selected
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-danger"
+        (click)="promptBulkReject()"
+      >
+        <span>✕</span> Reject Selected
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-reimburse"
+        (click)="promptReimburse()"
+      >
+        <span>💳</span> Reimburse Selected
+      </button>
+    </div>
+  </div>
+
+  <!-- Expenses Table -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="th-checkbox">
+            <input
+              type="checkbox"
+              [checked]="isAllSelected()"
+              (change)="toggleSelectAll($event)"
+              title="Select all"
+            />
+          </th>
+          <th>Expense #</th>
+          <th>Date</th>
+          <th>Paid By</th>
+          <th>Claimant / Payee</th>
+          <th>Category / Description</th>
+          <th class="th-receipt text-center" title="Paperclip / Receipt Status">📎 Receipt</th>
+          <th class="text-right">Net</th>
+          <th class="text-right">VAT</th>
+          <th class="text-right">Total (AED)</th>
+          <th class="text-center">Status</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="loading">
+          <td colspan="12" class="text-center py-4 text-muted">
+            <div class="spinner"></div> Loading expense records...
+          </td>
+        </tr>
+
+        <tr *ngIf="!loading && expensesPage.content.length === 0">
+          <td colspan="12" class="text-center py-5 text-muted">
+            <div class="empty-state">
+              <span class="empty-icon">🧾</span>
+              <h3>No expenses found</h3>
+              <p>There are no expense claims matching your selected tab or filter criteria.</p>
+              <a routerLink="/expenses/new" class="btn btn-primary btn-sm mt-2">Create New Claim</a>
+            </div>
+          </td>
+        </tr>
+
+        <tr
+          *ngFor="let exp of expensesPage.content"
+          [class.row-selected]="isSelected(exp.id)"
+          [class.row-missing-receipt]="isMissingReceipt(exp)"
+        >
+          <!-- Checkbox -->
+          <td class="td-checkbox">
+            <input
+              type="checkbox"
+              [checked]="isSelected(exp.id)"
+              (change)="toggleSelection(exp.id, $event)"
+            />
+          </td>
+
+          <!-- Expense No -->
+          <td>
+            <a (click)="viewDetails(exp)" class="expense-no-link" role="button">
+              {{ exp.expenseNo }}
+            </a>
+          </td>
+
+          <!-- Date -->
+          <td class="text-nowrap">{{ exp.expenseDate | date:'dd-MMM-yyyy' }}</td>
+
+          <!-- Paid By Badge -->
+          <td>
+            <span
+              class="badge-paidby"
+              [ngClass]="exp.paidBy === 'COMPANY' ? 'paidby-company' : 'paidby-employee'"
+            >
+              {{ exp.paidBy === 'COMPANY' ? '🏢 Company' : '👤 Employee' }}
+            </span>
+          </td>
+
+          <!-- Claimant / Payee -->
+          <td>
+            <div class="claimant-cell">
+              <span class="primary-text">
+                {{ exp.paidBy === 'EMPLOYEE' ? (exp.employeeName || 'Staff #' + exp.employeeUserId) : (exp.payeeName || exp.vendorName || 'Company Expense') }}
+              </span>
+              <span *ngIf="exp.bankAccountName" class="secondary-text">
+                Paid from: {{ exp.bankAccountName }}
+              </span>
+            </div>
+          </td>
+
+          <!-- Category / Description -->
+          <td>
+            <div class="desc-cell">
+              <span class="line-summary" *ngIf="exp.lines && exp.lines.length > 0">
+                <span class="badge-cat">{{ exp.lines[0].categoryName || 'Expense' }}</span>
+                <span class="desc-text">{{ exp.lines[0].description }}</span>
+                <span *ngIf="exp.lines.length > 1" class="more-lines-tag">+{{ exp.lines.length - 1 }} more</span>
+              </span>
+            </div>
+          </td>
+
+          <!-- Paperclip / Receipt Column (FinLedger v2.0 Section 4.10) -->
+          <td class="text-center td-receipt">
+            <ng-container *ngIf="isMissingReceipt(exp)">
+              <span
+                class="receipt-indicator receipt-missing"
+                title="Policy warning: Receipt is mandatory for this category!"
+              >
+                <span class="receipt-icon">⚠️</span>
+                <span class="receipt-text">Missing</span>
+              </span>
+            </ng-container>
+
+            <ng-container *ngIf="!isMissingReceipt(exp) && getAttachmentCount(exp) > 0">
+              <span
+                class="receipt-indicator receipt-attached"
+                (click)="viewDetails(exp)"
+                role="button"
+                [title]="getAttachmentCount(exp) + ' receipt attachment(s)'"
+              >
+                <span class="receipt-icon">📎</span>
+                <span class="receipt-count">{{ getAttachmentCount(exp) }}</span>
+              </span>
+            </ng-container>
+
+            <ng-container *ngIf="!isMissingReceipt(exp) && getAttachmentCount(exp) === 0">
+              <span class="receipt-indicator receipt-none" title="No receipts attached (optional)">
+                <span class="receipt-dash">—</span>
+              </span>
+            </ng-container>
+          </td>
+
+          <!-- Amounts -->
+          <td class="text-right">{{ exp.subtotal | number:'1.2-2' }}</td>
+          <td class="text-right text-muted">{{ exp.taxTotal | number:'1.2-2' }}</td>
+          <td class="text-right font-bold">{{ exp.total | number:'1.2-2' }}</td>
+
+          <!-- Status -->
+          <td class="text-center">
+            <span class="status-badge" [ngClass]="getStatusClass(exp.status)">
+              {{ exp.status }}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td class="text-center actions-cell">
+            <div class="action-btn-group">
+              <!-- Inline Approve for SUBMITTED -->
+              <button
+                *ngIf="exp.status === 'SUBMITTED'"
+                type="button"
+                class="btn-icon btn-icon-approve"
+                title="Approve Expense"
+                (click)="approveSingle(exp)"
+                [disabled]="approvingIds.has(exp.id)"
+              >
+                ✓
+              </button>
+
+              <!-- Inline Reject for SUBMITTED -->
+              <button
+                *ngIf="exp.status === 'SUBMITTED'"
+                type="button"
+                class="btn-icon btn-icon-reject"
+                title="Reject Expense"
+                (click)="promptReject(exp)"
+              >
+                ✕
+              </button>
+
+              <!-- View Details -->
+              <button
+                type="button"
+                class="btn-icon btn-icon-view"
+                title="View Details"
+                (click)="viewDetails(exp)"
+              >
+                👁️
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Rejection Reason Modal -->
+  <div class="modal-backdrop" *ngIf="showRejectModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Reject Expense Claim(s)</h3>
+        <button type="button" class="btn-close" (click)="showRejectModal = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">
+          Please provide a reason for rejecting {{ rejectTargetIds.length }} expense claim(s).
+          The employee will be notified to revise or cancel the claim.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Rejection Reason <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="rejectReason"
+            rows="3"
+            class="form-control"
+            placeholder="e.g. Missing valid tax invoice, per diem exceeded, out of policy..."
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="showRejectModal = false">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          [disabled]="!rejectReason.trim() || rejecting"
+          (click)="confirmReject()"
+        >
+          <span *ngIf="rejecting" class="spinner-sm"></span> Reject Claim
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reimbursement Modal -->
+  <div class="modal-backdrop" *ngIf="showReimburseModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Reimburse Approved Employee Claims</h3>
+        <button type="button" class="btn-close" (click)="showReimburseModal = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">
+          You are processing reimbursement for <strong>{{ reimburseTargetIds.length }}</strong> approved claim(s).
+          A payment journal entry will be generated to clear the employee payable balance.
+        </p>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Payment Bank / Cash Account <span class="required">*</span></label>
+          <select [(ngModel)]="selectedBankAccountId" class="form-control">
+            <option *ngFor="let acc of bankAccounts" [ngValue]="acc.id">
+              {{ acc.name }} ({{ acc.currencyCode }}) [{{ acc.accountKind }}]
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Payment Date</label>
+          <input type="date" [(ngModel)]="reimbursementDate" class="form-control" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="showReimburseModal = false">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-success"
+          [disabled]="!selectedBankAccountId || reimbursing"
+          (click)="confirmReimburse()"
+        >
+          <span *ngIf="reimbursing" class="spinner-sm"></span> Confirm & Reimburse
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expense Detail Drawer / Modal -->
+  <div class="modal-backdrop" *ngIf="showDetailModal && selectedExpense">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Expense Claim: {{ selectedExpense.expenseNo }}</h3>
+          <span class="status-badge mt-1" [ngClass]="getStatusClass(selectedExpense.status)">
+            {{ selectedExpense.status }}
+          </span>
+        </div>
+        <button type="button" class="btn-close" (click)="closeDetailModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Top Metadata Grid -->
+        <div class="detail-grid">
+          <div>
+            <span class="detail-label">Expense Date</span>
+            <span class="detail-val">{{ selectedExpense.expenseDate | date:'dd-MMM-yyyy' }}</span>
+          </div>
+          <div>
+            <span class="detail-label">Payment Method</span>
+            <span class="detail-val">
+              {{ selectedExpense.paidBy === 'COMPANY' ? '🏢 Company Paid' : '👤 Employee Reimbursable' }}
+            </span>
+          </div>
+          <div>
+            <span class="detail-label">{{ selectedExpense.paidBy === 'EMPLOYEE' ? 'Claimant' : 'Payee / Account' }}</span>
+            <span class="detail-val">
+              {{ selectedExpense.paidBy === 'EMPLOYEE' ? selectedExpense.employeeName : (selectedExpense.bankAccountName || selectedExpense.payeeName) }}
+            </span>
+          </div>
+          <div>
+            <span class="detail-label">Journal Entry</span>
+            <span class="detail-val">{{ selectedExpense.journalEntryNo || 'Pending Approval' }}</span>
+          </div>
+        </div>
+
+        <!-- Missing Receipt Alert Banner -->
+        <div class="alert alert-warning mt-3" *ngIf="isMissingReceipt(selectedExpense)">
+          ⚠️ <strong>Missing Receipt:</strong> This claim contains expense categories that require a receipt attachment according to corporate policy.
+        </div>
+
+        <!-- Rejection Alert Banner -->
+        <div class="alert alert-danger mt-3" *ngIf="selectedExpense.rejectionReason">
+          ✕ <strong>Rejection Reason:</strong> {{ selectedExpense.rejectionReason }}
+        </div>
+
+        <!-- Line Items -->
+        <h4 class="section-heading mt-4">Expense Items</h4>
+        <table class="data-table mt-2">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Cost Center</th>
+              <th>Customer</th>
+              <th class="text-right">Net Amount</th>
+              <th class="text-right">VAT</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of selectedExpense.lines; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><span class="badge-cat">{{ line.categoryName || 'General' }}</span></td>
+              <td>{{ line.description }}</td>
+              <td>{{ line.costCenterName || '—' }}</td>
+              <td>
+                <span *ngIf="line.isBillable" class="billable-badge">Billable:</span>
+                {{ line.customerName || '—' }}
+              </td>
+              <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
+              <td class="text-right text-muted">{{ line.taxAmount | number:'1.2-2' }}</td>
+              <td class="text-right font-bold">{{ (line.amount + (line.taxAmount || 0)) | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="text-right font-bold">Claim Total (AED):</td>
+              <td class="text-right font-bold">{{ selectedExpense.subtotal | number:'1.2-2' }}</td>
+              <td class="text-right font-bold">{{ selectedExpense.taxTotal | number:'1.2-2' }}</td>
+              <td class="text-right font-bold total-highlight">{{ selectedExpense.total | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Attachments / Receipts Gallery -->
+        <h4 class="section-heading mt-4">Attached Receipts & Invoices</h4>
+        <div class="attachments-list" *ngIf="selectedExpense.attachments && selectedExpense.attachments.length > 0; else noAttachments">
+          <div class="attachment-item" *ngFor="let att of selectedExpense.attachments">
+            <span class="att-icon">📄</span>
+            <div class="att-info">
+              <span class="att-name">{{ att.fileName }}</span>
+              <span class="att-size">{{ (att.sizeBytes / 1024) | number:'1.1-1' }} KB</span>
+            </div>
+            <a [href]="'/api/v1/attachments/' + att.id" target="_blank" class="btn btn-xs btn-outline">
+              Download
+            </a>
+          </div>
+        </div>
+        <ng-template #noAttachments>
+          <p class="text-muted text-sm mt-1">No receipts attached to this claim.</p>
+        </ng-template>
+
+        <!-- Approval History -->
+        <div *ngIf="selectedExpense.approvals && selectedExpense.approvals.length > 0" class="mt-4">
+          <h4 class="section-heading">Approval History</h4>
+          <div class="approval-timeline mt-2">
+            <div class="timeline-step" *ngFor="let app of selectedExpense.approvals">
+              <div class="step-marker" [ngClass]="app.decision === 'APPROVED' ? 'marker-success' : 'marker-danger'">
+                {{ app.decision === 'APPROVED' ? '✓' : '✕' }}
+              </div>
+              <div class="step-content">
+                <span class="step-actor">Step {{ app.step }}: {{ app.approverName }} ({{ app.decision }})</span>
+                <span class="step-comment" *ngIf="app.comment">Comment: "{{ app.comment }}"</span>
+                <span class="step-time" *ngIf="app.decidedAt">{{ app.decidedAt | date:'dd-MMM-yyyy HH:mm' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="closeDetailModal()">Close</button>
+        <button
+          *ngIf="selectedExpense.status === 'SUBMITTED'"
+          type="button"
+          class="btn btn-danger"
+          (click)="closeDetailModal(); promptReject(selectedExpense)"
+        >
+          Reject
+        </button>
+        <button
+          *ngIf="selectedExpense.status === 'SUBMITTED'"
+          type="button"
+          class="btn btn-success"
+          (click)="approveSingle(selectedExpense); closeDetailModal()"
+        >
+          Approve
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

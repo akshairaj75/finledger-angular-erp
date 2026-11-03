@@ -14,11 +14,16 @@ describe('Inventory Module - Stock Overview KPI & Status Logic', () => {
       name: 'Standard Steel Widget',
       categoryName: 'Hardware',
       itemType: 'INVENTORY',
-      totalQtyOnHand: 150,
+      unit: 'PCS',
+      totalOnHand: 150,
+      totalReserved: 0,
+      totalAvailable: 150,
       reorderLevel: 20,
-      weightedAvgCost: 25.50,
+      reorderQty: 50,
+      avgCost: 25.50,
       totalStockValue: 3825.00,
-      status: 'IN_STOCK'
+      status: 'IN_STOCK',
+      whQuantities: {}
     },
     {
       itemId: 2,
@@ -26,11 +31,16 @@ describe('Inventory Module - Stock Overview KPI & Status Logic', () => {
       name: 'M8 Hex Bolt Pack',
       categoryName: 'Hardware',
       itemType: 'INVENTORY',
-      totalQtyOnHand: 15,
+      unit: 'BOX',
+      totalOnHand: 15,
+      totalReserved: 0,
+      totalAvailable: 15,
       reorderLevel: 50,
-      weightedAvgCost: 12.00,
+      reorderQty: 100,
+      avgCost: 12.00,
       totalStockValue: 180.00,
-      status: 'LOW_STOCK'
+      status: 'LOW_STOCK',
+      whQuantities: {}
     },
     {
       itemId: 3,
@@ -38,11 +48,16 @@ describe('Inventory Module - Stock Overview KPI & Status Logic', () => {
       name: 'Oil Sump Gasket',
       categoryName: 'Seals',
       itemType: 'INVENTORY',
-      totalQtyOnHand: 0,
+      unit: 'PCS',
+      totalOnHand: 0,
+      totalReserved: 0,
+      totalAvailable: 0,
       reorderLevel: 10,
-      weightedAvgCost: 8.50,
+      reorderQty: 20,
+      avgCost: 8.50,
       totalStockValue: 0.00,
-      status: 'OUT_OF_STOCK'
+      status: 'OUT_OF_STOCK',
+      whQuantities: {}
     },
     {
       itemId: 4,
@@ -50,11 +65,16 @@ describe('Inventory Module - Stock Overview KPI & Status Logic', () => {
       name: 'Engineering Consulting',
       categoryName: 'Services',
       itemType: 'SERVICE',
-      totalQtyOnHand: 0,
+      unit: 'HR',
+      totalOnHand: 0,
+      totalReserved: 0,
+      totalAvailable: 0,
       reorderLevel: 0,
-      weightedAvgCost: 0.00,
+      reorderQty: 0,
+      avgCost: 0.00,
       totalStockValue: 0.00,
-      status: 'IN_STOCK'
+      status: 'IN_STOCK',
+      whQuantities: {}
     }
   ];
 
@@ -62,8 +82,8 @@ describe('Inventory Module - Stock Overview KPI & Status Logic', () => {
     const inventoryItems = mockSummaries.filter(i => i.itemType === 'INVENTORY');
     const activeSkus = inventoryItems.length;
     const totalStockValue = inventoryItems.reduce((acc, i) => acc + i.totalStockValue, 0);
-    const lowStockCount = inventoryItems.filter(i => i.totalQtyOnHand > 0 && i.totalQtyOnHand <= i.reorderLevel).length;
-    const outOfStockCount = inventoryItems.filter(i => i.totalQtyOnHand <= 0).length;
+    const lowStockCount = inventoryItems.filter(i => i.totalOnHand > 0 && i.totalOnHand <= i.reorderLevel).length;
+    const outOfStockCount = inventoryItems.filter(i => i.totalOnHand <= 0).length;
 
     expect(activeSkus).toBe(3);
     expect(totalStockValue).toBe(4005.00);
