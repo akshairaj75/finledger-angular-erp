@@ -1,0 +1,326 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">New Sales Invoice / Credit Note</h1>
+      <p class="page-subtitle">Generate compliant FTA tax invoices, apply VAT rates, and post directly to the General Ledger</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/sales/invoices" class="btn btn-outline">Back to Invoices</a>
+    </div>
+  </div>
+
+  <form [formGroup]="invoiceForm">
+    <!-- Invoice Header Card -->
+    <div class="form-card">
+      <h3 class="card-title">Invoice Details</h3>
+
+      <div class="form-row">
+        <!-- Customer Picker -->
+        <div class="form-group col-md-6">
+          <label for="customerId" class="required">Customer</label>
+          <select
+            id="customerId"
+            formControlName="customerId"
+            (change)="onCustomerSelect($event)"
+            class="form-control"
+          >
+            <option [ngValue]="null">-- Select Customer --</option>
+            <option *ngFor="let c of customers" [value]="c.id">
+              {{ c.code }} - {{ c.name }}
+            </option>
+          </select>
+          <span *ngIf="invoiceForm.get('customerId')?.touched && invoiceForm.get('customerId')?.invalid" class="field-error">
+            Customer selection is required.
+          </span>
+
+          <!-- Customer Info Callout -->
+          <div *ngIf="selectedCustomer" class="customer-info-box mt-2">
+            <div class="info-item">
+              <span class="info-label">TRN:</span>
+              <span class="info-value font-mono">{{ selectedCustomer.trn || 'Non-registered' }}</span>
+            </div>
+            <div class="info-item" *ngIf="selectedCustomer.billingAddress">
+              <span class="info-label">Billing Address:</span>
+              <span class="info-value">{{ selectedCustomer.billingAddress }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Terms & Limit:</span>
+              <span class="info-value">{{ selectedCustomer.paymentTermsDays ?? 30 }} Days (Limit: {{ selectedCustomer.creditLimit | number:'1.2-2' }} AED)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Document Type -->
+        <div class="form-group col-md-3">
+          <label for="docType" class="required">Document Type</label>
+          <select id="docType" formControlName="docType" class="form-control">
+            <option value="INVOICE">Tax Invoice</option>
+            <option value="CREDIT_NOTE">Credit Note</option>
+          </select>
+        </div>
+
+        <!-- Currency -->
+        <div class="form-group col-md-3">
+          <label for="currencyCode" class="required">Currency</label>
+          <select id="currencyCode" formControlName="currencyCode" class="form-control">
+            <option value="AED">AED - UAE Dirham</option>
+            <option value="USD">USD - US Dollar</option>
+            <option value="EUR">EUR - Euro</option>
+            <option value="GBP">GBP - British Pound</option>
+            <option value="SAR">SAR - Saudi Riyal</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row mt-2">
+        <!-- Invoice Date -->
+        <div class="form-group col-md-3">
+          <label for="invoiceDate" class="required">Invoice Date</label>
+          <input
+            type="date"
+            id="invoiceDate"
+            formControlName="invoiceDate"
+            (change)="onInvoiceDateOrTermsChange()"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Payment Terms Days -->
+        <div class="form-group col-md-3">
+          <label for="paymentTermsDays" class="required">Payment Terms (Days)</label>
+          <input
+            type="number"
+            id="paymentTermsDays"
+            formControlName="paymentTermsDays"
+            (input)="onInvoiceDateOrTermsChange()"
+            min="0"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Due Date -->
+        <div class="form-group col-md-3">
+          <label for="dueDate" class="required">Due Date</label>
+          <input
+            type="date"
+            id="dueDate"
+            formControlName="dueDate"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Exchange Rate -->
+        <div class="form-group col-md-3">
+          <label for="exchangeRate" class="required">Exchange Rate</label>
+          <input
+            type="number"
+            step="0.0001"
+            id="exchangeRate"
+            formControlName="exchangeRate"
+            min="0.0001"
+            class="form-control"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Line Items Card -->
+    <div class="form-card mt-3">
+      <div class="card-header-flex">
+        <h3 class="card-title">Line Items & Tax Allocation</h3>
+        <button type="button" (click)="addLine()" class="btn btn-outline btn-sm">
+          + Add Item Line
+        </button>
+      </div>
+
+      <div class="table-responsive mt-2">
+        <table class="lines-table" formArrayName="lines">
+          <thead>
+            <tr>
+              <th style="width: 40px">#</th>
+              <th style="width: 25%">Item / Description *</th>
+              <th style="width: 20%">Revenue Account *</th>
+              <th style="width: 9%" class="text-right">Qty *</th>
+              <th style="width: 12%" class="text-right">Unit Price *</th>
+              <th style="width: 8%" class="text-right">Disc %</th>
+              <th style="width: 14%">Tax Rate</th>
+              <th style="width: 10%" class="text-right">VAT Amount</th>
+              <th style="width: 12%" class="text-right">Total</th>
+              <th style="width: 40px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of linesArray.controls; let i = index" [formGroupName]="i">
+              <td class="text-center font-mono">{{ i + 1 }}</td>
+
+              <!-- Description -->
+              <td>
+                <input
+                  type="text"
+                  formControlName="description"
+                  placeholder="Service or product description"
+                  class="form-control"
+                  [ngClass]="{'is-invalid': line.get('description')?.touched && line.get('description')?.invalid}"
+                />
+              </td>
+
+              <!-- Revenue Account -->
+              <td>
+                <select
+                  formControlName="accountId"
+                  class="form-control"
+                  [ngClass]="{'is-invalid': line.get('accountId')?.touched && line.get('accountId')?.invalid}"
+                >
+                  <option [ngValue]="null">-- Select Account --</option>
+                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                    {{ acc.code }} - {{ acc.name }}
+                  </option>
+                </select>
+              </td>
+
+              <!-- Qty -->
+              <td>
+                <input
+                  type="number"
+                  step="1"
+                  min="0.0001"
+                  formControlName="quantity"
+                  class="form-control text-right"
+                  [ngClass]="{'is-invalid': line.get('quantity')?.touched && line.get('quantity')?.invalid}"
+                />
+              </td>
+
+              <!-- Unit Price -->
+              <td>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  formControlName="unitPrice"
+                  class="form-control text-right"
+                  [ngClass]="{'is-invalid': line.get('unitPrice')?.touched && line.get('unitPrice')?.invalid}"
+                />
+              </td>
+
+              <!-- Discount % -->
+              <td>
+                <input
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  formControlName="discountPct"
+                  class="form-control text-right"
+                />
+              </td>
+
+              <!-- Tax Rate -->
+              <td>
+                <select formControlName="taxRateId" class="form-control">
+                  <option [ngValue]="null">None / 0%</option>
+                  <option *ngFor="let t of taxRates" [value]="t.id">
+                    {{ t.name }} ({{ t.rate }}%)
+                  </option>
+                </select>
+              </td>
+
+              <!-- Computed VAT -->
+              <td class="text-right font-mono computed-val">
+                {{ getLineCalculatedValues(i).taxAmount | number:'1.2-2' }}
+              </td>
+
+              <!-- Computed Line Total -->
+              <td class="text-right font-mono font-bold computed-val">
+                {{ getLineCalculatedValues(i).lineTotal | number:'1.2-2' }}
+              </td>
+
+              <!-- Remove button -->
+              <td class="text-center">
+                <button
+                  type="button"
+                  (click)="removeLine(i)"
+                  class="btn-delete"
+                  title="Remove line"
+                  [disabled]="linesArray.length <= 1"
+                >
+                  &times;
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Calculation Breakdown and Notes -->
+      <div class="bottom-grid mt-4">
+        <div class="notes-panel">
+          <label for="notes">Narration / Payment Terms / Notes</label>
+          <textarea
+            id="notes"
+            formControlName="notes"
+            rows="4"
+            class="form-control"
+            placeholder="Specify bank details, wire instructions, or client PO reference..."
+          ></textarea>
+        </div>
+
+        <div class="totals-panel">
+          <div class="totals-row">
+            <span class="totals-label">Subtotal:</span>
+            <span class="totals-amount">{{ totals.subtotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+          </div>
+
+          <div class="totals-row" *ngIf="totals.discountTotal > 0">
+            <span class="totals-label">Discount Total:</span>
+            <span class="totals-amount text-danger">-{{ totals.discountTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+          </div>
+
+          <div class="totals-row">
+            <span class="totals-label">VAT Output:</span>
+            <span class="totals-amount">{{ totals.taxTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+          </div>
+
+          <div class="totals-row totals-grand-total">
+            <span class="totals-label">Total Amount:</span>
+            <span class="totals-amount font-bold">{{ totals.total | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Actions Bar -->
+    <div class="actions-bar mt-4">
+      <a routerLink="/sales/invoices" class="btn btn-outline">Cancel</a>
+
+      <div class="action-buttons-right">
+        <button
+          type="button"
+          (click)="saveDraft()"
+          class="btn btn-secondary"
+          [disabled]="saving || previewingPdf"
+        >
+          Save Draft
+        </button>
+
+        <button
+          type="button"
+          (click)="previewPdf()"
+          class="btn btn-outline"
+          [disabled]="saving || previewingPdf"
+        >
+          {{ previewingPdf ? 'Generating PDF...' : 'Preview PDF' }}
+        </button>
+
+        <button
+          type="button"
+          (click)="saveAndSend()"
+          class="btn btn-primary"
+          [disabled]="saving || previewingPdf"
+        >
+          {{ saving ? 'Posting to GL...' : 'Save & Send' }}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

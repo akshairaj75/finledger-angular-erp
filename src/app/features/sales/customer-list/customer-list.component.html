@@ -1,0 +1,370 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">Customers</h1>
+      <p class="page-subtitle">Manage customer master profiles, tax TRNs, payment terms, and open balances</p>
+    </div>
+    <div class="header-actions">
+      <button (click)="openCreateModal()" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        New Customer
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="form-group search-group">
+        <label for="search">Search Customers</label>
+        <div class="search-input-wrapper">
+          <input
+            type="text"
+            id="search"
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="onSearch()"
+            placeholder="Search by code, customer name, TRN, or email..."
+            class="form-control"
+          />
+        </div>
+      </div>
+
+      <div class="filter-buttons">
+        <button (click)="onSearch()" class="btn btn-secondary">Search</button>
+        <button (click)="resetSearch()" class="btn btn-outline">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customers Table Card -->
+  <div class="table-card">
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading customers...</p>
+    </div>
+
+    <div *ngIf="!loading && customersPage.content.length === 0" class="empty-state">
+      <div class="empty-icon">👥</div>
+      <h3>No Customers Found</h3>
+      <p>Get started by adding your first customer or clearing your search filters.</p>
+      <button (click)="openCreateModal()" class="btn btn-primary mt-3">Add Customer</button>
+    </div>
+
+    <div *ngIf="!loading && customersPage.content.length > 0" class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Customer Name</th>
+            <th>TRN</th>
+            <th>Contact & Email</th>
+            <th>Payment Terms</th>
+            <th>AR Account</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of customersPage.content">
+            <td>
+              <span class="code-badge">{{ c.code }}</span>
+            </td>
+            <td>
+              <div class="customer-info">
+                <span class="customer-name">{{ c.name }}</span>
+                <span class="customer-currency text-muted">{{ c.currencyCode }} | {{ c.countryCode }}</span>
+              </div>
+            </td>
+            <td>
+              <span *ngIf="c.trn" class="trn-text">{{ c.trn }}</span>
+              <span *ngIf="!c.trn" class="text-muted italic">Non-registered</span>
+            </td>
+            <td>
+              <div class="contact-details">
+                <span *ngIf="c.email" class="email-link">{{ c.email }}</span>
+                <span *ngIf="c.phone" class="phone-text text-muted">{{ c.phone }}</span>
+                <span *ngIf="!c.email && !c.phone" class="text-muted">—</span>
+              </div>
+            </td>
+            <td>
+              <span class="terms-pill">{{ c.paymentTermsDays ?? 30 }} Days</span>
+            </td>
+            <td>
+              <span class="account-tag">{{ getAccountLabel(c.arAccountId) }}</span>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="c.isActive ? 'badge-success' : 'badge-danger'">
+                {{ c.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-right actions-col">
+              <button (click)="viewOpenInvoices(c)" class="btn btn-outline btn-xs" title="View Open Invoices">
+                Invoices
+              </button>
+              <button (click)="openEditModal(c)" class="btn btn-outline btn-xs ml-1" title="Edit Customer">
+                Edit
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination-footer">
+        <span class="pagination-info">
+          Showing {{ customersPage.page * customersPage.size + 1 }} to
+          {{ (customersPage.page + 1) * customersPage.size > customersPage.totalElements ? customersPage.totalElements : (customersPage.page + 1) * customersPage.size }}
+          of {{ customersPage.totalElements }} entries
+        </span>
+        <div class="pagination-buttons">
+          <button
+            class="btn btn-outline btn-sm"
+            [disabled]="customersPage.page === 0"
+            (click)="goToPage(customersPage.page - 1)"
+          >
+            Previous
+          </button>
+          <span class="current-page-badge">Page {{ customersPage.page + 1 }} of {{ customersPage.totalPages || 1 }}</span>
+          <button
+            class="btn btn-outline btn-sm"
+            [disabled]="customersPage.page >= customersPage.totalPages - 1"
+            (click)="goToPage(customersPage.page + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Create / Edit Modal -->
+  <div *ngIf="showCustomerModal" class="modal-backdrop">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">{{ isEditMode ? 'Edit Customer' : 'Add New Customer' }}</h2>
+          <button (click)="closeCustomerModal()" class="modal-close">&times;</button>
+        </div>
+
+        <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="custCode" class="required">Customer Code</label>
+                <input
+                  type="text"
+                  id="custCode"
+                  formControlName="code"
+                  class="form-control"
+                  placeholder="e.g. CUST-001"
+                />
+                <span *ngIf="customerForm.get('code')?.touched && customerForm.get('code')?.invalid" class="field-error">
+                  Code is required (max 50 chars).
+                </span>
+              </div>
+
+              <div class="form-group col-md-8">
+                <label for="custName" class="required">Customer Legal / Trade Name</label>
+                <input
+                  type="text"
+                  id="custName"
+                  formControlName="name"
+                  class="form-control"
+                  placeholder="e.g. Emirates Industrial Supplies LLC"
+                />
+                <span *ngIf="customerForm.get('name')?.touched && customerForm.get('name')?.invalid" class="field-error">
+                  Customer name is required.
+                </span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="custTrn">Tax Registration Number (TRN)</label>
+                <input
+                  type="text"
+                  id="custTrn"
+                  formControlName="trn"
+                  class="form-control"
+                  placeholder="15-digit FTA TRN (e.g. 100234567800003)"
+                />
+                <span *ngIf="customerForm.get('trn')?.touched && customerForm.get('trn')?.invalid" class="field-error">
+                  TRN must be exactly 15 digits.
+                </span>
+              </div>
+
+              <div class="form-group col-md-3">
+                <label for="currencyCode" class="required">Currency</label>
+                <select id="currencyCode" formControlName="currencyCode" class="form-control">
+                  <option value="AED">AED - UAE Dirham</option>
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="SAR">SAR - Saudi Riyal</option>
+                </select>
+              </div>
+
+              <div class="form-group col-md-3">
+                <label for="countryCode" class="required">Country</label>
+                <select id="countryCode" formControlName="countryCode" class="form-control">
+                  <option value="AE">United Arab Emirates (AE)</option>
+                  <option value="SA">Saudi Arabia (SA)</option>
+                  <option value="QA">Qatar (QA)</option>
+                  <option value="OM">Oman (OM)</option>
+                  <option value="US">United States (US)</option>
+                  <option value="GB">United Kingdom (GB)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="custEmail">Email Address</label>
+                <input
+                  type="email"
+                  id="custEmail"
+                  formControlName="email"
+                  class="form-control"
+                  placeholder="billing@customer.com"
+                />
+                <span *ngIf="customerForm.get('email')?.touched && customerForm.get('email')?.invalid" class="field-error">
+                  Please enter a valid email address.
+                </span>
+              </div>
+
+              <div class="form-group col-md-6">
+                <label for="custPhone">Phone Number</label>
+                <input
+                  type="text"
+                  id="custPhone"
+                  formControlName="phone"
+                  class="form-control"
+                  placeholder="+971 4 123 4567"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="billingAddress">Billing Address</label>
+              <textarea
+                id="billingAddress"
+                formControlName="billingAddress"
+                rows="2"
+                class="form-control"
+                placeholder="Office / Street, Building, P.O. Box, City, Emirate..."
+              ></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="paymentTermsDays" class="required">Payment Terms (Days)</label>
+                <input
+                  type="number"
+                  id="paymentTermsDays"
+                  formControlName="paymentTermsDays"
+                  class="form-control"
+                  min="0"
+                />
+              </div>
+
+              <div class="form-group col-md-4">
+                <label for="creditLimit">Credit Limit (AED)</label>
+                <input
+                  type="number"
+                  id="creditLimit"
+                  formControlName="creditLimit"
+                  class="form-control"
+                  min="0"
+                />
+              </div>
+
+              <div class="form-group col-md-4">
+                <label for="arAccountId" class="required">AR GL Account</label>
+                <select id="arAccountId" formControlName="arAccountId" class="form-control">
+                  <option [ngValue]="null">-- Select AR Account --</option>
+                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                    {{ acc.code }} - {{ acc.name }}
+                  </option>
+                </select>
+                <span *ngIf="customerForm.get('arAccountId')?.touched && customerForm.get('arAccountId')?.invalid" class="field-error">
+                  Accounts Receivable account is required.
+                </span>
+              </div>
+            </div>
+
+            <div class="form-check mt-2">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="isActive" />
+                <span>Customer is active and available for billing</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" (click)="closeCustomerModal()" class="btn btn-outline">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="customerForm.invalid">
+              {{ isEditMode ? 'Update Customer' : 'Save Customer' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open Invoices Modal -->
+  <div *ngIf="showOpenInvoicesModal" class="modal-backdrop">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">Open Invoices for {{ selectedCustomerForInvoices?.name }}</h2>
+            <p class="text-muted text-sm">{{ selectedCustomerForInvoices?.code }} | TRN: {{ selectedCustomerForInvoices?.trn || 'N/A' }}</p>
+          </div>
+          <button (click)="closeOpenInvoicesModal()" class="modal-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div *ngIf="loadingOpenInvoices" class="loading-state">
+            <div class="spinner"></div>
+            <p>Fetching open invoices...</p>
+          </div>
+
+          <div *ngIf="!loadingOpenInvoices && openInvoices.length === 0" class="empty-state">
+            <p>No unpaid or open invoices for this customer. All invoices are settled!</p>
+          </div>
+
+          <div *ngIf="!loadingOpenInvoices && openInvoices.length > 0" class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Date</th>
+                  <th>Due Date</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-right">Amount Paid</th>
+                  <th class="text-right">Balance Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let inv of openInvoices">
+                  <td><strong>{{ inv.invoiceNo }}</strong></td>
+                  <td>{{ inv.invoiceDate | date:'mediumDate' }}</td>
+                  <td>{{ inv.dueDate | date:'mediumDate' }}</td>
+                  <td class="text-right">{{ inv.total | number:'1.2-2' }} AED</td>
+                  <td class="text-right text-success">{{ inv.amountPaid | number:'1.2-2' }} AED</td>
+                  <td class="text-right text-danger font-bold">{{ inv.balanceDue | number:'1.2-2' }} AED</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeOpenInvoicesModal()" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

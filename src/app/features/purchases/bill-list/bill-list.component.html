@@ -1,0 +1,374 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">Vendor Bills & Debit Notes</h1>
+      <p class="page-subtitle">Track supplier bills, record debit note adjustments, approve for GL posting, and manage payables</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/purchases/bills/new" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        New Vendor Bill
+      </a>
+    </div>
+  </div>
+
+  <!-- Status Summary Cards (Section 4.5 FinLedger v2.0) -->
+  <div class="summary-cards-grid">
+    <div class="summary-card card-draft">
+      <div class="card-icon">📝</div>
+      <div class="card-content">
+        <span class="card-label">Draft Bills</span>
+        <span class="card-value">{{ summary.draftCount }}</span>
+        <span class="card-subtext">Awaiting approval</span>
+      </div>
+    </div>
+
+    <div class="summary-card card-unpaid">
+      <div class="card-icon">⏳</div>
+      <div class="card-content">
+        <span class="card-label">Unpaid Payables</span>
+        <span class="card-value">{{ summary.unpaidTotal | number:'1.2-2' }} AED</span>
+        <span class="card-subtext">Open vendor balances</span>
+      </div>
+    </div>
+
+    <div class="summary-card card-overdue">
+      <div class="card-icon">⚠️</div>
+      <div class="card-content">
+        <span class="card-label">Overdue Bills</span>
+        <span class="card-value">{{ summary.overdueTotal | number:'1.2-2' }} AED</span>
+        <span class="card-subtext">Past due payment terms</span>
+      </div>
+    </div>
+
+    <div class="summary-card card-paid">
+      <div class="card-icon">💳</div>
+      <div class="card-content">
+        <span class="card-label">Paid This Month</span>
+        <span class="card-value">{{ summary.paidThisMonthTotal | number:'1.2-2' }} AED</span>
+        <span class="card-subtext">Monthly disbursements</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="form-group search-group">
+        <label for="searchQuery">Search</label>
+        <input
+          type="text"
+          id="searchQuery"
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="applyFilters()"
+          placeholder="Search by bill #, vendor invoice #, or vendor name..."
+          class="form-control"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="filterStatus">Status</label>
+        <select id="filterStatus" [(ngModel)]="filterStatus" class="form-control">
+          <option value="">All Statuses</option>
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="filterFrom">From Date</label>
+        <input type="date" id="filterFrom" [(ngModel)]="filterFrom" class="form-control" />
+      </div>
+
+      <div class="form-group">
+        <label for="filterTo">To Date</label>
+        <input type="date" id="filterTo" [(ngModel)]="filterTo" class="form-control" />
+      </div>
+
+      <div class="filter-buttons">
+        <button (click)="applyFilters()" class="btn btn-secondary">Filter</button>
+        <button (click)="resetFilters()" class="btn btn-outline">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bills Table Card -->
+  <div class="table-card">
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading vendor bills...</p>
+    </div>
+
+    <div *ngIf="!loading && billsPage.content.length === 0" class="empty-state">
+      <div class="empty-icon">📑</div>
+      <h3>No Bills Found</h3>
+      <p>Create your first vendor bill or adjust your search filters.</p>
+      <a routerLink="/purchases/bills/new" class="btn btn-primary mt-3">Create Bill</a>
+    </div>
+
+    <div *ngIf="!loading && billsPage.content.length > 0" class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Bill #</th>
+            <th>Vendor Invoice #</th>
+            <th>Type</th>
+            <th>Vendor</th>
+            <th>Bill Date</th>
+            <th>Due Date</th>
+            <th class="text-right">Total</th>
+            <th class="text-right">Paid</th>
+            <th class="text-right">Balance Due</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let b of billsPage.content" (click)="viewDetails(b)" class="clickable-row">
+            <td>
+              <span class="bill-number">{{ b.billNo || 'DRAFT' }}</span>
+            </td>
+            <td>
+              <span *ngIf="b.vendorInvoiceNo" class="vendor-inv-no font-mono">{{ b.vendorInvoiceNo }}</span>
+              <span *ngIf="!b.vendorInvoiceNo" class="text-muted">—</span>
+            </td>
+            <td>
+              <span class="type-tag" [ngClass]="b.docType === 'DEBIT_NOTE' ? 'type-dn' : 'type-bill'">
+                {{ b.docType }}
+              </span>
+            </td>
+            <td>
+              <div class="vendor-info">
+                <span class="vendor-name">{{ b.vendorName }}</span>
+                <span class="vendor-code text-muted">{{ b.vendorCode }}</span>
+              </div>
+            </td>
+            <td>{{ b.billDate | date:'mediumDate' }}</td>
+            <td>
+              <span [ngClass]="{'overdue-due-date': isOverdue(b)}">
+                {{ b.dueDate | date:'mediumDate' }}
+              </span>
+            </td>
+            <td class="text-right font-medium">{{ b.total | number:'1.2-2' }} {{ b.currencyCode }}</td>
+            <td class="text-right text-success">{{ b.amountPaid | number:'1.2-2' }}</td>
+            <td class="text-right font-bold" [ngClass]="b.balanceDue > 0 ? 'text-danger' : 'text-muted'">
+              {{ b.balanceDue | number:'1.2-2' }}
+            </td>
+            <td>
+              <span class="chip" [ngClass]="getStatusClass(b.status)">
+                {{ b.status }}
+              </span>
+            </td>
+            <td class="text-right actions-col" (click)="$event.stopPropagation()">
+              <!-- Action: Approve (for DRAFT) -->
+              <button
+                *ngIf="b.status === 'DRAFT'"
+                (click)="approveBill(b, $event)"
+                class="btn btn-primary btn-xs"
+                [disabled]="approvingId === b.id"
+                title="Approve & Post to GL"
+              >
+                {{ approvingId === b.id ? 'Approving...' : 'Approve' }}
+              </button>
+
+              <!-- Action: Void (for non-VOID) -->
+              <button
+                *ngIf="b.status !== 'VOID'"
+                (click)="openVoidModal(b, $event)"
+                class="btn btn-outline btn-xs btn-danger-hover ml-1"
+                title="Void Bill"
+              >
+                Void
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination-footer">
+        <span class="pagination-info">
+          Showing {{ billsPage.page * billsPage.size + 1 }} to
+          {{ (billsPage.page + 1) * billsPage.size > billsPage.totalElements ? billsPage.totalElements : (billsPage.page + 1) * billsPage.size }}
+          of {{ billsPage.totalElements }} entries
+        </span>
+        <div class="pagination-buttons">
+          <button
+            class="btn btn-outline btn-sm"
+            [disabled]="billsPage.page === 0"
+            (click)="goToPage(billsPage.page - 1)"
+          >
+            Previous
+          </button>
+          <span class="current-page-badge">Page {{ billsPage.page + 1 }} of {{ billsPage.totalPages || 1 }}</span>
+          <button
+            class="btn btn-outline btn-sm"
+            [disabled]="billsPage.page >= billsPage.totalPages - 1"
+            (click)="goToPage(billsPage.page + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bill Detail Modal -->
+  <div *ngIf="showDetailModal && selectedBill" class="modal-backdrop">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <div class="detail-header-tags">
+              <span class="bill-number-lg">{{ selectedBill.billNo || 'DRAFT BILL' }}</span>
+              <span class="chip" [ngClass]="getStatusClass(selectedBill.status)">{{ selectedBill.status }}</span>
+              <span class="type-tag" [ngClass]="selectedBill.docType === 'DEBIT_NOTE' ? 'type-dn' : 'type-bill'">
+                {{ selectedBill.docType }}
+              </span>
+            </div>
+            <p class="text-muted text-sm mt-1">Vendor Invoice #: {{ selectedBill.vendorInvoiceNo || 'N/A' }} | Bill ID: #{{ selectedBill.id }}</p>
+          </div>
+          <button (click)="closeDetailModal()" class="modal-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-card">
+              <span class="detail-label">Vendor Profile</span>
+              <span class="detail-main-text">{{ selectedBill.vendorName }}</span>
+              <span class="detail-sub-text">Code: {{ selectedBill.vendorCode }}</span>
+            </div>
+
+            <div class="detail-card">
+              <span class="detail-label">Bill Dates</span>
+              <span class="detail-main-text">Issued: {{ selectedBill.billDate | date:'mediumDate' }}</span>
+              <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(selectedBill)}">
+                Due: {{ selectedBill.dueDate | date:'mediumDate' }}
+              </span>
+            </div>
+
+            <div class="detail-card">
+              <span class="detail-label">Financial Overview</span>
+              <span class="detail-main-text">{{ selectedBill.total | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span class="detail-sub-text text-danger font-bold">Balance: {{ selectedBill.balanceDue | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+            </div>
+          </div>
+
+          <!-- Line Items Table -->
+          <h4 class="section-heading mt-4">Bill Line Items</h4>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Description</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Unit Price</th>
+                  <th class="text-right">VAT Amount</th>
+                  <th class="text-right">Line Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let line of selectedBill.lines; let i = index">
+                  <td>{{ line.lineNo || (i + 1) }}</td>
+                  <td>{{ line.description }}</td>
+                  <td class="text-right">{{ line.quantity | number:'1.2-2' }}</td>
+                  <td class="text-right">{{ line.unitPrice | number:'1.2-2' }}</td>
+                  <td class="text-right">{{ line.taxAmount | number:'1.2-2' }}</td>
+                  <td class="text-right font-medium">{{ line.lineTotal | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Total Calculation Breakdown -->
+          <div class="totals-breakdown">
+            <div class="totals-row">
+              <span>Subtotal:</span>
+              <span>{{ selectedBill.subtotal | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+            </div>
+            <div class="totals-row">
+              <span>Input VAT Total:</span>
+              <span>{{ selectedBill.taxTotal | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+            </div>
+            <div class="totals-row totals-grand">
+              <span>Grand Total:</span>
+              <span>{{ selectedBill.total | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+            </div>
+            <div class="totals-row text-success">
+              <span>Amount Paid:</span>
+              <span>{{ selectedBill.amountPaid | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+            </div>
+            <div class="totals-row totals-balance text-danger font-bold">
+              <span>Balance Due:</span>
+              <span>{{ selectedBill.balanceDue | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+            </div>
+          </div>
+
+          <div *ngIf="selectedBill.notes" class="bill-notes mt-3">
+            <strong>Notes / Terms:</strong>
+            <p>{{ selectedBill.notes }}</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="footer-left">
+            <button
+              *ngIf="selectedBill.status === 'DRAFT'"
+              (click)="approveBill(selectedBill)"
+              class="btn btn-primary"
+              [disabled]="approvingId === selectedBill.id"
+            >
+              {{ approvingId === selectedBill.id ? 'Approving...' : 'Approve & Post to GL' }}
+            </button>
+            <button
+              *ngIf="selectedBill.status !== 'VOID'"
+              (click)="openVoidModal(selectedBill)"
+              class="btn btn-outline btn-danger-hover ml-1"
+            >
+              Void Bill
+            </button>
+          </div>
+          <button (click)="closeDetailModal()" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Void Reason Confirmation Modal -->
+  <div *ngIf="showVoidModal && billToVoid" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Void Bill {{ billToVoid.billNo }}</h2>
+          <button (click)="closeVoidModal()" class="modal-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="text-danger">
+            <strong>Warning:</strong> Voiding this bill will generate an automatic reversing journal entry in the General Ledger and invalidate any outstanding balance.
+          </p>
+
+          <div class="form-group mt-3">
+            <label for="voidReason">Reason for Voiding</label>
+            <textarea
+              id="voidReason"
+              [(ngModel)]="voidReason"
+              rows="3"
+              class="form-control"
+              placeholder="e.g. Duplicate supplier invoice, incorrect amounts entered..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeVoidModal()" class="btn btn-outline">Cancel</button>
+          <button (click)="confirmVoid()" class="btn btn-danger" [disabled]="voiding">
+            {{ voiding ? 'Voiding...' : 'Confirm Void' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

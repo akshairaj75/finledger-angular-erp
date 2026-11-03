@@ -1,0 +1,294 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">New Customer Receipt</h1>
+      <p class="page-subtitle">Record customer settlement, allocate against open invoices (oldest first), and post to GL</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/sales/invoices" class="btn btn-outline">Back to Invoices</a>
+    </div>
+  </div>
+
+  <form [formGroup]="receiptForm" (ngSubmit)="submitReceipt()">
+    <!-- Receipt Header Card -->
+    <div class="form-card">
+      <h3 class="card-title">Receipt Header</h3>
+
+      <div class="form-row">
+        <!-- Customer Picker -->
+        <div class="form-group col-md-6">
+          <label for="customerId" class="required">Customer</label>
+          <select
+            id="customerId"
+            formControlName="customerId"
+            (change)="onCustomerChange($event)"
+            class="form-control"
+          >
+            <option [ngValue]="null">-- Select Customer --</option>
+            <option *ngFor="let c of customers" [value]="c.id">
+              {{ c.code }} - {{ c.name }}
+            </option>
+          </select>
+          <span *ngIf="receiptForm.get('customerId')?.touched && receiptForm.get('customerId')?.invalid" class="field-error">
+            Please select a customer.
+          </span>
+
+          <!-- Customer Info Callout -->
+          <div *ngIf="selectedCustomer" class="customer-info-box mt-2">
+            <div class="info-item">
+              <span class="info-label">TRN:</span>
+              <span class="info-value font-mono">{{ selectedCustomer.trn || 'Non-registered' }}</span>
+            </div>
+            <div class="info-item" *ngIf="selectedCustomer.billingAddress">
+              <span class="info-label">Address:</span>
+              <span class="info-value">{{ selectedCustomer.billingAddress }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipt Date -->
+        <div class="form-group col-md-3">
+          <label for="receiptDate" class="required">Receipt Date</label>
+          <input
+            type="date"
+            id="receiptDate"
+            formControlName="receiptDate"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Currency -->
+        <div class="form-group col-md-3">
+          <label for="currencyCode" class="required">Currency</label>
+          <input
+            type="text"
+            id="currencyCode"
+            formControlName="currencyCode"
+            readonly
+            class="form-control bg-readonly"
+          />
+        </div>
+      </div>
+
+      <div class="form-row mt-2">
+        <!-- Deposit Bank Account -->
+        <div class="form-group col-md-4">
+          <label for="bankAccountId" class="required">Deposit Bank / Cash Account</label>
+          <select id="bankAccountId" formControlName="bankAccountId" class="form-control">
+            <option [ngValue]="null">-- Select Bank Account --</option>
+            <option *ngFor="let b of bankAccounts" [value]="b.id">
+              {{ b.name }} ({{ b.accountNumber }}) - {{ b.currencyCode }}
+            </option>
+          </select>
+          <span *ngIf="receiptForm.get('bankAccountId')?.touched && receiptForm.get('bankAccountId')?.invalid" class="field-error">
+            Deposit bank account is required.
+          </span>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="form-group col-md-3">
+          <label for="paymentMethod" class="required">Payment Method</label>
+          <select id="paymentMethod" formControlName="paymentMethod" class="form-control">
+            <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
+          </select>
+        </div>
+
+        <!-- Reference / Cheque No -->
+        <div class="form-group col-md-2">
+          <label for="reference">Reference / Cheque #</label>
+          <input
+            type="text"
+            id="reference"
+            formControlName="reference"
+            placeholder="e.g. WIRE-88421"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Amount Received -->
+        <div class="form-group col-md-3">
+          <label for="amount" class="required">Amount Received</label>
+          <div class="input-with-currency">
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              id="amount"
+              formControlName="amount"
+              placeholder="0.00"
+              class="form-control text-right font-bold"
+              [ngClass]="{'is-invalid': receiptForm.get('amount')?.touched && receiptForm.get('amount')?.invalid}"
+            />
+            <span class="currency-affix">{{ receiptForm.get('currencyCode')?.value }}</span>
+          </div>
+          <span *ngIf="receiptForm.get('amount')?.touched && receiptForm.get('amount')?.invalid" class="field-error">
+            Valid amount received is required (> 0).
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open Invoices Allocation Card (Section 4.7 FinLedger v2.0) -->
+    <div class="form-card mt-3">
+      <div class="card-header-flex">
+        <div>
+          <h3 class="card-title">Open Invoices & Settlement Allocation</h3>
+          <p class="card-subtitle">Oldest-first auto-allocation enabled. You can manually adjust allocation amounts per invoice.</p>
+        </div>
+        <div class="alloc-buttons" *ngIf="openInvoices.length > 0">
+          <button type="button" (click)="autoAllocateOldestFirst()" class="btn btn-outline btn-sm">
+            ⚡ Auto Allocate (Oldest First)
+          </button>
+          <button type="button" (click)="clearAllocations()" class="btn btn-outline btn-sm ml-1">
+            Clear Allocations
+          </button>
+        </div>
+      </div>
+
+      <!-- State: No Customer Selected -->
+      <div *ngIf="!selectedCustomer" class="empty-state">
+        <p>Please select a customer above to view their open invoices.</p>
+      </div>
+
+      <!-- State: Loading Invoices -->
+      <div *ngIf="selectedCustomer && loadingInvoices" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading customer open invoices...</p>
+      </div>
+
+      <!-- State: No Invoices Found -->
+      <div *ngIf="selectedCustomer && !loadingInvoices && openInvoices.length === 0" class="empty-state">
+        <p>No open or unpaid invoices found for this customer. Any amount received will be recorded as an unapplied customer advance.</p>
+      </div>
+
+      <!-- State: Invoices Table -->
+      <div *ngIf="selectedCustomer && !loadingInvoices && openInvoices.length > 0" class="table-responsive mt-2">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Invoice Date</th>
+              <th>Due Date</th>
+              <th class="text-right">Total (AED)</th>
+              <th class="text-right">Balance Due (AED)</th>
+              <th class="text-right" style="width: 200px">Allocate Amount (AED)</th>
+              <th class="text-center" style="width: 120px">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let inv of openInvoices">
+              <td>
+                <span class="font-mono font-bold">{{ inv.invoiceNo }}</span>
+              </td>
+              <td>{{ inv.invoiceDate | date:'mediumDate' }}</td>
+              <td>
+                <span class="due-date-pill">{{ inv.dueDate | date:'mediumDate' }}</span>
+              </td>
+              <td class="text-right">{{ inv.total | number:'1.2-2' }}</td>
+              <td class="text-right text-danger font-bold">{{ inv.balanceDue | number:'1.2-2' }}</td>
+              <td class="text-right">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  [max]="inv.balanceDue"
+                  [value]="inv.allocatedAmount"
+                  (input)="onManualAllocationChange(inv, $event)"
+                  class="form-control text-right font-mono"
+                  [ngClass]="{'border-success': inv.allocatedAmount > 0}"
+                />
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  (click)="togglePayFull(inv)"
+                  class="btn btn-outline btn-xs"
+                  [ngClass]="{'btn-success-active': inv.allocatedAmount === inv.balanceDue}"
+                >
+                  {{ inv.allocatedAmount === inv.balanceDue ? '✓ Paid Full' : 'Pay Full' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Allocation Warning -->
+      <div *ngIf="isOverAllocated" class="alert-box alert-danger mt-3">
+        ⚠️ Total allocated amount ({{ totalAllocated | number:'1.2-2' }} AED) exceeds total received amount ({{ receivedAmount | number:'1.2-2' }} AED). Please adjust line allocations.
+      </div>
+
+      <!-- Summary & Auto Journal Preview Grid -->
+      <div class="bottom-grid mt-4">
+        <!-- Live Journal Entry Preview Panel -->
+        <div class="journal-preview-card">
+          <div class="preview-header">
+            <span class="preview-title">Auto-Generated Journal Entry Preview</span>
+            <span class="badge badge-info">GL Posting</span>
+          </div>
+          <div class="preview-body">
+            <div class="journal-line-preview">
+              <div class="account-side">
+                <span class="dr-tag">Dr</span>
+                <span class="account-name">{{ selectedBankAccount?.name || 'Selected Bank Account' }}</span>
+              </div>
+              <div class="amount-side font-mono font-bold">
+                {{ receivedAmount | number:'1.2-2' }} AED
+              </div>
+            </div>
+
+            <div class="journal-line-preview">
+              <div class="account-side">
+                <span class="cr-tag">Cr</span>
+                <span class="account-name">1200 Accounts Receivable - {{ selectedCustomer?.name || 'Customer' }}</span>
+              </div>
+              <div class="amount-side font-mono font-bold">
+                {{ receivedAmount | number:'1.2-2' }} AED
+              </div>
+            </div>
+
+            <div class="narration-preview text-muted mt-2">
+              Narration: Customer Receipt {{ receiptForm.get('reference')?.value ? '(' + receiptForm.get('reference')?.value + ')' : '' }} via {{ receiptForm.get('paymentMethod')?.value }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipt Settlement Totals -->
+        <div class="totals-panel">
+          <div class="totals-row">
+            <span class="totals-label">Total Received:</span>
+            <span class="totals-amount font-bold">{{ receivedAmount | number:'1.2-2' }} AED</span>
+          </div>
+
+          <div class="totals-row">
+            <span class="totals-label">Applied to Invoices:</span>
+            <span class="totals-amount text-success font-medium">{{ totalAllocated | number:'1.2-2' }} AED</span>
+          </div>
+
+          <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount > 0}">
+            <span class="totals-label">Unapplied (Advance):</span>
+            <span class="totals-amount font-bold">{{ unappliedAmount | number:'1.2-2' }} AED</span>
+          </div>
+          <p *ngIf="unappliedAmount > 0" class="advance-subtext">
+            * Recorded as unapplied customer credit for future invoice settlements.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar mt-4">
+      <a routerLink="/sales/invoices" class="btn btn-outline">Cancel</a>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="submitting || receiptForm.invalid || isOverAllocated"
+      >
+        {{ submitting ? 'Posting Receipt...' : 'Post Customer Receipt' }}
+      </button>
+    </div>
+  </form>
+</div>
+

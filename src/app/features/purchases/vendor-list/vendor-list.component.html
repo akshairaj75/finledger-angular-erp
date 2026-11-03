@@ -1,0 +1,356 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">Vendors & Suppliers</h1>
+      <p class="page-subtitle">Manage supplier profiles, payment terms, IBANs, and outstanding balances</p>
+    </div>
+    <div class="header-actions">
+      <button (click)="openCreateModal()" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        New Vendor
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="form-group search-group">
+        <label for="search">Search Vendors</label>
+        <div class="search-input-wrapper">
+          <input
+            type="text"
+            id="search"
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="onSearch()"
+            placeholder="Search by code, vendor name, TRN, or IBAN..."
+            class="form-control"
+          />
+        </div>
+      </div>
+
+      <div class="filter-buttons">
+        <button (click)="onSearch()" class="btn btn-secondary">Search</button>
+        <button (click)="resetSearch()" class="btn btn-outline">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vendors Table Card -->
+  <div class="table-card">
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading vendors...</p>
+    </div>
+
+    <div *ngIf="!loading && vendorsPage.content.length === 0" class="empty-state">
+      <div class="empty-icon">🏢</div>
+      <h3>No Vendors Found</h3>
+      <p>Get started by adding your first vendor profile.</p>
+      <button (click)="openCreateModal()" class="btn btn-primary mt-3">Add Vendor</button>
+    </div>
+
+    <div *ngIf="!loading && vendorsPage.content.length > 0" class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Vendor Name</th>
+            <th>TRN</th>
+            <th>Bank IBAN</th>
+            <th>Payment Terms</th>
+            <th>AP GL Account</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let v of vendorsPage.content">
+            <td>
+              <span class="code-badge">{{ v.code }}</span>
+            </td>
+            <td>
+              <div class="vendor-info">
+                <span class="vendor-name">{{ v.name }}</span>
+                <span class="vendor-sub text-muted">{{ v.currencyCode }} <span *ngIf="v.email">• {{ v.email }}</span></span>
+              </div>
+            </td>
+            <td>
+              <span *ngIf="v.trn" class="trn-text">{{ v.trn }}</span>
+              <span *ngIf="!v.trn" class="text-muted italic">Non-registered</span>
+            </td>
+            <td>
+              <span *ngIf="v.bankIban" class="iban-text">{{ v.bankIban }}</span>
+              <span *ngIf="!v.bankIban" class="text-muted">—</span>
+            </td>
+            <td>
+              <span class="terms-pill">{{ v.paymentTermsDays }} Days</span>
+            </td>
+            <td>
+              <span class="account-tag">{{ getAccountLabel(v.apAccountId) }}</span>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="v.isActive ? 'badge-success' : 'badge-danger'">
+                {{ v.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-right actions-col">
+              <button (click)="viewOpenBills(v)" class="btn btn-outline btn-xs" title="View Open Bills">
+                Bills
+              </button>
+              <button (click)="openEditModal(v)" class="btn btn-outline btn-xs ml-1" title="Edit Vendor">
+                Edit
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination-footer">
+        <span class="pagination-info">
+          Showing {{ vendorsPage.page * vendorsPage.size + 1 }} to
+          {{ (vendorsPage.page + 1) * vendorsPage.size > vendorsPage.totalElements ? vendorsPage.totalElements : (vendorsPage.page + 1) * vendorsPage.size }}
+          of {{ vendorsPage.totalElements }} entries
+        </span>
+        <div class="pagination-buttons">
+          <button
+            class="btn btn-outline btn-sm"
+            [disabled]="vendorsPage.page === 0"
+            (click)="goToPage(vendorsPage.page - 1)"
+          >
+            Previous
+          </button>
+          <span class="current-page-badge">Page {{ vendorsPage.page + 1 }} of {{ vendorsPage.totalPages || 1 }}</span>
+          <button
+            class="btn btn-outline btn-sm"
+            [disabled]="vendorsPage.page >= vendorsPage.totalPages - 1"
+            (click)="goToPage(vendorsPage.page + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vendor Create / Edit Modal -->
+  <div *ngIf="showVendorModal" class="modal-backdrop">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">{{ isEditMode ? 'Edit Vendor' : 'Add New Vendor' }}</h2>
+          <button (click)="closeVendorModal()" class="modal-close">&times;</button>
+        </div>
+
+        <form [formGroup]="vendorForm" (ngSubmit)="saveVendor()">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="vendorCode" class="required">Vendor Code</label>
+                <input
+                  type="text"
+                  id="vendorCode"
+                  formControlName="code"
+                  class="form-control"
+                  placeholder="e.g. VEND-001"
+                />
+                <span *ngIf="vendorForm.get('code')?.touched && vendorForm.get('code')?.invalid" class="field-error">
+                  Code is required (max 20 chars).
+                </span>
+              </div>
+
+              <div class="form-group col-md-8">
+                <label for="vendorName" class="required">Vendor Legal / Trade Name</label>
+                <input
+                  type="text"
+                  id="vendorName"
+                  formControlName="name"
+                  class="form-control"
+                  placeholder="e.g. Dell Technologies Middle East"
+                />
+                <span *ngIf="vendorForm.get('name')?.touched && vendorForm.get('name')?.invalid" class="field-error">
+                  Vendor name is required.
+                </span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="vendorTrn">Tax Registration Number (TRN)</label>
+                <input
+                  type="text"
+                  id="vendorTrn"
+                  formControlName="trn"
+                  class="form-control"
+                  placeholder="15-digit FTA TRN (e.g. 100987654300003)"
+                />
+                <span *ngIf="vendorForm.get('trn')?.touched && vendorForm.get('trn')?.invalid" class="field-error">
+                  TRN must be exactly 15 digits.
+                </span>
+              </div>
+
+              <div class="form-group col-md-6">
+                <label for="vendorIban">Bank IBAN</label>
+                <input
+                  type="text"
+                  id="vendorIban"
+                  formControlName="bankIban"
+                  class="form-control"
+                  placeholder="e.g. AE020330001234567890123"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="vendorEmail">Email Address</label>
+                <input
+                  type="email"
+                  id="vendorEmail"
+                  formControlName="email"
+                  class="form-control"
+                  placeholder="accounts@vendor.com"
+                />
+                <span *ngIf="vendorForm.get('email')?.touched && vendorForm.get('email')?.invalid" class="field-error">
+                  Please enter a valid email address.
+                </span>
+              </div>
+
+              <div class="form-group col-md-6">
+                <label for="vendorPhone">Phone Number</label>
+                <input
+                  type="text"
+                  id="vendorPhone"
+                  formControlName="phone"
+                  class="form-control"
+                  placeholder="+971 4 888 7766"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="vendorAddress">Address</label>
+              <textarea
+                id="vendorAddress"
+                formControlName="address"
+                rows="2"
+                class="form-control"
+                placeholder="Office / Street, Building, City, Country..."
+              ></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="vendorCurrency" class="required">Currency</label>
+                <select id="vendorCurrency" formControlName="currencyCode" class="form-control">
+                  <option value="AED">AED - UAE Dirham</option>
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="SAR">SAR - Saudi Riyal</option>
+                </select>
+              </div>
+
+              <div class="form-group col-md-4">
+                <label for="vendorTerms" class="required">Payment Terms (Days)</label>
+                <input
+                  type="number"
+                  id="vendorTerms"
+                  formControlName="paymentTermsDays"
+                  class="form-control"
+                  min="0"
+                />
+              </div>
+
+              <div class="form-group col-md-4">
+                <label for="apAccountId" class="required">AP GL Account</label>
+                <select id="apAccountId" formControlName="apAccountId" class="form-control">
+                  <option [ngValue]="null">-- Select AP Account --</option>
+                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                    {{ acc.code }} - {{ acc.name }}
+                  </option>
+                </select>
+                <span *ngIf="vendorForm.get('apAccountId')?.touched && vendorForm.get('apAccountId')?.invalid" class="field-error">
+                  Accounts Payable account is required.
+                </span>
+              </div>
+            </div>
+
+            <div class="form-check mt-2">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="isActive" />
+                <span>Vendor is active and available for purchasing</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" (click)="closeVendorModal()" class="btn btn-outline">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="vendorForm.invalid">
+              {{ isEditMode ? 'Update Vendor' : 'Save Vendor' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open Bills Modal -->
+  <div *ngIf="showOpenBillsModal" class="modal-backdrop">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">Open Bills for {{ selectedVendorForBills?.name }}</h2>
+            <p class="text-muted text-sm">{{ selectedVendorForBills?.code }} | IBAN: {{ selectedVendorForBills?.bankIban || 'N/A' }}</p>
+          </div>
+          <button (click)="closeOpenBillsModal()" class="modal-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div *ngIf="loadingOpenBills" class="loading-state">
+            <div class="spinner"></div>
+            <p>Fetching open bills...</p>
+          </div>
+
+          <div *ngIf="!loadingOpenBills && openBills.length === 0" class="empty-state">
+            <p>No open or outstanding bills for this vendor. All bills are settled!</p>
+          </div>
+
+          <div *ngIf="!loadingOpenBills && openBills.length > 0" class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Bill #</th>
+                  <th>Vendor Inv #</th>
+                  <th>Bill Date</th>
+                  <th>Due Date</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-right">Paid</th>
+                  <th class="text-right">Balance Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let b of openBills">
+                  <td><strong>{{ b.billNo }}</strong></td>
+                  <td>{{ b.vendorInvoiceNo || '—' }}</td>
+                  <td>{{ b.billDate | date:'mediumDate' }}</td>
+                  <td>{{ b.dueDate | date:'mediumDate' }}</td>
+                  <td class="text-right">{{ b.total | number:'1.2-2' }} AED</td>
+                  <td class="text-right text-success">{{ b.amountPaid | number:'1.2-2' }} AED</td>
+                  <td class="text-right text-danger font-bold">{{ b.balanceDue | number:'1.2-2' }} AED</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeOpenBillsModal()" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

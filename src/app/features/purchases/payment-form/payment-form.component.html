@@ -1,0 +1,303 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">New Vendor Payment</h1>
+      <p class="page-subtitle">Disburse supplier payments, allocate against open bills (oldest first), and post to General Ledger</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/purchases/bills" class="btn btn-outline">Back to Bills</a>
+    </div>
+  </div>
+
+  <form [formGroup]="paymentForm" (ngSubmit)="submitPayment()">
+    <!-- Payment Header Card -->
+    <div class="form-card">
+      <h3 class="card-title">Payment Header</h3>
+
+      <div class="form-row">
+        <!-- Vendor Picker -->
+        <div class="form-group col-md-6">
+          <label for="vendorId" class="required">Vendor / Supplier</label>
+          <select
+            id="vendorId"
+            formControlName="vendorId"
+            (change)="onVendorChange($event)"
+            class="form-control"
+          >
+            <option [ngValue]="null">-- Select Vendor --</option>
+            <option *ngFor="let v of vendors" [value]="v.id">
+              {{ v.code }} - {{ v.name }}
+            </option>
+          </select>
+          <span *ngIf="paymentForm.get('vendorId')?.touched && paymentForm.get('vendorId')?.invalid" class="field-error">
+            Please select a vendor.
+          </span>
+
+          <!-- Vendor Info Callout -->
+          <div *ngIf="selectedVendor" class="vendor-info-box mt-2">
+            <div class="info-item">
+              <span class="info-label">TRN:</span>
+              <span class="info-value font-mono">{{ selectedVendor.trn || 'Non-registered' }}</span>
+            </div>
+            <div class="info-item" *ngIf="selectedVendor.bankIban">
+              <span class="info-label">Bank IBAN:</span>
+              <span class="info-value font-mono text-primary">{{ selectedVendor.bankIban }}</span>
+            </div>
+            <div class="info-item" *ngIf="selectedVendor.address">
+              <span class="info-label">Address:</span>
+              <span class="info-value">{{ selectedVendor.address }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Date -->
+        <div class="form-group col-md-3">
+          <label for="paymentDate" class="required">Payment Date</label>
+          <input
+            type="date"
+            id="paymentDate"
+            formControlName="paymentDate"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Currency -->
+        <div class="form-group col-md-3">
+          <label for="currencyCode" class="required">Currency</label>
+          <input
+            type="text"
+            id="currencyCode"
+            formControlName="currencyCode"
+            readonly
+            class="form-control bg-readonly"
+          />
+        </div>
+      </div>
+
+      <div class="form-row mt-2">
+        <!-- Disbursing Bank Account -->
+        <div class="form-group col-md-4">
+          <label for="bankAccountId" class="required">Disbursing Bank / Cash Account</label>
+          <select id="bankAccountId" formControlName="bankAccountId" class="form-control">
+            <option [ngValue]="null">-- Select Bank Account --</option>
+            <option *ngFor="let b of bankAccounts" [value]="b.id">
+              {{ b.name }} ({{ b.accountNumber }}) - {{ b.currencyCode }}
+            </option>
+          </select>
+          <span *ngIf="paymentForm.get('bankAccountId')?.touched && paymentForm.get('bankAccountId')?.invalid" class="field-error">
+            Disbursing bank account is required.
+          </span>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="form-group col-md-3">
+          <label for="paymentMethod" class="required">Payment Method</label>
+          <select id="paymentMethod" formControlName="paymentMethod" class="form-control">
+            <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
+          </select>
+        </div>
+
+        <!-- Reference / Cheque No -->
+        <div class="form-group col-md-2">
+          <label for="reference">Reference / Cheque #</label>
+          <input
+            type="text"
+            id="reference"
+            formControlName="reference"
+            placeholder="e.g. TR-2026-99"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Amount Disbursed -->
+        <div class="form-group col-md-3">
+          <label for="amount" class="required">Amount Disbursed</label>
+          <div class="input-with-currency">
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              id="amount"
+              formControlName="amount"
+              placeholder="0.00"
+              class="form-control text-right font-bold"
+              [ngClass]="{'is-invalid': paymentForm.get('amount')?.touched && paymentForm.get('amount')?.invalid}"
+            />
+            <span class="currency-affix">{{ paymentForm.get('currencyCode')?.value }}</span>
+          </div>
+          <span *ngIf="paymentForm.get('amount')?.touched && paymentForm.get('amount')?.invalid" class="field-error">
+            Valid disbursement amount is required (> 0).
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open Bills Allocation Card -->
+    <div class="form-card mt-3">
+      <div class="card-header-flex">
+        <div>
+          <h3 class="card-title">Open Vendor Bills & Settlement Allocation</h3>
+          <p class="card-subtitle">Oldest-first auto-allocation enabled. You can manually adjust allocation amounts per bill.</p>
+        </div>
+        <div class="alloc-buttons" *ngIf="openBills.length > 0">
+          <button type="button" (click)="autoAllocateOldestFirst()" class="btn btn-outline btn-sm">
+            ⚡ Auto Allocate (Oldest First)
+          </button>
+          <button type="button" (click)="clearAllocations()" class="btn btn-outline btn-sm ml-1">
+            Clear Allocations
+          </button>
+        </div>
+      </div>
+
+      <!-- State: No Vendor Selected -->
+      <div *ngIf="!selectedVendor" class="empty-state">
+        <p>Please select a vendor above to load open bills and payables.</p>
+      </div>
+
+      <!-- State: Loading Bills -->
+      <div *ngIf="selectedVendor && loadingBills" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading open vendor bills...</p>
+      </div>
+
+      <!-- State: No Open Bills -->
+      <div *ngIf="selectedVendor && !loadingBills && openBills.length === 0" class="empty-state">
+        <p class="text-success font-medium">✓ No open bills found for this vendor. All bills are fully settled!</p>
+        <p class="text-muted text-sm mt-1">Any payment recorded now will be treated as an unapplied vendor advance.</p>
+      </div>
+
+      <!-- Open Bills Table -->
+      <div class="table-responsive mt-3" *ngIf="selectedVendor && !loadingBills && openBills.length > 0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Bill #</th>
+              <th>Vendor Inv #</th>
+              <th>Bill Date</th>
+              <th>Due Date</th>
+              <th class="text-right">Total (AED)</th>
+              <th class="text-right">Balance Due (AED)</th>
+              <th class="text-right" style="width: 170px;">Payment Amount</th>
+              <th class="text-center" style="width: 110px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let bill of openBills">
+              <td>
+                <span class="bill-number font-mono">{{ bill.billNo }}</span>
+              </td>
+              <td>
+                <span class="text-sm font-medium">{{ bill.vendorInvoiceNo || '-' }}</span>
+              </td>
+              <td>{{ bill.billDate | date:'mediumDate' }}</td>
+              <td>
+                <span>{{ bill.dueDate | date:'mediumDate' }}</span>
+              </td>
+              <td class="text-right font-mono">{{ bill.total | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold text-danger">{{ bill.balanceDue | number:'1.2-2' }}</td>
+              <td class="text-right">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  [max]="bill.balanceDue"
+                  [value]="bill.allocatedAmount"
+                  (input)="onManualAllocationChange(bill, $event)"
+                  class="form-control form-control-sm text-right font-mono font-bold"
+                  [ngClass]="{'border-success': bill.allocatedAmount > 0}"
+                />
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  (click)="togglePayFull(bill)"
+                  class="btn btn-outline btn-xs"
+                  [ngClass]="{'btn-success-active': bill.allocatedAmount === bill.balanceDue}"
+                >
+                  {{ bill.allocatedAmount === bill.balanceDue ? '✓ Paid Full' : 'Pay Full' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Allocation Warning -->
+      <div *ngIf="isOverAllocated" class="alert-box alert-danger mt-3">
+        ⚠️ Total allocated amount ({{ totalAllocated | number:'1.2-2' }} AED) exceeds total disbursement amount ({{ paymentAmount | number:'1.2-2' }} AED). Please adjust line allocations.
+      </div>
+
+      <!-- Summary & Auto Journal Preview Grid -->
+      <div class="bottom-grid mt-4">
+        <!-- Live Journal Entry Preview Panel -->
+        <div class="journal-preview-card">
+          <div class="preview-header">
+            <span class="preview-title">Auto-Generated Journal Entry Preview</span>
+            <span class="badge badge-info">GL Posting</span>
+          </div>
+          <div class="preview-body">
+            <div class="journal-line-preview">
+              <div class="account-side">
+                <span class="dr-tag">Dr</span>
+                <span class="account-name">2000 Accounts Payable - {{ selectedVendor?.name || 'Vendor' }}</span>
+              </div>
+              <div class="amount-side font-mono font-bold">
+                {{ paymentAmount | number:'1.2-2' }} AED
+              </div>
+            </div>
+
+            <div class="journal-line-preview">
+              <div class="account-side">
+                <span class="cr-tag">Cr</span>
+                <span class="account-name">{{ selectedBankAccount?.name || 'Selected Bank Account' }}</span>
+              </div>
+              <div class="amount-side font-mono font-bold">
+                {{ paymentAmount | number:'1.2-2' }} AED
+              </div>
+            </div>
+
+            <div class="narration-preview text-muted mt-2">
+              Narration: Supplier Payment {{ paymentForm.get('reference')?.value ? '(' + paymentForm.get('reference')?.value + ')' : '' }} via {{ paymentForm.get('paymentMethod')?.value }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Settlement Totals -->
+        <div class="totals-panel">
+          <div class="totals-row">
+            <span class="totals-label">Total Disbursed:</span>
+            <span class="totals-amount font-bold">{{ paymentAmount | number:'1.2-2' }} AED</span>
+          </div>
+
+          <div class="totals-row">
+            <span class="totals-label">Applied to Bills:</span>
+            <span class="totals-amount text-success font-medium">{{ totalAllocated | number:'1.2-2' }} AED</span>
+          </div>
+
+          <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount > 0}">
+            <span class="totals-label">Unapplied (Advance):</span>
+            <span class="totals-amount font-bold">{{ unappliedAmount | number:'1.2-2' }} AED</span>
+          </div>
+          <p *ngIf="unappliedAmount > 0" class="advance-subtext">
+            * Recorded as unapplied vendor advance debit balance for future bill settlements.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar mt-4">
+      <a routerLink="/purchases/bills" class="btn btn-outline">Cancel</a>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="submitting || paymentForm.invalid || isOverAllocated"
+      >
+        {{ submitting ? 'Posting Payment...' : 'Post Vendor Payment' }}
+      </button>
+    </div>
+  </form>
+</div>
+

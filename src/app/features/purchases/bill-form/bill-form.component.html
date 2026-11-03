@@ -1,0 +1,288 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">New Vendor Bill / Debit Note</h1>
+      <p class="page-subtitle">Record supplier payables, track vendor invoice references, calculate VAT, and post to General Ledger</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/purchases/bills" class="btn btn-outline">Back to Bills</a>
+    </div>
+  </div>
+
+  <form [formGroup]="billForm">
+    <!-- Bill Header Card -->
+    <div class="form-card">
+      <h3 class="card-title">Bill & Supplier Details</h3>
+
+      <div class="form-row">
+        <!-- Vendor Picker -->
+        <div class="form-group col-md-6">
+          <label for="vendorId" class="required">Vendor / Supplier</label>
+          <select
+            id="vendorId"
+            formControlName="vendorId"
+            (change)="onVendorSelect($event)"
+            class="form-control"
+          >
+            <option [ngValue]="null">-- Select Vendor --</option>
+            <option *ngFor="let v of vendors" [value]="v.id">
+              {{ v.code }} - {{ v.name }}
+            </option>
+          </select>
+          <span *ngIf="billForm.get('vendorId')?.touched && billForm.get('vendorId')?.invalid" class="field-error">
+            Vendor selection is required.
+          </span>
+
+          <!-- Vendor Info Callout -->
+          <div *ngIf="selectedVendor" class="vendor-info-box mt-2">
+            <div class="info-item">
+              <span class="info-label">TRN:</span>
+              <span class="info-value font-mono">{{ selectedVendor.trn || 'Non-registered' }}</span>
+            </div>
+            <div class="info-item" *ngIf="selectedVendor.address">
+              <span class="info-label">Address:</span>
+              <span class="info-value">{{ selectedVendor.address }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Terms & Bank IBAN:</span>
+              <span class="info-value">
+                {{ selectedVendor.paymentTermsDays }} Days
+                <span *ngIf="selectedVendor.bankIban" class="iban-text"> | IBAN: {{ selectedVendor.bankIban }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vendor Invoice Number -->
+        <div class="form-group col-md-3">
+          <label for="vendorInvoiceNo" class="required">Vendor Invoice #</label>
+          <input
+            type="text"
+            id="vendorInvoiceNo"
+            formControlName="vendorInvoiceNo"
+            placeholder="e.g. INV-2026-889"
+            class="form-control"
+          />
+          <span *ngIf="billForm.get('vendorInvoiceNo')?.touched && billForm.get('vendorInvoiceNo')?.invalid" class="field-error">
+            Vendor invoice number is required for audit trail.
+          </span>
+        </div>
+
+        <!-- Document Type -->
+        <div class="form-group col-md-3">
+          <label for="docType" class="required">Document Type</label>
+          <select id="docType" formControlName="docType" class="form-control">
+            <option value="BILL">Vendor Bill</option>
+            <option value="DEBIT_NOTE">Debit Note</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row mt-2">
+        <!-- Bill Date -->
+        <div class="form-group col-md-3">
+          <label for="billDate" class="required">Bill Date</label>
+          <input
+            type="date"
+            id="billDate"
+            formControlName="billDate"
+            (change)="onBillDateOrTermsChange()"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Payment Terms Days -->
+        <div class="form-group col-md-3">
+          <label for="paymentTermsDays" class="required">Payment Terms (Days)</label>
+          <input
+            type="number"
+            id="paymentTermsDays"
+            formControlName="paymentTermsDays"
+            (input)="onBillDateOrTermsChange()"
+            min="0"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Due Date -->
+        <div class="form-group col-md-3">
+          <label for="dueDate" class="required">Due Date</label>
+          <input
+            type="date"
+            id="dueDate"
+            formControlName="dueDate"
+            class="form-control"
+          />
+        </div>
+
+        <!-- Currency -->
+        <div class="form-group col-md-3">
+          <label for="currencyCode" class="required">Currency</label>
+          <select id="currencyCode" formControlName="currencyCode" class="form-control">
+            <option value="AED">AED - UAE Dirham</option>
+            <option value="USD">USD - US Dollar</option>
+            <option value="EUR">EUR - Euro</option>
+            <option value="GBP">GBP - British Pound</option>
+            <option value="SAR">SAR - Saudi Riyal</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Line Items Card -->
+    <div class="form-card mt-3">
+      <div class="card-header-flex">
+        <h3 class="card-title">Expense Allocation & Line Items</h3>
+        <button type="button" (click)="addLine()" class="btn btn-outline btn-sm">
+          + Add Line Item
+        </button>
+      </div>
+
+      <div class="table-responsive mt-2">
+        <table class="lines-table" formArrayName="lines">
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th style="width: 32%;">Item Description *</th>
+              <th style="width: 26%;">Expense / Asset Account *</th>
+              <th style="width: 10%;">Qty *</th>
+              <th style="width: 12%;">Unit Price *</th>
+              <th style="width: 12%;">Tax Rate</th>
+              <th style="width: 8%;" class="text-right">VAT</th>
+              <th style="width: 10%;" class="text-right">Total (AED)</th>
+              <th style="width: 40px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of linesArray.controls; let i = index" [formGroupName]="i">
+              <td class="text-muted">{{ i + 1 }}</td>
+              <td>
+                <input
+                  type="text"
+                  formControlName="description"
+                  placeholder="e.g. Server hosting, Office supplies, Inventory..."
+                  class="form-control form-control-sm"
+                />
+              </td>
+              <td>
+                <select formControlName="accountId" class="form-control form-control-sm">
+                  <option [ngValue]="null">-- Select Expense Account --</option>
+                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                    {{ acc.code }} - {{ acc.name }}
+                  </option>
+                </select>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="quantity"
+                  step="0.01"
+                  min="0.0001"
+                  class="form-control form-control-sm text-right"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="unitPrice"
+                  step="0.01"
+                  min="0"
+                  class="form-control form-control-sm text-right"
+                />
+              </td>
+              <td>
+                <select formControlName="taxRateId" class="form-control form-control-sm">
+                  <option [ngValue]="null">0% - None / Out of Scope</option>
+                  <option *ngFor="let tr of taxRates" [value]="tr.id">
+                    {{ tr.rate }}% - {{ tr.name }}
+                  </option>
+                </select>
+              </td>
+              <td class="text-right font-mono text-sm">
+                {{ getLineCalculatedValues(i).taxAmount | number:'1.2-2' }}
+              </td>
+              <td class="text-right font-mono font-bold text-sm">
+                {{ getLineCalculatedValues(i).lineTotal | number:'1.2-2' }}
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  (click)="removeLine(i)"
+                  [disabled]="linesArray.length <= 1"
+                  class="btn-icon-danger"
+                  title="Remove Line"
+                >
+                  ✕
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Notes & Totals Section -->
+    <div class="bottom-grid mt-3">
+      <!-- Notes & Instructions -->
+      <div class="form-card">
+        <h4 class="card-title">Bill Notes & Remarks</h4>
+        <div class="form-group mt-2">
+          <textarea
+            formControlName="notes"
+            rows="4"
+            placeholder="Enter any internal notes, supplier reference notes, or matching PO numbers..."
+            class="form-control"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Live Calculated Totals Card -->
+      <div class="form-card totals-card">
+        <h4 class="card-title">Payable Summary</h4>
+        <div class="summary-breakdown mt-2">
+          <div class="summary-row">
+            <span class="summary-label">Subtotal (Net):</span>
+            <span class="summary-val font-mono">{{ totals.subtotal | number:'1.2-2' }} AED</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Input VAT (5%):</span>
+            <span class="summary-val font-mono">{{ totals.taxTotal | number:'1.2-2' }} AED</span>
+          </div>
+          <div class="summary-row summary-grand">
+            <span class="summary-label">Total Payable:</span>
+            <span class="summary-val font-mono">{{ totals.total | number:'1.2-2' }} AED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky Action Footer -->
+    <div class="form-footer mt-3">
+      <div class="footer-left">
+        <a routerLink="/purchases/bills" class="btn btn-outline">Cancel</a>
+      </div>
+      <div class="footer-right">
+        <button
+          type="button"
+          (click)="saveDraft()"
+          [disabled]="saving"
+          class="btn btn-secondary"
+        >
+          <span *ngIf="saving">Saving...</span>
+          <span *ngIf="!saving">Save as Draft</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="approveBill()"
+          [disabled]="saving"
+          class="btn btn-primary"
+        >
+          <span *ngIf="saving">Posting to GL...</span>
+          <span *ngIf="!saving">Approve & Post to GL</span>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

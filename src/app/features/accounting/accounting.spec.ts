@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { describe, expect, it } from 'vitest';
 import { balancedLinesValidator } from './validators/balanced-lines.validator';

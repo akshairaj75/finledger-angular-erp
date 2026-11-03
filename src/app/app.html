@@ -22,7 +22,43 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-section-title">General Ledger</div>
+      <div class="nav-section-title">Sales & Accounts Receivable</div>
+      <a routerLink="/sales/invoices" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🧾</span>
+        <span class="nav-label">Sales Invoices</span>
+      </a>
+      <a routerLink="/sales/invoices/new" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">New Tax Invoice</span>
+      </a>
+      <a routerLink="/sales/receipts/new" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💳</span>
+        <span class="nav-label">Customer Receipts</span>
+      </a>
+      <a routerLink="/sales/customers" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Customer Accounts</span>
+      </a>
+
+      <div class="nav-section-title mt-3">Purchases & Accounts Payable</div>
+      <a routerLink="/purchases/bills" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📥</span>
+        <span class="nav-label">Vendor Bills</span>
+      </a>
+      <a routerLink="/purchases/bills/new" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">New Vendor Bill</span>
+      </a>
+      <a routerLink="/purchases/payments/new" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💸</span>
+        <span class="nav-label">Vendor Payments</span>
+      </a>
+      <a routerLink="/purchases/vendors" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏢</span>
+        <span class="nav-label">Vendor Accounts</span>
+      </a>
+
+      <div class="nav-section-title mt-3">General Ledger</div>
       <a routerLink="/accounting/journals" routerLinkActive="active" class="nav-item">
         <span class="nav-icon">📖</span>
         <span class="nav-label">Journal Entries</span>
