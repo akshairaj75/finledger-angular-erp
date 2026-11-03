@@ -1,0 +1,149 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h1 class="page-title">New Stock Transfer</h1>
+      <p class="page-subtitle">Transfer inventory between warehouses with in-transit tracking and live balance validation</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/inventory/items" class="btn btn-secondary">Cancel</a>
+      <button type="button" class="btn btn-secondary" [disabled]="saving || dispatching" (click)="saveDraft()">
+        {{ saving ? 'Saving...' : 'Save Draft' }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="saving || dispatching" (click)="saveAndDispatch()">
+        {{ dispatching ? 'Dispatching...' : 'Save & Dispatch' }}
+      </button>
+    </div>
+  </div>
+
+  <form [formGroup]="transferForm">
+    <!-- Header Card -->
+    <div class="card form-card">
+      <h3 class="card-title">Transfer Locations</h3>
+
+      <div class="form-grid">
+        <!-- Transfer Date -->
+        <div class="form-group">
+          <label class="form-label">Transfer Date <span class="required">*</span></label>
+          <input type="date" class="form-control" formControlName="transferDate" />
+        </div>
+
+        <!-- Source Warehouse -->
+        <div class="form-group">
+          <label class="form-label">From Warehouse (Source) <span class="required">*</span></label>
+          <select class="form-control" formControlName="fromWarehouseId">
+            <option [ngValue]="null" disabled>Select source warehouse...</option>
+            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+              {{ wh.code }} - {{ wh.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Destination Warehouse -->
+        <div class="form-group">
+          <label class="form-label">To Warehouse (Destination) <span class="required">*</span></label>
+          <select class="form-control" formControlName="toWarehouseId">
+            <option [ngValue]="null" disabled>Select destination warehouse...</option>
+            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+              {{ wh.code }} - {{ wh.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group mt-3">
+        <label class="form-label">Transfer Notes / Shipment Reference</label>
+        <textarea
+          class="form-control"
+          rows="2"
+          placeholder="Waybill number, driver details, or internal transfer justification..."
+          formControlName="notes"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Lines Table Card -->
+    <div class="card table-card">
+      <div class="card-header-bar">
+        <h3 class="card-title">Items to Transfer</h3>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">
+          + Add Item Line
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table data-table">
+          <thead>
+            <tr>
+              <th style="width: 35%">Item <span class="required">*</span></th>
+              <th class="text-right" style="width: 15%">Source Available</th>
+              <th class="text-right" style="width: 18%">Transfer Qty <span class="required">*</span></th>
+              <th class="text-right" style="width: 15%">Unit Cost</th>
+              <th class="text-right" style="width: 12%">Total Value</th>
+              <th style="width: 5%"></th>
+            </tr>
+          </thead>
+          <tbody formArrayName="lines">
+            <tr *ngFor="let line of linesArray.controls; let i = index" [formGroupName]="i">
+              <td>
+                <select class="form-control" formControlName="itemId" (change)="onItemSelect(i, $event)">
+                  <option [ngValue]="null" disabled>Select item...</option>
+                  <option *ngFor="let item of catalogItems" [ngValue]="item.id">
+                    {{ item.sku }} - {{ item.name }} ({{ item.unit }})
+                  </option>
+                </select>
+              </td>
+              <td class="text-right font-medium text-muted">
+                {{ line.get('availableQty')?.value | number:'1.0-2' }}
+              </td>
+              <td class="text-right">
+                <input
+                  type="number"
+                  class="form-control text-right qty-input"
+                  min="0.0001"
+                  step="1"
+                  formControlName="quantity"
+                />
+                <div *ngIf="isLineOverAvailable(i)" class="stock-warning">
+                  ⚠️ Exceeds available stock ({{ getLineAvailableQty(i) }})
+                </div>
+              </td>
+              <td class="text-right text-muted">
+                {{ line.get('unitCost')?.value | currency:'AED ':'symbol':'1.2-4' }}
+              </td>
+              <td class="text-right font-bold">
+                {{ getLineTotalCost(i) | currency:'AED ':'symbol':'1.2-2' }}
+              </td>
+              <td class="text-center">
+                <button type="button" class="btn-remove" (click)="removeLine(i)">&times;</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Transfer Summary Card -->
+    <div class="card summary-card" *ngIf="linesArray.length > 0">
+      <div class="summary-columns">
+        <div class="summary-col">
+          <span class="summary-label">Total SKUs</span>
+          <span class="summary-val">{{ linesArray.length }}</span>
+        </div>
+        <div class="summary-col">
+          <span class="summary-label">Total Units</span>
+          <span class="summary-val">{{ totalItemsCount | number:'1.0-2' }}</span>
+        </div>
+        <div class="summary-col">
+          <span class="summary-label">Total Transfer Value</span>
+          <span class="summary-val font-bold text-blue">
+            {{ totalTransferValue | currency:'AED ':'symbol':'1.2-2' }}
+          </span>
+        </div>
+      </div>
+      <div class="stock-impact-note">
+        ℹ️ Stock will be credited out of source warehouse upon dispatch (in-transit status) and added to destination warehouse upon confirmation of delivery receipt.
+      </div>
+    </div>
+  </form>
+</div>

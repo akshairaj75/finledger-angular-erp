@@ -1,0 +1,312 @@
+<div class="page-container">
+  <!-- Header Bar -->
+  <div class="page-header">
+    <div class="header-titles">
+      <h1 class="page-title">Inventory & Stock Overview</h1>
+      <p class="page-subtitle">Real-time stock valuation, multi-warehouse on-hand levels, and movements ledger</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/inventory/transfers/new" class="btn btn-secondary">
+        <span class="btn-icon">⇄</span> Stock Transfer
+      </a>
+      <a routerLink="/inventory/adjustments/new" class="btn btn-primary">
+        <span class="btn-icon">⚖️</span> Stock Adjustment
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon-wrap bg-blue">💰</div>
+      <div class="kpi-content">
+        <span class="kpi-label">Total Stock Value</span>
+        <span class="kpi-value">{{ kpis.totalStockValue | currency:'AED ':'symbol':'1.2-2' }}</span>
+        <span class="kpi-sub">Across all warehouses</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-wrap bg-indigo">📦</div>
+      <div class="kpi-content">
+        <span class="kpi-label">Active SKUs</span>
+        <span class="kpi-value">{{ kpis.activeSkus }}</span>
+        <span class="kpi-sub">Catalog inventory items</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" [class.highlight-warning]="kpis.lowStockCount > 0">
+      <div class="kpi-icon-wrap bg-orange">⚠️</div>
+      <div class="kpi-content">
+        <span class="kpi-label">Below Reorder Level</span>
+        <span class="kpi-value text-orange">{{ kpis.lowStockCount }}</span>
+        <span class="kpi-sub">Needs replenishment</span>
+      </div>
+    </div>
+
+    <div class="kpi-card" [class.highlight-danger]="kpis.outOfStockCount > 0">
+      <div class="kpi-icon-wrap bg-red">🚫</div>
+      <div class="kpi-content">
+        <span class="kpi-label">Out of Stock</span>
+        <span class="kpi-value text-red">{{ kpis.outOfStockCount }}</span>
+        <span class="kpi-sub">Zero available quantity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Control Bar -->
+  <div class="card filter-card">
+    <div class="filter-row">
+      <!-- Search -->
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Search by SKU, barcode, or item name..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+        />
+      </div>
+
+      <!-- Warehouse Filter -->
+      <div class="filter-select-wrap">
+        <select class="form-control" [(ngModel)]="selectedWarehouseId" (change)="onFilterChange()">
+          <option [ngValue]="null">All Warehouses</option>
+          <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{ wh.code }} - {{ wh.name }}</option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="filter-select-wrap">
+        <select class="form-control" [(ngModel)]="selectedCategoryId" (change)="onFilterChange()">
+          <option [ngValue]="null">All Categories</option>
+          <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
+        </select>
+      </div>
+
+      <!-- Status Pills -->
+      <div class="status-pills">
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="selectedStatus === 'ALL'"
+          (click)="onStatusFilter('ALL')"
+        >
+          All
+        </button>
+        <button
+          type="button"
+          class="pill-btn pill-success"
+          [class.active]="selectedStatus === 'IN_STOCK'"
+          (click)="onStatusFilter('IN_STOCK')"
+        >
+          In Stock
+        </button>
+        <button
+          type="button"
+          class="pill-btn pill-warning"
+          [class.active]="selectedStatus === 'LOW_STOCK'"
+          (click)="onStatusFilter('LOW_STOCK')"
+        >
+          Low Stock
+        </button>
+        <button
+          type="button"
+          class="pill-btn pill-danger"
+          [class.active]="selectedStatus === 'OUT_OF_STOCK'"
+          (click)="onStatusFilter('OUT_OF_STOCK')"
+        >
+          Out of Stock
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Data Table -->
+  <div class="card table-card">
+    <div class="table-responsive" *ngIf="!loading; else loadingTpl">
+      <table class="table data-table" *ngIf="filteredList.length > 0; else emptyTpl">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th>Warehouses</th>
+            <th class="text-right">On Hand</th>
+            <th class="text-right">Reorder Lvl</th>
+            <th class="text-right">Avg Cost</th>
+            <th class="text-right">Stock Value</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Ledger</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let item of filteredList"
+            class="clickable-row"
+            (click)="openLedger(item)"
+          >
+            <td>
+              <span class="sku-tag">{{ item.sku }}</span>
+            </td>
+            <td>
+              <div class="item-name-cell">
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-unit">{{ item.unit }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="text-muted">{{ item.categoryName || 'Uncategorized' }}</span>
+            </td>
+            <td>
+              <div class="wh-chips">
+                <span
+                  *ngFor="let entry of getWarehouseEntries(item.whQuantities)"
+                  class="wh-chip"
+                >
+                  <strong>{{ entry[0] }}:</strong> {{ entry[1] | number:'1.0-2' }}
+                </span>
+                <span *ngIf="getWarehouseEntries(item.whQuantities).length === 0" class="text-muted text-sm">
+                  None
+                </span>
+              </div>
+            </td>
+            <td class="text-right">
+              <span class="qty-badge" [class.qty-zero]="item.totalOnHand <= 0">
+                {{ item.totalOnHand | number:'1.0-2' }}
+              </span>
+            </td>
+            <td class="text-right text-muted">
+              {{ item.reorderLevel | number:'1.0-2' }}
+            </td>
+            <td class="text-right">
+              {{ item.avgCost | currency:'AED ':'symbol':'1.2-4' }}
+            </td>
+            <td class="text-right font-medium">
+              {{ item.totalStockValue | currency:'AED ':'symbol':'1.2-2' }}
+            </td>
+            <td class="text-center">
+              <span class="badge" [ngClass]="getStatusBadgeClass(item.status)">
+                {{ getStatusLabel(item.status) }}
+              </span>
+            </td>
+            <td class="text-center" (click)="$event.stopPropagation()">
+              <button
+                type="button"
+                class="btn-icon-action"
+                title="View stock movement history"
+                (click)="openLedger(item)"
+              >
+                📜
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #loadingTpl>
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading inventory stock summary...</span>
+      </div>
+    </ng-template>
+
+    <ng-template #emptyTpl>
+      <div class="empty-state">
+        <span class="empty-icon">📦</span>
+        <h3>No inventory items found</h3>
+        <p class="text-muted">Adjust your search or filter parameters to find stock positions.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Stock Ledger Modal / Drawer -->
+<div class="modal-backdrop" *ngIf="selectedItem" (click)="closeLedger()">
+  <div class="modal-container ledger-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-title">Stock Movement Ledger</h2>
+        <p class="modal-subtitle">
+          Item: <strong>{{ selectedItem.sku }}</strong> - {{ selectedItem.name }} (Unit: {{ selectedItem.unit }})
+        </p>
+      </div>
+      <button type="button" class="btn-close" (click)="closeLedger()">&times;</button>
+    </div>
+
+    <!-- Modal Filter Bar -->
+    <div class="modal-filters">
+      <div class="date-filter">
+        <label>From Date:</label>
+        <input type="date" class="form-control" [(ngModel)]="movementsFromDate" (change)="filterLedgerDates()" />
+      </div>
+      <div class="date-filter">
+        <label>To Date:</label>
+        <input type="date" class="form-control" [(ngModel)]="movementsToDate" (change)="filterLedgerDates()" />
+      </div>
+      <div class="balance-summary">
+        <span>Current On-Hand: <strong>{{ selectedItem.totalOnHand }} {{ selectedItem.unit }}</strong></span>
+        <span>Avg Cost: <strong>{{ selectedItem.avgCost | currency:'AED ' }}</strong></span>
+      </div>
+    </div>
+
+    <!-- Movement Ledger Table -->
+    <div class="modal-body table-responsive">
+      <div *ngIf="loadingMovements" class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading movement ledger...</span>
+      </div>
+
+      <table class="table data-table" *ngIf="!loadingMovements && movements.length > 0">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Type</th>
+            <th>Warehouse</th>
+            <th>Source Document</th>
+            <th class="text-right">Qty</th>
+            <th class="text-right">Unit Cost</th>
+            <th class="text-right">Total Cost</th>
+            <th class="text-right">Running Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of movements">
+            <td class="text-sm">{{ m.movementDate }}</td>
+            <td>
+              <span class="badge" [ngClass]="getMovementBadgeClass(m.movementType)">
+                {{ m.movementType }}
+              </span>
+            </td>
+            <td>
+              <span class="wh-tag">{{ m.warehouseCode }}</span>
+            </td>
+            <td class="text-sm text-muted">
+              {{ m.sourceType }} #{{ m.sourceId }}
+            </td>
+            <td class="text-right font-medium" [class.text-green]="m.quantity > 0" [class.text-red]="m.quantity < 0">
+              {{ m.quantity > 0 ? '+' : '' }}{{ m.quantity | number:'1.0-2' }}
+            </td>
+            <td class="text-right">{{ m.unitCost | currency:'AED ':'symbol':'1.2-4' }}</td>
+            <td class="text-right">{{ m.totalCost | currency:'AED ':'symbol':'1.2-2' }}</td>
+            <td class="text-right font-bold running-balance">
+              {{ m.balanceQty | number:'1.0-2' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="!loadingMovements && movements.length === 0" class="empty-state">
+        <span class="empty-icon">📜</span>
+        <p class="text-muted">No stock movements recorded for this item in the selected period.</p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeLedger()">Close</button>
+    </div>
+  </div>
+</div>
+

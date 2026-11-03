@@ -4,10 +4,12 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } fr
 import { Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
 import { Customer } from '../../../core/models/customer.model';
+import { Item, Warehouse } from '../../../core/models/inventory.model';
 import { InvoiceDocType, InvoiceLineRequest, InvoiceRequest } from '../../../core/models/invoice.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AccountService } from '../../accounting/services/account.service';
+import { InventoryService } from '../../inventory/services/inventory.service';
 import { CustomerService } from '../services/customer.service';
 import { InvoiceService } from '../services/invoice.service';
 import { TaxRateService } from '../services/tax-rate.service';
@@ -27,6 +29,7 @@ export class InvoiceFormComponent implements OnInit {
   private invoiceService = inject(InvoiceService);
   private taxRateService = inject(TaxRateService);
   private accountService = inject(AccountService);
+  private inventoryService = inject(InventoryService);
   private notificationService = inject(NotificationService);
 
   invoiceForm!: FormGroup;
@@ -35,6 +38,9 @@ export class InvoiceFormComponent implements OnInit {
   selectedCustomer: Customer | null = null;
   taxRates: TaxRate[] = [];
   accounts: Account[] = [];
+  warehouses: Warehouse[] = [];
+  catalogItems: Item[] = [];
+  stockBalances: Map<string, number> = new Map();
 
   loadingData = true;
   saving = false;
@@ -59,6 +65,7 @@ export class InvoiceFormComponent implements OnInit {
     this.invoiceForm = this.fb.group({
       docType: ['INVOICE' as InvoiceDocType, [Validators.required]],
       customerId: [null, [Validators.required]],
+      warehouseId: [null],
       invoiceDate: [today, [Validators.required]],
       paymentTermsDays: [30, [Validators.required, Validators.min(0)]],
       dueDate: [defaultDueDate, [Validators.required]],
@@ -66,6 +73,10 @@ export class InvoiceFormComponent implements OnInit {
       exchangeRate: [1.0, [Validators.required, Validators.min(0.000001)]],
       notes: ['Thank you for your business. Payment is due within agreed terms.'],
       lines: this.fb.array([])
+    });
+
+    this.invoiceForm.get('warehouseId')?.valueChanges.subscribe(() => {
+      this.refreshAllLineStock();
     });
 
     // Add first line by default
@@ -102,6 +113,24 @@ export class InvoiceFormComponent implements OnInit {
     this.accountService.getAccounts(0, 200).subscribe({
       next: page => {
         this.accounts = page.content;
+      }
+    });
+
+    // Load warehouses
+    this.inventoryService.getWarehouses().subscribe({
+      next: whs => {
+        this.warehouses = whs;
+        const defaultWh = whs.find(w => w.isDefault) || (whs.length > 0 ? whs[0] : null);
+        if (defaultWh) {
+          this.invoiceForm.patchValue({ warehouseId: defaultWh.id });
+        }
+      }
+    });
+
+    // Load inventory catalog items
+    this.inventoryService.getItems({ active: true, size: 500 }).subscribe({
+      next: page => {
+        this.catalogItems = page.content;
         this.loadingData = false;
       },
       error: () => {
@@ -117,6 +146,7 @@ export class InvoiceFormComponent implements OnInit {
     const standardTax = this.taxRates.find(t => t.rate === 5.0 || t.code.includes('STANDARD'));
 
     return this.fb.group({
+      itemId: [null],
       description: ['', [Validators.required]],
       accountId: [revAcc ? revAcc.id : (this.accounts.length > 0 ? this.accounts[0].id : null), [Validators.required]],
       quantity: [1, [Validators.required, Validators.min(0.0001)]],
@@ -124,6 +154,82 @@ export class InvoiceFormComponent implements OnInit {
       discountPct: [0, [Validators.min(0), Validators.max(100)]],
       taxRateId: [standardTax ? standardTax.id : null]
     });
+  }
+
+  onItemSelect(index: number, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const itemId = Number(target.value);
+    const item = this.catalogItems.find(i => i.id === itemId);
+    const lineGroup = this.linesArray.at(index) as FormGroup;
+
+    if (item) {
+      lineGroup.patchValue({
+        description: item.name,
+        unitPrice: item.salesPrice || 0,
+        taxRateId: item.taxRateId ?? lineGroup.get('taxRateId')?.value,
+        accountId: item.incomeAccountId ?? lineGroup.get('accountId')?.value
+      });
+
+      this.fetchItemStock(item.id);
+    }
+  }
+
+  private fetchItemStock(itemId: number): void {
+    const whId = this.invoiceForm.get('warehouseId')?.value;
+    if (whId) {
+      this.inventoryService.getStockBalance(itemId, whId).subscribe({
+        next: bal => {
+          this.stockBalances.set(`${itemId}_${whId}`, bal.qtyOnHand);
+        },
+        error: () => {
+          this.stockBalances.set(`${itemId}_${whId}`, 0);
+        }
+      });
+    }
+  }
+
+  private refreshAllLineStock(): void {
+    for (let i = 0; i < this.linesArray.length; i++) {
+      const itemId = this.linesArray.at(i).get('itemId')?.value;
+      if (itemId) {
+        this.fetchItemStock(itemId);
+      }
+    }
+  }
+
+  getLineStockInfo(index: number): string | null {
+    const line = this.linesArray.at(index);
+    const itemId = line.get('itemId')?.value;
+    if (!itemId) return null;
+
+    const item = this.catalogItems.find(i => i.id === itemId);
+    if (!item || item.itemType !== 'INVENTORY') return null;
+
+    const whId = this.invoiceForm.get('warehouseId')?.value;
+    const wh = this.warehouses.find(w => w.id === whId);
+    const key = `${itemId}_${whId}`;
+    const avail = this.stockBalances.get(key) ?? 0;
+
+    return `Available: ${avail} ${item.unit} in ${wh ? wh.code : 'Warehouse'}`;
+  }
+
+  getLineStockWarning(index: number): string | null {
+    const line = this.linesArray.at(index);
+    const itemId = line.get('itemId')?.value;
+    if (!itemId) return null;
+
+    const item = this.catalogItems.find(i => i.id === itemId);
+    if (!item || item.itemType !== 'INVENTORY') return null;
+
+    const whId = this.invoiceForm.get('warehouseId')?.value;
+    const key = `${itemId}_${whId}`;
+    const avail = this.stockBalances.get(key) ?? 0;
+    const requested = Number(line.get('quantity')?.value || 0);
+
+    if (requested > avail) {
+      return `⚠️ Insufficient stock (Available: ${avail}, Requested: ${requested})`;
+    }
+    return null;
   }
 
   addLine(): void {
@@ -223,6 +329,8 @@ export class InvoiceFormComponent implements OnInit {
     const formVal = this.invoiceForm.value;
     const lines: InvoiceLineRequest[] = formVal.lines.map((l: any, idx: number) => ({
       lineNo: idx + 1,
+      itemId: l.itemId ? Number(l.itemId) : undefined,
+      warehouseId: formVal.warehouseId ? Number(formVal.warehouseId) : undefined,
       description: l.description.trim(),
       quantity: Number(l.quantity),
       unitPrice: Number(l.unitPrice),

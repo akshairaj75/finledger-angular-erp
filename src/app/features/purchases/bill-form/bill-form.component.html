@@ -127,6 +127,17 @@
             <option value="SAR">SAR - Saudi Riyal</option>
           </select>
         </div>
+
+        <!-- Destination Warehouse -->
+        <div class="form-group col-md-3">
+          <label for="warehouseId">Destination Warehouse</label>
+          <select id="warehouseId" formControlName="warehouseId" class="form-control">
+            <option [ngValue]="null">Default Company Warehouse</option>
+            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+              {{ wh.code }} - {{ wh.name }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -158,6 +169,16 @@
             <tr *ngFor="let line of linesArray.controls; let i = index" [formGroupName]="i">
               <td class="text-muted">{{ i + 1 }}</td>
               <td>
+                <select
+                  formControlName="itemId"
+                  (change)="onItemSelect(i, $event)"
+                  class="form-control mb-1 text-sm"
+                >
+                  <option [ngValue]="null">-- Select Catalog Item (Optional) --</option>
+                  <option *ngFor="let it of catalogItems" [ngValue]="it.id">
+                    {{ it.sku }} - {{ it.name }}
+                  </option>
+                </select>
                 <input
                   type="text"
                   formControlName="description"
@@ -181,6 +202,9 @@
                   min="0.0001"
                   class="form-control form-control-sm text-right"
                 />
+                <div *ngIf="getLineStockInfo(i)" class="stock-info-badge">
+                  {{ getLineStockInfo(i) }}
+                </div>
               </td>
               <td>
                 <input

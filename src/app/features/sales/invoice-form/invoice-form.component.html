@@ -122,6 +122,17 @@
             class="form-control"
           />
         </div>
+
+        <!-- Issue Warehouse -->
+        <div class="form-group col-md-3">
+          <label for="warehouseId">Issue Warehouse</label>
+          <select id="warehouseId" formControlName="warehouseId" class="form-control">
+            <option [ngValue]="null">Default Company Warehouse</option>
+            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+              {{ wh.code }} - {{ wh.name }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -156,6 +167,16 @@
 
               <!-- Description -->
               <td>
+                <select
+                  formControlName="itemId"
+                  (change)="onItemSelect(i, $event)"
+                  class="form-control mb-1 text-sm"
+                >
+                  <option [ngValue]="null">-- Select Catalog Item (Optional) --</option>
+                  <option *ngFor="let it of catalogItems" [ngValue]="it.id">
+                    {{ it.sku }} - {{ it.name }}
+                  </option>
+                </select>
                 <input
                   type="text"
                   formControlName="description"
@@ -189,6 +210,12 @@
                   class="form-control text-right"
                   [ngClass]="{'is-invalid': line.get('quantity')?.touched && line.get('quantity')?.invalid}"
                 />
+                <div *ngIf="getLineStockWarning(i)" class="stock-warning-badge">
+                  {{ getLineStockWarning(i) }}
+                </div>
+                <div *ngIf="getLineStockInfo(i) && !getLineStockWarning(i)" class="stock-info-badge">
+                  {{ getLineStockInfo(i) }}
+                </div>
               </td>
 
               <!-- Unit Price -->

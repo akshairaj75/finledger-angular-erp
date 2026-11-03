@@ -300,3 +300,27 @@
 .mt-3 { margin-top: 0.75rem; }
 .mt-4 { margin-top: 1rem; }
 
+.mb-1 { margin-bottom: 0.35rem; }
+
+.stock-warning-badge {
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  background-color: #fee2e2;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.35rem;
+  text-align: left;
+}
+
+.stock-info-badge {
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  background-color: #eff6ff;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.35rem;
+  text-align: left;
+}
+
