@@ -1,0 +1,486 @@
+<div class="opportunity-detail-page">
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Loading opportunity details...</span>
+  </div>
+
+  <div *ngIf="!loading && opportunity">
+    <!-- Breadcrumb & Top Bar -->
+    <div class="top-nav">
+      <nav class="breadcrumb">
+        <a routerLink="/crm/pipeline" class="breadcrumb-item">Sales Pipeline</a>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-current">{{ opportunity.opportunityNo }}</span>
+      </nav>
+      <div class="top-actions">
+        <button
+          type="button"
+          class="btn btn-outline btn-danger-text"
+          *ngIf="opportunity.stageName?.toLowerCase() !== 'lost'"
+          (click)="openMarkLostModal()"
+        >
+          <span>⚠️ Mark Lost</span>
+        </button>
+
+        <a
+          [routerLink]="['/crm/quotations/new']"
+          [queryParams]="{ opportunityId: opportunity.id, customerId: opportunity.customerId, leadId: opportunity.leadId }"
+          class="btn btn-outline"
+        >
+          <span>➕ Quotation</span>
+        </a>
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          *ngIf="!opportunity.customerId"
+          (click)="openConvertModal()"
+        >
+          <span>👥 Convert to Customer</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Header Banner -->
+    <div class="detail-header-card">
+      <div class="header-main-info">
+        <div class="title-row">
+          <h1 class="deal-title">{{ opportunity.title }}</h1>
+          <span class="stage-badge" [ngClass]="'badge-' + (opportunity.stageName || '').toLowerCase()">
+            {{ opportunity.stageName || 'Pipeline' }}
+          </span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-item">
+            <strong>Opp #:</strong> {{ opportunity.opportunityNo }}
+          </span>
+          <span class="meta-separator">•</span>
+          <span class="meta-item" *ngIf="opportunity.customerName">
+            <strong>Customer:</strong> {{ opportunity.customerName }}
+          </span>
+          <span class="meta-item" *ngIf="!opportunity.customerName && opportunity.leadId">
+            <span class="lead-tag">Unconverted Lead (ID: {{ opportunity.leadId }})</span>
+          </span>
+          <span class="meta-separator">•</span>
+          <span class="meta-item">
+            <strong>Owner:</strong> {{ opportunity.ownerUserName || 'Unassigned' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="header-deal-metrics">
+        <div class="deal-metric-box">
+          <span class="metric-label">Expected Value</span>
+          <span class="metric-value">{{ opportunity.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+        </div>
+        <div class="deal-metric-box">
+          <span class="metric-label">Probability</span>
+          <span class="metric-value">{{ opportunity.probabilityPct }}%</span>
+        </div>
+        <div class="deal-metric-box">
+          <span class="metric-label">Close Forecast</span>
+          <span class="metric-value">
+            {{ opportunity.expectedCloseDate ? (opportunity.expectedCloseDate | date:'dd-MMM-yyyy') : '—' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage Progress Bar (Section 4.4) -->
+    <div class="stage-stepper-card">
+      <div class="stepper-track">
+        <div
+          class="step-item"
+          *ngFor="let s of stages; let i = index"
+          [class.completed]="isStageCompleted(s)"
+          [class.current]="isStageCurrent(s)"
+          [class.won]="s.stageType === 'WON' && isStageCurrent(s)"
+          [class.lost]="s.stageType === 'LOST' && isStageCurrent(s)"
+          (click)="onStageClick(s)"
+          title="Click to advance stage to {{ s.name }}"
+        >
+          <div class="step-circle">
+            <span *ngIf="isStageCompleted(s)">✓</span>
+            <span *ngIf="!isStageCompleted(s)">{{ i + 1 }}</span>
+          </div>
+          <span class="step-label">{{ s.name }}</span>
+          <span class="step-prob" *ngIf="s.probabilityPct !== null">{{ s.probabilityPct }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Three-Panel Layout (Section 4.4) -->
+    <div class="three-panel-grid">
+      <!-- LEFT PANEL: Deal Details, Primary Contact, Linked Quotations -->
+      <div class="panel-left">
+        <!-- Deal Details Card -->
+        <div class="panel-card">
+          <h2 class="card-title">Deal Details</h2>
+          <div class="info-list">
+            <div class="info-row">
+              <span class="info-label">Expected Value:</span>
+              <span class="info-val font-bold">{{ opportunity.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Currency:</span>
+              <span class="info-val">{{ opportunity.currencyCode || 'AED' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Win Probability:</span>
+              <span class="info-val">{{ opportunity.probabilityPct }}%</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Expected Close:</span>
+              <span class="info-val">
+                {{ opportunity.expectedCloseDate ? (opportunity.expectedCloseDate | date:'dd-MMM-yyyy') : 'Not set' }}
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Sales Owner:</span>
+              <span class="info-val">{{ opportunity.ownerUserName || 'Unassigned' }}</span>
+            </div>
+            <div class="info-row" *ngIf="opportunity.lostReason">
+              <span class="info-label text-danger">Lost Reason:</span>
+              <span class="info-val text-danger">{{ opportunity.lostReason }}</span>
+            </div>
+            <div class="info-row" *ngIf="opportunity.closedAt">
+              <span class="info-label">Closed Date:</span>
+              <span class="info-val">{{ opportunity.closedAt | date:'dd-MMM-yyyy HH:mm' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Created At:</span>
+              <span class="info-val">{{ opportunity.createdAt ? (opportunity.createdAt | date:'dd-MMM-yyyy') : '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Primary Contact Card -->
+        <div class="panel-card">
+          <div class="card-title-row">
+            <h2 class="card-title">Primary Contact</h2>
+            <span class="badge-primary" *ngIf="opportunity.contactName">Primary</span>
+          </div>
+          <div *ngIf="opportunity.contactName" class="contact-details">
+            <div class="contact-avatar">
+              <span>{{ opportunity.contactName.charAt(0) }}</span>
+            </div>
+            <div class="contact-info">
+              <h3 class="contact-name">{{ opportunity.contactName }}</h3>
+              <div class="contact-links">
+                <a href="mailto:info@customer.com" class="contact-link">✉️ Send Email</a>
+                <a href="tel:+971501234567" class="contact-link">📞 Call</a>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="!opportunity.contactName" class="empty-notice">
+            <span>No primary contact attached.</span>
+          </div>
+        </div>
+
+        <!-- Linked Quotations Card -->
+        <div class="panel-card">
+          <div class="card-title-row">
+            <h2 class="card-title">Linked Quotations ({{ quotations.length }})</h2>
+            <a
+              [routerLink]="['/crm/quotations/new']"
+              [queryParams]="{ opportunityId: opportunity.id, customerId: opportunity.customerId }"
+              class="btn btn-xs btn-outline"
+            >
+              ➕ Quote
+            </a>
+          </div>
+
+          <div class="quotations-list" *ngIf="quotations.length > 0">
+            <div class="quote-item" *ngFor="let q of quotations">
+              <div class="quote-header">
+                <span class="quote-no">{{ q.quotationNo }}</span>
+                <span class="quote-status" [ngClass]="'status-' + q.status.toLowerCase()">
+                  {{ q.status }}
+                </span>
+              </div>
+              <div class="quote-meta">
+                <span>Date: {{ q.quoteDate | date:'dd-MMM-yyyy' }}</span>
+                <span class="font-bold">{{ q.total | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+              <!-- Convert to invoice if accepted -->
+              <div class="quote-actions mt-2" *ngIf="q.status === 'ACCEPTED' && !q.invoiceId">
+                <button
+                  type="button"
+                  class="btn btn-xs btn-primary"
+                  (click)="convertQuotationToInvoice(q)"
+                >
+                  ⚡ Convert to Invoice
+                </button>
+              </div>
+              <div class="quote-invoiced mt-1" *ngIf="q.invoiceId">
+                <span class="text-success text-xs">Invoiced: {{ q.invoiceNo || ('#' + q.invoiceId) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-notice" *ngIf="quotations.length === 0">
+            <span>No quotations linked yet. Click "+ Quote" to create one.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER PANEL: Activity Timeline & Quick-Log Buttons -->
+      <div class="panel-center">
+        <!-- Quick Log Action Bar (Section 4.4) -->
+        <div class="quick-log-card">
+          <span class="quick-log-label">Quick Log Activity:</span>
+          <div class="quick-log-buttons">
+            <button type="button" class="quick-btn btn-call" (click)="openQuickLog('CALL')">
+              <span>📞 Log Call</span>
+            </button>
+            <button type="button" class="quick-btn btn-meeting" (click)="openQuickLog('MEETING')">
+              <span>👥 Meeting</span>
+            </button>
+            <button type="button" class="quick-btn btn-email" (click)="openQuickLog('EMAIL')">
+              <span>✉️ Email</span>
+            </button>
+            <button type="button" class="quick-btn btn-note" (click)="openQuickLog('NOTE')">
+              <span>📝 Add Note</span>
+            </button>
+            <button type="button" class="quick-btn btn-task" (click)="openQuickLog('TASK')">
+              <span>⏱️ Follow-up Task</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Activity Timeline -->
+        <div class="timeline-card">
+          <h2 class="card-title">Activity Timeline</h2>
+
+          <div class="timeline-stream" *ngIf="timelineActivities.length > 0">
+            <div class="timeline-entry" *ngFor="let act of timelineActivities">
+              <div class="timeline-icon" [ngClass]="'icon-' + act.activityType.toLowerCase()">
+                <span *ngIf="act.activityType === 'CALL'">📞</span>
+                <span *ngIf="act.activityType === 'MEETING'">👥</span>
+                <span *ngIf="act.activityType === 'EMAIL'">✉️</span>
+                <span *ngIf="act.activityType === 'NOTE'">📝</span>
+                <span *ngIf="act.activityType === 'WHATSAPP'">💬</span>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span class="act-type-tag" [ngClass]="'tag-' + act.activityType.toLowerCase()">
+                    {{ act.activityType }}
+                  </span>
+                  <span class="act-subject">{{ act.subject }}</span>
+                  <span class="act-time">{{ act.createdAt | date:'dd-MMM-yyyy HH:mm' }}</span>
+                </div>
+                <p class="act-details" *ngIf="act.details">{{ act.details }}</p>
+                <div class="act-author" *ngIf="act.assignedUserName">
+                  <span>Logged by: {{ act.assignedUserName }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-notice py-4" *ngIf="timelineActivities.length === 0">
+            <span>No logged calls, meetings, or notes yet. Use the quick-log bar above!</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: Open Follow-up Tasks & Stage History -->
+      <div class="panel-right">
+        <!-- Open Follow-up Tasks Card -->
+        <div class="panel-card">
+          <div class="card-title-row">
+            <h2 class="card-title">Open Follow-up Tasks ({{ openTasks.length }})</h2>
+            <button type="button" class="btn btn-xs btn-outline" (click)="openQuickLog('TASK')">
+              ➕ Add Task
+            </button>
+          </div>
+
+          <div class="tasks-list" *ngIf="openTasks.length > 0">
+            <div class="task-item" *ngFor="let task of openTasks">
+              <input
+                type="checkbox"
+                class="task-check"
+                (change)="toggleTaskComplete(task)"
+                title="Mark task done"
+              />
+              <div class="task-info">
+                <span class="task-title">{{ task.subject }}</span>
+                <div class="task-meta">
+                  <span class="task-due" *ngIf="task.dueAt">
+                    Due: {{ task.dueAt | date:'dd-MMM-yyyy' }}
+                  </span>
+                  <span class="task-assignee" *ngIf="task.assignedUserName">
+                    · {{ task.assignedUserName }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="empty-notice" *ngIf="openTasks.length === 0">
+            <span>🎉 All caught up! No pending follow-up tasks.</span>
+          </div>
+
+          <!-- Completed Tasks accordion/toggle if any -->
+          <div class="completed-tasks-section mt-3" *ngIf="completedTasks.length > 0">
+            <span class="text-xs text-muted font-bold">COMPLETED ({{ completedTasks.length }})</span>
+            <div class="completed-task-row" *ngFor="let c of completedTasks">
+              <span class="check-done">✓</span>
+              <span class="done-text">{{ c.subject }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage History Card (Section 4.4) -->
+        <div class="panel-card">
+          <h2 class="card-title">Stage History</h2>
+          <div class="history-list">
+            <div class="history-item">
+              <span class="history-dot current"></span>
+              <div class="history-info">
+                <strong>Current: {{ opportunity.stageName || 'In Progress' }}</strong>
+                <span class="history-time">{{ (opportunity.closedAt || opportunity.createdAt) | date:'dd-MMM-yyyy HH:mm' }}</span>
+              </div>
+            </div>
+            <div class="history-item" *ngIf="opportunity.lostReason">
+              <span class="history-dot lost"></span>
+              <div class="history-info">
+                <strong class="text-danger">Lost Reason</strong>
+                <p class="history-desc text-danger">{{ opportunity.lostReason }}</p>
+              </div>
+            </div>
+            <div class="history-item">
+              <span class="history-dot"></span>
+              <div class="history-info">
+                <span>Deal Created</span>
+                <span class="history-time">{{ opportunity.createdAt ? (opportunity.createdAt | date:'dd-MMM-yyyy') : '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK LOG ACTIVITY MODAL -->
+  <div class="modal-backdrop" *ngIf="showActivityModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Log {{ activeLogType }}</h3>
+        <button type="button" class="close-btn" (click)="showActivityModal = false">&times;</button>
+      </div>
+      <form [formGroup]="activityForm" (ngSubmit)="saveActivity()">
+        <div class="modal-body">
+          <div class="form-group mb-3">
+            <label class="form-label required">Subject / Purpose</label>
+            <input
+              type="text"
+              class="form-control"
+              formControlName="subject"
+              placeholder="e.g. Discovery call with CFO, Quote discussion, Pricing follow-up"
+            />
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Notes & Outcome Details</label>
+            <textarea
+              class="form-control"
+              rows="4"
+              formControlName="details"
+              placeholder="Record details, customer questions, or agreed next steps..."
+            ></textarea>
+          </div>
+
+          <div class="form-group mb-3" *ngIf="activeLogType === 'TASK' || activeLogType === 'CALL' || activeLogType === 'MEETING'">
+            <label class="form-label">{{ activeLogType === 'TASK' ? 'Due Date & Time' : 'Activity Date & Time' }}</label>
+            <input type="datetime-local" class="form-control" formControlName="dueAt" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="showActivityModal = false">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingActivity || activityForm.invalid">
+            <span *ngIf="!savingActivity">Save Activity</span>
+            <span *ngIf="savingActivity">Saving...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MARK LOST MODAL -->
+  <div class="modal-backdrop" *ngIf="showLostModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">⚠️ Mark Opportunity as Lost</h3>
+        <button type="button" class="close-btn" (click)="showLostModal = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Please provide a reason why this deal was lost. This updates pipeline metrics and forecasting.
+        </p>
+        <div class="form-group mt-3">
+          <label class="form-label required">Lost Reason</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="lostReason"
+            placeholder="e.g. Competitor undercut price, client delayed budget to next fiscal year..."
+            autofocus
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="showLostModal = false">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          [disabled]="!lostReason.trim() || submittingLost"
+          (click)="confirmMarkLost()"
+        >
+          <span *ngIf="!submittingLost">Confirm Lost</span>
+          <span *ngIf="submittingLost">Updating...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONVERT TO CUSTOMER MODAL -->
+  <div class="modal-backdrop" *ngIf="showConvertModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">👥 Convert to Customer Account</h3>
+        <button type="button" class="close-btn" (click)="showConvertModal = false">&times;</button>
+      </div>
+      <form [formGroup]="convertForm" (ngSubmit)="confirmConvertToCustomer()">
+        <div class="modal-body">
+          <p class="text-sm text-muted mb-3">
+            Create an Accounts Receivable customer ledger account for this prospect to allow invoicing and quotation conversions.
+          </p>
+
+          <div class="form-group mb-3">
+            <label class="form-label required">Customer Code</label>
+            <input type="text" class="form-control" formControlName="customerCode" />
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label required">Customer Business Name</label>
+            <input type="text" class="form-control" formControlName="customerName" />
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Tax Registration Number (TRN)</label>
+            <input type="text" class="form-control" formControlName="trn" placeholder="15-digit UAE TRN" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="showConvertModal = false">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="convertingCustomer || convertForm.invalid">
+            <span *ngIf="!convertingCustomer">Create Customer</span>
+            <span *ngIf="convertingCustomer">Creating...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

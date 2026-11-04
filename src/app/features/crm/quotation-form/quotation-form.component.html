@@ -1,0 +1,309 @@
+<div class="quotation-page">
+  <!-- Top Navigation & Actions -->
+  <div class="header-section">
+    <div>
+      <div class="title-with-status">
+        <h1 class="page-title">
+          {{ currentQuotation ? ('Quotation ' + currentQuotation.quotationNo) : 'New Sales Quotation' }}
+        </h1>
+        <span
+          class="status-chip"
+          *ngIf="currentQuotation"
+          [ngClass]="'status-' + currentQuotation.status.toLowerCase()"
+        >
+          {{ currentQuotation.status }}
+        </span>
+      </div>
+      <p class="page-subtitle">Draft commercial proposals, reserve inventory on acceptance, and convert to sales invoices</p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Recent Quotes toggle -->
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="showRecentQuotes = !showRecentQuotes"
+      >
+        <span>📑 Quotations List</span>
+      </button>
+
+      <!-- PDF Download -->
+      <button
+        type="button"
+        class="btn btn-outline"
+        *ngIf="quoteId"
+        (click)="downloadPdf()"
+        title="Download official quotation PDF"
+      >
+        <span>📄 PDF</span>
+      </button>
+
+      <!-- Send Action -->
+      <button
+        type="button"
+        class="btn btn-outline"
+        *ngIf="quoteId && currentQuotation?.status === 'DRAFT'"
+        [disabled]="actionInProgress"
+        (click)="sendQuotation()"
+      >
+        <span>✉️ Send</span>
+      </button>
+
+      <!-- Accept Action -->
+      <button
+        type="button"
+        class="btn btn-success"
+        *ngIf="quoteId && (currentQuotation?.status === 'DRAFT' || currentQuotation?.status === 'SENT')"
+        [disabled]="actionInProgress"
+        (click)="acceptQuotation()"
+        title="Mark quotation accepted and reserve stock"
+      >
+        <span>✓ Accept (Reserve Stock)</span>
+      </button>
+
+      <!-- Convert to Invoice Action (Section 3.2, 4.3, 4.4) -->
+      <button
+        type="button"
+        class="btn btn-primary"
+        *ngIf="quoteId && currentQuotation?.status === 'ACCEPTED' && !currentQuotation?.invoiceId"
+        [disabled]="actionInProgress"
+        (click)="convertToInvoice()"
+        title="Convert accepted quote to a draft sales invoice"
+      >
+        <span>⚡ Convert to Invoice</span>
+      </button>
+
+      <!-- Save Button -->
+      <button
+        type="button"
+        class="btn btn-primary"
+        *ngIf="!currentQuotation || currentQuotation.status === 'DRAFT'"
+        [disabled]="saving"
+        (click)="saveQuotation()"
+      >
+        <span *ngIf="!saving">💾 Save Quotation</span>
+        <span *ngIf="saving">Saving...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Invoiced Banner -->
+  <div class="invoiced-banner mb-3" *ngIf="currentQuotation?.invoiceId">
+    <span>
+      🎉 This quotation has been converted to <strong>Sales Invoice {{ currentQuotation?.invoiceNo || ('#' + currentQuotation?.invoiceId) }}</strong>.
+    </span>
+    <a routerLink="/sales/invoices" class="btn btn-xs btn-primary ml-3">
+      View in Sales →
+    </a>
+  </div>
+
+  <!-- Main Quotation Form -->
+  <form [formGroup]="quotationForm" (ngSubmit)="saveQuotation()">
+    <!-- Header Details Card -->
+    <div class="form-card mb-4">
+      <h2 class="card-title">Quotation Details</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required">Customer / Prospect Account</label>
+          <select formControlName="customerId" class="form-control">
+            <option [ngValue]="null">-- Select Customer --</option>
+            <option *ngFor="let c of customers" [ngValue]="c.id">
+              {{ c.name }} ({{ c.code }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Linked Sales Opportunity</label>
+          <select formControlName="opportunityId" class="form-control">
+            <option [ngValue]="null">-- No Opportunity Linked --</option>
+            <option *ngFor="let opp of opportunities" [ngValue]="opp.id">
+              {{ opp.opportunityNo }} - {{ opp.title }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Quotation Date</label>
+          <input type="date" formControlName="quoteDate" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Valid Until (Expiry)</label>
+          <input type="date" formControlName="validUntil" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">Currency</label>
+          <input type="text" formControlName="currencyCode" class="form-control" readonly />
+        </div>
+      </div>
+    </div>
+
+    <!-- Line Items Table Card -->
+    <div class="form-card mb-4">
+      <div class="card-title-row">
+        <h2 class="card-title">Quotation Line Items</h2>
+        <button type="button" class="btn btn-sm btn-outline" (click)="addLine()">
+          <span>➕ Add Line Item</span>
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table line-table">
+          <thead>
+            <tr>
+              <th style="width: 45px;">#</th>
+              <th style="width: 250px;">Item / Product</th>
+              <th>Description</th>
+              <th style="width: 90px;">Qty</th>
+              <th style="width: 120px;">Unit Price (AED)</th>
+              <th style="width: 90px;">Disc %</th>
+              <th style="width: 110px;">Tax (VAT)</th>
+              <th style="width: 130px;" class="text-right">Line Total (AED)</th>
+              <th style="width: 50px;"></th>
+            </tr>
+          </thead>
+          <tbody formArrayName="lines">
+            <tr
+              *ngFor="let line of linesArray.controls; let i = index"
+              [formGroupName]="i"
+            >
+              <td class="text-muted">{{ i + 1 }}</td>
+              <td>
+                <select
+                  formControlName="itemId"
+                  (change)="onItemSelect(i, line.get('itemId')?.value)"
+                  class="form-control form-control-sm"
+                >
+                  <option [ngValue]="null">Custom / Non-Inventory</option>
+                  <option *ngFor="let it of items" [ngValue]="it.id">
+                    {{ it.sku }} - {{ it.name }}
+                  </option>
+                </select>
+              </td>
+              <td>
+                <input
+                  type="text"
+                  formControlName="description"
+                  class="form-control form-control-sm"
+                  placeholder="Line item description..."
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="quantity"
+                  class="form-control form-control-sm"
+                  min="0.0001"
+                  step="1"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="unitPrice"
+                  class="form-control form-control-sm"
+                  min="0"
+                  step="10"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  formControlName="discountPct"
+                  class="form-control form-control-sm"
+                  min="0"
+                  max="100"
+                />
+              </td>
+              <td>
+                <select formControlName="taxRateId" class="form-control form-control-sm">
+                  <option [ngValue]="null">Standard 5% VAT</option>
+                  <option *ngFor="let tr of taxRates" [ngValue]="tr.id">
+                    {{ tr.name }} ({{ tr.rate }}%)
+                  </option>
+                </select>
+              </td>
+              <td class="text-right font-bold">
+                {{ calculateLineNet(line) | currency:'AED':'symbol-narrow':'1.2-2' }}
+              </td>
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="btn-delete-line"
+                  (click)="removeLine(i)"
+                  title="Remove Line"
+                >
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Financial Totals Box -->
+      <div class="totals-section">
+        <div class="totals-box">
+          <div class="totals-row">
+            <span class="totals-label">Subtotal (Net):</span>
+            <span class="totals-value">{{ subtotal | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">VAT / Tax (5%):</span>
+            <span class="totals-value">{{ taxTotal | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+          </div>
+          <div class="totals-row grand-total-row">
+            <span class="totals-label font-bold">Grand Total:</span>
+            <span class="totals-value font-bold total-highlight">
+              {{ grandTotal | currency:'AED':'symbol-narrow':'1.2-2' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- RECENT QUOTATIONS DRAWER / TABLE -->
+  <div class="form-card mt-4" *ngIf="showRecentQuotes">
+    <div class="card-title-row">
+      <h2 class="card-title">Commercial Quotations Directory</h2>
+      <a routerLink="/crm/quotations/new" class="btn btn-sm btn-primary">➕ New Quote</a>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Quotation #</th>
+          <th>Customer</th>
+          <th>Date</th>
+          <th>Valid Until</th>
+          <th>Status</th>
+          <th>Total Value</th>
+          <th class="text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let q of recentQuotations">
+          <td><span class="badge-code">{{ q.quotationNo }}</span></td>
+          <td>{{ q.customerName || 'Prospect' }}</td>
+          <td>{{ q.quoteDate | date:'dd-MMM-yyyy' }}</td>
+          <td>{{ q.validUntil | date:'dd-MMM-yyyy' }}</td>
+          <td>
+            <span class="status-chip" [ngClass]="'status-' + q.status.toLowerCase()">
+              {{ q.status }}
+            </span>
+          </td>
+          <td class="font-bold">{{ q.total | currency:'AED':'symbol-narrow':'1.2-2' }}</td>
+          <td class="text-right">
+            <a [routerLink]="['/crm/quotations', q.id]" class="btn btn-xs btn-outline">
+              Open →
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+

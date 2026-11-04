@@ -3,6 +3,10 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   { path: '', redirectTo: 'sales/invoices', pathMatch: 'full' },
   {
+    path: 'crm',
+    loadChildren: () => import('./features/crm/crm.routes').then(m => m.CRM_ROUTES)
+  },
+  {
     path: 'accounting',
     loadChildren: () => import('./features/accounting/accounting.routes').then(m => m.ACCOUNTING_ROUTES)
   },

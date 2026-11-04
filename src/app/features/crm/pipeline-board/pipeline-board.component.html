@@ -1,0 +1,461 @@
+<div class="pipeline-page">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div>
+      <h1 class="page-title">Sales Pipeline</h1>
+      <p class="page-subtitle">Track, forecast, and manage your sales opportunities across pipeline stages</p>
+    </div>
+    <div class="header-actions">
+      <!-- View Switcher -->
+      <div class="view-switcher">
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="viewMode === 'kanban'"
+          (click)="viewMode = 'kanban'"
+          title="Kanban Board"
+        >
+          <span>📊 Kanban</span>
+        </button>
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="viewMode === 'list'"
+          (click)="viewMode = 'list'"
+          title="List View"
+        >
+          <span>📋 List</span>
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-outline" (click)="showImportModal = true">
+        <span>📥 Import Leads</span>
+      </button>
+
+      <button type="button" class="btn btn-primary" (click)="openNewDealModal()">
+        <span>➕ New Deal</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Strip (Section 4.3) -->
+  <div class="kpi-strip">
+    <div class="kpi-card open-pipeline">
+      <div class="kpi-icon">💼</div>
+      <div class="kpi-details">
+        <span class="kpi-label">Open Pipeline</span>
+        <span class="kpi-value">{{ openPipelineValue | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+        <span class="kpi-hint">Active deals in negotiation</span>
+      </div>
+    </div>
+
+    <div class="kpi-card weighted-forecast">
+      <div class="kpi-icon">🎯</div>
+      <div class="kpi-details">
+        <span class="kpi-label">Weighted Forecast</span>
+        <span class="kpi-value">{{ weightedForecastValue | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+        <span class="kpi-hint">Probability-adjusted revenue</span>
+      </div>
+    </div>
+
+    <div class="kpi-card won-quarter">
+      <div class="kpi-icon">🏆</div>
+      <div class="kpi-details">
+        <span class="kpi-label">Won This Quarter</span>
+        <span class="kpi-value">{{ wonThisQuarterValue | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+        <span class="kpi-hint">Closed revenue booked</span>
+      </div>
+    </div>
+
+    <div class="kpi-card win-rate">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-details">
+        <span class="kpi-label">Win Rate</span>
+        <span class="kpi-value">{{ winRatePct }}%</span>
+        <span class="kpi-hint">Won vs closed ratio</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Loading sales pipeline...</span>
+  </div>
+
+  <!-- KANBAN BOARD VIEW -->
+  <div class="board-wrapper" *ngIf="!loading && viewMode === 'kanban'">
+    <div class="kanban-board" cdkDropListGroup>
+      <div
+        class="kanban-column"
+        *ngFor="let col of board.columns"
+        [ngClass]="'col-stage-' + col.stageType.toLowerCase()"
+      >
+        <!-- Column Header -->
+        <div class="column-header">
+          <div class="column-title-row">
+            <span class="stage-name">{{ col.stageName }}</span>
+            <span class="stage-prob-badge" *ngIf="col.probabilityPct !== null">{{ col.probabilityPct }}%</span>
+          </div>
+          <div class="column-meta-row">
+            <span class="deal-count">{{ col.count }} {{ col.count === 1 ? 'deal' : 'deals' }}</span>
+            <span class="deal-total">{{ col.totalValue | currency:'AED':'symbol-narrow':'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <!-- CDK Drop List -->
+        <div
+          class="card-list"
+          cdkDropList
+          [cdkDropListData]="col.opportunities"
+          (cdkDropListDropped)="onDrop($event, col)"
+        >
+          <!-- Individual Deal Card -->
+          <div
+            class="deal-card"
+            *ngFor="let opp of col.opportunities"
+            cdkDrag
+            [cdkDragData]="opp"
+            [ngClass]="'card-stage-' + col.stageType.toLowerCase()"
+          >
+            <!-- Drag Handle Placeholder -->
+            <div class="card-drag-placeholder" *cdkDragPlaceholder></div>
+
+            <div class="card-header">
+              <span class="deal-no">{{ opp.opportunityNo }}</span>
+              <span class="deal-prob" *ngIf="opp.probabilityPct">{{ opp.probabilityPct }}%</span>
+            </div>
+
+            <a [routerLink]="['/crm/opportunities', opp.id]" class="deal-title-link">
+              <h3 class="deal-title">{{ opp.title }}</h3>
+            </a>
+
+            <div class="deal-customer" *ngIf="opp.customerName">
+              <span class="customer-icon">🏢</span>
+              <span class="customer-name">{{ opp.customerName }}</span>
+            </div>
+
+            <div class="deal-value-row">
+              <span class="deal-value">{{ opp.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+            </div>
+
+            <div class="card-footer">
+              <div class="owner-pill" *ngIf="opp.ownerUserName">
+                <span class="avatar-sm">{{ opp.ownerUserName.charAt(0) }}</span>
+                <span class="owner-name">{{ opp.ownerUserName }}</span>
+              </div>
+              <div class="close-date" *ngIf="opp.expectedCloseDate" title="Expected close date">
+                <span>📅 {{ opp.expectedCloseDate | date:'dd-MMM' }}</span>
+              </div>
+            </div>
+
+            <div class="card-lost-reason" *ngIf="opp.lostReason">
+              <span>⚠️ {{ opp.lostReason }}</span>
+            </div>
+          </div>
+
+          <!-- Empty Column Notice -->
+          <div class="empty-column-hint" *ngIf="col.opportunities.length === 0">
+            <span>Drag deals here</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div class="list-wrapper" *ngIf="!loading && viewMode === 'list'">
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="search-box">
+          <input
+            type="text"
+            placeholder="Search deals, opportunity number, or customer..."
+            [(ngModel)]="searchQuery"
+            class="form-control"
+          />
+        </div>
+        <div class="stage-filter">
+          <select [(ngModel)]="selectedStageFilter" class="form-control">
+            <option [ngValue]="null">All Stages</option>
+            <option *ngFor="let stage of stages" [ngValue]="stage.id">
+              {{ stage.name }} ({{ stage.probabilityPct }}%)
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Opp #</th>
+            <th>Title</th>
+            <th>Customer</th>
+            <th>Stage</th>
+            <th>Probability</th>
+            <th>Value</th>
+            <th>Close Date</th>
+            <th>Owner</th>
+            <th class="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let opp of allOpportunities">
+            <td>
+              <span class="badge-code">{{ opp.opportunityNo }}</span>
+            </td>
+            <td>
+              <a [routerLink]="['/crm/opportunities', opp.id]" class="table-link">
+                <strong>{{ opp.title }}</strong>
+              </a>
+            </td>
+            <td>{{ opp.customerName || '—' }}</td>
+            <td>
+              <span class="stage-pill">{{ opp.stageName || '—' }}</span>
+            </td>
+            <td>{{ opp.probabilityPct }}%</td>
+            <td class="font-bold">{{ opp.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}</td>
+            <td>{{ opp.expectedCloseDate ? (opp.expectedCloseDate | date:'dd-MMM-yyyy') : '—' }}</td>
+            <td>{{ opp.ownerUserName || 'Unassigned' }}</td>
+            <td class="text-right">
+              <a [routerLink]="['/crm/opportunities', opp.id]" class="btn btn-sm btn-outline">
+                View Detail →
+              </a>
+            </td>
+          </tr>
+          <tr *ngIf="allOpportunities.length === 0">
+            <td colspan="9" class="text-center py-4 text-muted">
+              No sales opportunities found matching current filters.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WON CONFIRMATION MODAL -->
+  <div class="modal-backdrop" *ngIf="showWonConfirmModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">🏆 Confirm Deal Won</h3>
+        <button type="button" class="close-btn" (click)="cancelWonMove()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Are you sure you want to mark <strong>"{{ pendingMove?.opportunity?.title }}"</strong> as
+          <span class="text-success font-bold">WON</span>?
+        </p>
+        <p class="text-muted text-sm">
+          Value: {{ pendingMove?.opportunity?.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="cancelWonMove()">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="confirmWonMove()">Yes, Mark as Won</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOST CONFIRMATION MODAL WITH REASON -->
+  <div class="modal-backdrop" *ngIf="showLostConfirmModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">⚠️ Mark Deal as Lost</h3>
+        <button type="button" class="close-btn" (click)="cancelLostMove()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>
+          You are moving <strong>"{{ pendingMove?.opportunity?.title }}"</strong> to
+          <span class="text-danger font-bold">LOST</span>.
+        </p>
+        <div class="form-group mt-3">
+          <label class="form-label required">Reason for Lost Deal</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="lostReasonInput"
+            placeholder="e.g. Competitor lower pricing, project canceled, budget cuts..."
+            autofocus
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="cancelLostMove()">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          [disabled]="!lostReasonInput.trim()"
+          (click)="confirmLostMove()"
+        >
+          Confirm Lost
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAD IMPORT MODAL -->
+  <div class="modal-backdrop" *ngIf="showImportModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">📥 Import Leads from CSV</h3>
+        <button type="button" class="close-btn" (click)="showImportModal = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted text-sm mb-3">
+          Upload a CSV file containing unqualified prospects. Contacts will be created and placed in the New lead queue.
+        </p>
+
+        <div class="sample-csv-action mb-3">
+          <button type="button" class="btn btn-sm btn-outline" (click)="downloadSampleCsv()">
+            ⬇️ Download Sample CSV Template
+          </button>
+        </div>
+
+        <div class="upload-dropzone">
+          <input
+            type="file"
+            id="csvFileInput"
+            accept=".csv,text/csv"
+            (change)="onFileSelected($event)"
+            class="file-input"
+          />
+          <label for="csvFileInput" class="file-label">
+            <span class="upload-icon">📄</span>
+            <span *ngIf="!importFile">Click to select CSV file</span>
+            <span *ngIf="importFile" class="font-bold">{{ importFile.name }} ({{ importFile.size }} bytes)</span>
+          </label>
+        </div>
+
+        <!-- Import Result Feedback -->
+        <div class="import-result mt-3" *ngIf="importResult">
+          <div class="result-banner" [class.success]="importResult.importedCount > 0">
+            <h4>Import Summary</h4>
+            <p>
+              Processed <strong>{{ importResult.totalRows }}</strong> rows:
+              <strong class="text-success">{{ importResult.importedCount }} imported</strong>,
+              <strong class="text-warning">{{ importResult.skippedCount }} skipped</strong>.
+            </p>
+          </div>
+          <div class="error-list mt-2" *ngIf="importResult.errors.length > 0">
+            <h5>Errors / Skipped reasons:</h5>
+            <ul>
+              <li *ngFor="let err of importResult.errors" class="text-danger text-sm">{{ err }}</li>
+            </ul>
+          </div>
+          <div class="mt-3">
+            <a routerLink="/crm/leads" (click)="showImportModal = false" class="btn btn-sm btn-primary">
+              View Leads Queue →
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="showImportModal = false">Close</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="!importFile || importing"
+          (click)="uploadCsv()"
+        >
+          <span *ngIf="!importing">Upload & Import</span>
+          <span *ngIf="importing">Importing...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW DEAL MODAL -->
+  <div class="modal-backdrop" *ngIf="showNewDealModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ Create Sales Opportunity</h3>
+        <button type="button" class="close-btn" (click)="showNewDealModal = false">&times;</button>
+      </div>
+      <form [formGroup]="newDealForm" (ngSubmit)="saveNewDeal()">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label required">Opportunity Title / Deal Name</label>
+              <input
+                type="text"
+                formControlName="title"
+                class="form-control"
+                placeholder="e.g. ERP Cloud Implementation - Phase 1"
+              />
+              <span class="field-error" *ngIf="newDealForm.get('title')?.touched && newDealForm.get('title')?.invalid">
+                Title is required
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Customer / Prospect</label>
+              <select formControlName="customerId" class="form-control">
+                <option [ngValue]="null">-- Select Customer (Optional) --</option>
+                <option *ngFor="let c of customers" [ngValue]="c.id">
+                  {{ c.name }} ({{ c.code }})
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">Initial Pipeline Stage</label>
+              <select
+                formControlName="stageId"
+                class="form-control"
+                (change)="onStageSelectChange(newDealForm.get('stageId')?.value)"
+              >
+                <option *ngFor="let s of stages" [ngValue]="s.id">
+                  {{ s.name }} ({{ s.probabilityPct }}%)
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">Expected Deal Value</label>
+              <div class="input-with-currency">
+                <input
+                  type="number"
+                  formControlName="expectedValue"
+                  class="form-control"
+                  min="0"
+                  step="1000"
+                />
+                <span class="currency-tag">AED</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Win Probability (%)</label>
+              <input
+                type="number"
+                formControlName="probabilityPct"
+                class="form-control"
+                min="0"
+                max="100"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">Expected Close Date</label>
+              <input
+                type="date"
+                formControlName="expectedCloseDate"
+                class="form-control"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="showNewDealModal = false">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingDeal || newDealForm.invalid">
+            <span *ngIf="!savingDeal">Save Deal</span>
+            <span *ngIf="savingDeal">Saving...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
