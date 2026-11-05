@@ -22,7 +22,37 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-section-title">CRM & Pipeline</div>
+      <div class="nav-section-title">Overview</div>
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Executive Dashboard</span>
+      </a>
+
+      <div class="nav-section-title mt-3">Banking & Treasury</div>
+      <a routerLink="/banking/reconciliation" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏦</span>
+        <span class="nav-label">Bank Reconciliation</span>
+      </a>
+
+      <div class="nav-section-title mt-3">Financial Reports</div>
+      <a routerLink="/reports/profit-loss" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Profit & Loss</span>
+      </a>
+      <a routerLink="/reports/balance-sheet" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⚖️</span>
+        <span class="nav-label">Balance Sheet</span>
+      </a>
+      <a routerLink="/reports/vat-return" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📑</span>
+        <span class="nav-label">VAT 201 Return</span>
+      </a>
+      <a routerLink="/reports/stock-valuation" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">Stock Valuation</span>
+      </a>
+
+      <div class="nav-section-title mt-3">CRM & Pipeline</div>
       <a routerLink="/crm/pipeline" routerLinkActive="active" class="nav-item">
         <span class="nav-icon">📊</span>
         <span class="nav-label">Sales Pipeline</span>

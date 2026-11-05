@@ -1,7 +1,19 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'sales/invoices', pathMatch: 'full' },
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
+  },
+  {
+    path: 'banking',
+    loadChildren: () => import('./features/banking/banking.routes').then(m => m.BANKING_ROUTES)
+  },
+  {
+    path: 'reports',
+    loadChildren: () => import('./features/reports/reports.routes').then(m => m.REPORTS_ROUTES)
+  },
   {
     path: 'crm',
     loadChildren: () => import('./features/crm/crm.routes').then(m => m.CRM_ROUTES)
@@ -26,5 +38,5 @@ export const routes: Routes = [
     path: 'expenses',
     loadChildren: () => import('./features/expenses/expenses.routes').then(m => m.EXPENSES_ROUTES)
   },
-  { path: '**', redirectTo: 'sales/invoices' }
+  { path: '**', redirectTo: 'dashboard' }
 ];
