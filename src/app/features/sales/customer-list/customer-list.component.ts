@@ -7,6 +7,11 @@ import { Customer, CustomerQuery, CustomerRequest } from '../../../core/models/c
 import { OpenInvoice } from '../../../core/models/invoice.model';
 import { Page } from '../../../core/models/page.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import {
+  ParsedApiError,
+  applyServerFieldErrors,
+  getServerFieldError
+} from '../../../core/utils/api-error.util';
 import { AccountService } from '../../accounting/services/account.service';
 import { CustomerService } from '../services/customer.service';
 
@@ -55,10 +60,16 @@ export class CustomerListComponent implements OnInit {
     this.loadCustomers();
   }
 
+  modalError: ParsedApiError | null = null;
+
+  getServerError(field: string): string | null {
+    return getServerFieldError(this.customerForm, field);
+  }
+
   private initForm(): void {
     this.customerForm = this.fb.group({
-      code: ['', [Validators.required, Validators.maxLength(50)]],
-      name: ['', [Validators.required, Validators.maxLength(255)]],
+      code: ['', [Validators.required, Validators.maxLength(20), Validators.pattern(/\S/)]],
+      name: ['', [Validators.required, Validators.maxLength(200), Validators.pattern(/\S/)]],
       trn: ['', [Validators.pattern('^[0-9]{15}$')]],
       email: ['', [Validators.email]],
       phone: [''],
@@ -122,6 +133,7 @@ export class CustomerListComponent implements OnInit {
   openCreateModal(): void {
     this.isEditMode = false;
     this.selectedCustomerId = null;
+    this.modalError = null;
     const arAcc = this.accounts.find(a => a.code === '1200' || a.name.toLowerCase().includes('receivable'));
     this.customerForm.reset({
       code: '',
@@ -143,6 +155,7 @@ export class CustomerListComponent implements OnInit {
   openEditModal(customer: Customer): void {
     this.isEditMode = true;
     this.selectedCustomerId = customer.id;
+    this.modalError = null;
     this.customerForm.patchValue({
       code: customer.code,
       name: customer.name,
@@ -163,17 +176,21 @@ export class CustomerListComponent implements OnInit {
   closeCustomerModal(): void {
     this.showCustomerModal = false;
     this.selectedCustomerId = null;
+    this.modalError = null;
   }
 
   saveCustomer(): void {
+    this.modalError = null;
     if (this.customerForm.invalid) {
       this.customerForm.markAllAsTouched();
       return;
     }
 
+    const raw = this.customerForm.value;
     const payload: CustomerRequest = {
-      ...this.customerForm.value,
-      code: this.customerForm.value.code.toUpperCase().trim()
+      ...raw,
+      code: String(raw.code || '').toUpperCase().trim(),
+      name: String(raw.name || '').trim()
     };
 
     if (this.isEditMode && this.selectedCustomerId) {
@@ -184,7 +201,7 @@ export class CustomerListComponent implements OnInit {
           this.loadCustomers();
         },
         error: err => {
-          this.notificationService.error(err?.error?.message || 'Failed to update customer');
+          this.modalError = applyServerFieldErrors(this.customerForm, err, 'Failed to update customer');
         }
       });
     } else {
@@ -195,7 +212,7 @@ export class CustomerListComponent implements OnInit {
           this.loadCustomers();
         },
         error: err => {
-          this.notificationService.error(err?.error?.message || 'Failed to create customer');
+          this.modalError = applyServerFieldErrors(this.customerForm, err, 'Failed to create customer');
         }
       });
     }

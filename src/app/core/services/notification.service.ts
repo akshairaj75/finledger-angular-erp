@@ -29,7 +29,7 @@ export class NotificationService {
   }
 
   error(message: string): void {
-    this.show('error', message);
+    this.show('error', message, 8000);
   }
 
   warning(message: string): void {

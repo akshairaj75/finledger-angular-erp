@@ -1,6 +1,7 @@
 import '@angular/compiler';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpErrorResponse } from '@angular/common/http';
+import { formatApiError } from '../utils/api-error.util';
 
 describe('errorInterceptor', () => {
   let mockNotificationService: {
@@ -18,32 +19,7 @@ describe('errorInterceptor', () => {
   });
 
   const runInterceptorLogic = (error: HttpErrorResponse) => {
-    let errorMessage = 'An unexpected error occurred. Please try again.';
-
-    if (error.error && typeof error.error === 'object') {
-      const apiError = error.error as any;
-      if (apiError.message) {
-        errorMessage = apiError.message;
-      } else if (apiError.code) {
-        errorMessage = `Error: ${apiError.code}`;
-      }
-
-      if (apiError.fieldErrors && apiError.fieldErrors.length > 0) {
-        const fieldMsgs = apiError.fieldErrors.map((f: any) => `${f.field}: ${f.message}`).join(', ');
-        errorMessage = `${errorMessage} (${fieldMsgs})`;
-      }
-    } else if (error.status === 0) {
-      errorMessage = 'Unable to connect to the FinLedger server. Please check your connection.';
-    } else if (error.status === 401) {
-      errorMessage = 'Your session has expired. Please log in again.';
-    } else if (error.status === 403) {
-      errorMessage = 'Access denied. You do not have permission for this action.';
-    } else if (error.status === 404) {
-      errorMessage = 'Requested resource was not found.';
-    } else if (error.status === 409) {
-      errorMessage = 'Conflict detected: this record was modified by another user.';
-    }
-
+    const errorMessage = formatApiError(error);
     mockNotificationService.error(errorMessage);
     return errorMessage;
   };

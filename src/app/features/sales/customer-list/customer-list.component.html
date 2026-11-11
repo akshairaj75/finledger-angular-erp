@@ -149,6 +149,22 @@
 
         <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
           <div class="modal-body">
+            <div *ngIf="modalError" class="modal-error-alert" role="alert">
+              <div class="modal-error-header">
+                <strong>
+                  Error{{ modalError.status ? ' (' + modalError.status + ')' : '' }}
+                  <span *ngIf="modalError.code">[{{ modalError.code }}]</span>
+                </strong>
+                <button type="button" class="modal-error-close" (click)="modalError = null" aria-label="Dismiss error">&times;</button>
+              </div>
+              <p class="modal-error-message">{{ modalError.message }}</p>
+              <ul *ngIf="modalError.fieldErrors.length > 0" class="modal-error-fields">
+                <li *ngFor="let fe of modalError.fieldErrors">
+                  <strong>{{ fe.field }}:</strong> {{ fe.message }}
+                </li>
+              </ul>
+            </div>
+
             <div class="form-row">
               <div class="form-group col-md-4">
                 <label for="custCode" class="required">Customer Code</label>
@@ -159,8 +175,11 @@
                   class="form-control"
                   placeholder="e.g. CUST-001"
                 />
-                <span *ngIf="customerForm.get('code')?.touched && customerForm.get('code')?.invalid" class="field-error">
-                  Code is required (max 50 chars).
+                <span *ngIf="getServerError('code') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
+                <span *ngIf="!getServerError('code') && customerForm.get('code')?.touched && customerForm.get('code')?.invalid" class="field-error">
+                  Code is required (non-blank, max 20 chars).
                 </span>
               </div>
 
@@ -173,8 +192,11 @@
                   class="form-control"
                   placeholder="e.g. Emirates Industrial Supplies LLC"
                 />
-                <span *ngIf="customerForm.get('name')?.touched && customerForm.get('name')?.invalid" class="field-error">
-                  Customer name is required.
+                <span *ngIf="getServerError('name') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
+                <span *ngIf="!getServerError('name') && customerForm.get('name')?.touched && customerForm.get('name')?.invalid" class="field-error">
+                  Customer name is required (non-blank, max 200 chars).
                 </span>
               </div>
             </div>
@@ -189,7 +211,10 @@
                   class="form-control"
                   placeholder="15-digit FTA TRN (e.g. 100234567800003)"
                 />
-                <span *ngIf="customerForm.get('trn')?.touched && customerForm.get('trn')?.invalid" class="field-error">
+                <span *ngIf="getServerError('trn') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
+                <span *ngIf="!getServerError('trn') && customerForm.get('trn')?.touched && customerForm.get('trn')?.invalid" class="field-error">
                   TRN must be exactly 15 digits.
                 </span>
               </div>
@@ -203,6 +228,9 @@
                   <option value="GBP">GBP - British Pound</option>
                   <option value="SAR">SAR - Saudi Riyal</option>
                 </select>
+                <span *ngIf="getServerError('currencyCode') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
               </div>
 
               <div class="form-group col-md-3">
@@ -215,6 +243,9 @@
                   <option value="US">United States (US)</option>
                   <option value="GB">United Kingdom (GB)</option>
                 </select>
+                <span *ngIf="getServerError('countryCode') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
               </div>
             </div>
 
@@ -228,7 +259,10 @@
                   class="form-control"
                   placeholder="billing@customer.com"
                 />
-                <span *ngIf="customerForm.get('email')?.touched && customerForm.get('email')?.invalid" class="field-error">
+                <span *ngIf="getServerError('email') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
+                <span *ngIf="!getServerError('email') && customerForm.get('email')?.touched && customerForm.get('email')?.invalid" class="field-error">
                   Please enter a valid email address.
                 </span>
               </div>
@@ -242,6 +276,9 @@
                   class="form-control"
                   placeholder="+971 4 123 4567"
                 />
+                <span *ngIf="getServerError('phone') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
               </div>
             </div>
 
@@ -254,6 +291,9 @@
                 class="form-control"
                 placeholder="Office / Street, Building, P.O. Box, City, Emirate..."
               ></textarea>
+              <span *ngIf="getServerError('billingAddress') as serverErr" class="field-error">
+                {{ serverErr }}
+              </span>
             </div>
 
             <div class="form-row">
@@ -266,6 +306,9 @@
                   class="form-control"
                   min="0"
                 />
+                <span *ngIf="getServerError('paymentTermsDays') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
               </div>
 
               <div class="form-group col-md-4">
@@ -277,17 +320,23 @@
                   class="form-control"
                   min="0"
                 />
+                <span *ngIf="getServerError('creditLimit') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
               </div>
 
               <div class="form-group col-md-4">
                 <label for="arAccountId" class="required">AR GL Account</label>
                 <select id="arAccountId" formControlName="arAccountId" class="form-control">
                   <option [ngValue]="null">-- Select AR Account --</option>
-                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                  <option *ngFor="let acc of accounts" [ngValue]="acc.id">
                     {{ acc.code }} - {{ acc.name }}
                   </option>
                 </select>
-                <span *ngIf="customerForm.get('arAccountId')?.touched && customerForm.get('arAccountId')?.invalid" class="field-error">
+                <span *ngIf="getServerError('arAccountId') as serverErr" class="field-error">
+                  {{ serverErr }}
+                </span>
+                <span *ngIf="!getServerError('arAccountId') && customerForm.get('arAccountId')?.touched && customerForm.get('arAccountId')?.invalid" class="field-error">
                   Accounts Receivable account is required.
                 </span>
               </div>
