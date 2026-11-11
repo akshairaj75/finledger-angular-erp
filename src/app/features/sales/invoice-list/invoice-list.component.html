@@ -5,7 +5,7 @@
       <h1 class="page-title">Sales Invoices</h1>
       <p class="page-subtitle">Manage customer tax invoices, dispatch vouchers, credit notes, and payment statuses</p>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" *appHasPermission="'INVOICE_CREATE'">
       <a routerLink="/sales/invoices/new" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         New Tax Invoice
@@ -157,7 +157,8 @@
             <td class="text-right actions-col" (click)="$event.stopPropagation()">
               <!-- Action: Send (for DRAFT) -->
               <button
-                *ngIf="inv.status === 'DRAFT'"
+                *appHasPermission="'INVOICE_SEND'"
+                [hidden]="inv.status !== 'DRAFT'"
                 (click)="sendInvoice(inv, $event)"
                 class="btn btn-primary btn-xs"
                 [disabled]="sendingId === inv.id"
@@ -178,7 +179,8 @@
 
               <!-- Action: Void (for non-VOID) -->
               <button
-                *ngIf="inv.status !== 'VOID'"
+                *appHasPermission="'INVOICE_VOID'"
+                [hidden]="inv.status === 'VOID'"
                 (click)="openVoidModal(inv, $event)"
                 class="btn btn-outline btn-xs btn-danger-hover ml-1"
                 title="Void Invoice"

@@ -1,14 +1,40 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
+import { AuthService } from '../auth/auth.service';
 import { ApiError } from '../models/api-error.model';
 import { NotificationService } from '../services/notification.service';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const notificationService = inject(NotificationService);
+  const authService = inject(AuthService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      // Handle HTTP 401 with silent JWT refresh rotation for non-auth requests
+      if (
+        error.status === 401 &&
+        !req.url.includes('/auth/login') &&
+        !req.url.includes('/auth/refresh') &&
+        !req.url.includes('/auth/logout')
+      ) {
+        return authService.refreshToken().pipe(
+          switchMap(tokenRes => {
+            const retried = req.clone({
+              setHeaders: {
+                Authorization: `Bearer ${tokenRes.accessToken}`
+              }
+            });
+            return next(retried);
+          }),
+          catchError(refreshErr => {
+            notificationService.error('Your session has expired. Please log in again.');
+            authService.logout(true);
+            return throwError(() => refreshErr);
+          })
+        );
+      }
+
       let errorMessage = 'An unexpected error occurred. Please try again.';
 
       if (error.error && typeof error.error === 'object') {
@@ -40,4 +66,3 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
-

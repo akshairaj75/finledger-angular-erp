@@ -93,10 +93,10 @@
               <button (click)="viewDetails(j)" class="btn-icon" title="View lines">
                 👁
               </button>
-              <button *ngIf="j.status === 'DRAFT'" (click)="postDraft(j)" class="btn-sm btn-success" title="Post Entry">
+              <button *appHasPermission="'JOURNAL_POST'" [hidden]="j.status !== 'DRAFT'" (click)="postDraft(j)" class="btn-sm btn-success" title="Post Entry">
                 Post
               </button>
-              <button *ngIf="j.status === 'POSTED'" (click)="openReversalModal(j)" class="btn-sm btn-danger" title="Reverse Entry">
+              <button *appHasPermission="'JOURNAL_VOID'" [hidden]="j.status !== 'POSTED'" (click)="openReversalModal(j)" class="btn-sm btn-danger" title="Reverse Entry">
                 Reverse
               </button>
             </td>

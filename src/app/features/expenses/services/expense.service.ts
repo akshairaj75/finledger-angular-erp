@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   ApproveExpenseRequest,
@@ -70,68 +70,7 @@ export class ExpenseService {
 
   // Categories
   getAllActiveCategories(): Observable<ExpenseCategory[]> {
-    return this.http.get<ExpenseCategory[]>(`${this.categoriesBase}/all`).pipe(
-      catchError(() => {
-        // Fallback default sample categories if database table hasn't been seeded yet
-        return of([
-          {
-            id: 1,
-            name: 'Travel & Lodging',
-            accountId: 5300,
-            accountCode: '5300',
-            accountName: 'Travel & Lodging',
-            defaultTaxRateId: 1,
-            limitPerClaim: 1500,
-            receiptRequired: true,
-            isActive: true
-          },
-          {
-            id: 2,
-            name: 'Meals & Entertainment',
-            accountId: 5310,
-            accountCode: '5310',
-            accountName: 'Meals & Entertainment',
-            defaultTaxRateId: 1,
-            limitPerClaim: 500,
-            receiptRequired: true,
-            isActive: true
-          },
-          {
-            id: 3,
-            name: 'Fuel & Transportation',
-            accountId: 5320,
-            accountCode: '5320',
-            accountName: 'Fuel & Local Transport',
-            defaultTaxRateId: 1,
-            limitPerClaim: 300,
-            receiptRequired: true,
-            isActive: true
-          },
-          {
-            id: 4,
-            name: 'Office Supplies',
-            accountId: 5330,
-            accountCode: '5330',
-            accountName: 'Office Supplies',
-            defaultTaxRateId: 1,
-            limitPerClaim: 250,
-            receiptRequired: false,
-            isActive: true
-          },
-          {
-            id: 5,
-            name: 'Client Hospitality',
-            accountId: 5310,
-            accountCode: '5310',
-            accountName: 'Meals & Entertainment',
-            defaultTaxRateId: 1,
-            limitPerClaim: 1000,
-            receiptRequired: true,
-            isActive: true
-          }
-        ]);
-      })
-    );
+    return this.http.get<ExpenseCategory[]>(`${this.categoriesBase}/all`);
   }
 
   // Attachments

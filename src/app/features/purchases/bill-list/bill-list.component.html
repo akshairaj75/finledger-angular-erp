@@ -5,7 +5,7 @@
       <h1 class="page-title">Vendor Bills & Debit Notes</h1>
       <p class="page-subtitle">Track supplier bills, record debit note adjustments, approve for GL posting, and manage payables</p>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" *appHasPermission="'BILL_CREATE'">
       <a routerLink="/purchases/bills/new" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         New Vendor Bill
@@ -162,7 +162,8 @@
             <td class="text-right actions-col" (click)="$event.stopPropagation()">
               <!-- Action: Approve (for DRAFT) -->
               <button
-                *ngIf="b.status === 'DRAFT'"
+                *appHasPermission="'BILL_APPROVE'"
+                [hidden]="b.status !== 'DRAFT'"
                 (click)="approveBill(b, $event)"
                 class="btn btn-primary btn-xs"
                 [disabled]="approvingId === b.id"
@@ -173,7 +174,8 @@
 
               <!-- Action: Void (for non-VOID) -->
               <button
-                *ngIf="b.status !== 'VOID'"
+                *appHasPermission="'BILL_VOID'"
+                [hidden]="b.status === 'VOID'"
                 (click)="openVoidModal(b, $event)"
                 class="btn btn-outline btn-xs btn-danger-hover ml-1"
                 title="Void Bill"

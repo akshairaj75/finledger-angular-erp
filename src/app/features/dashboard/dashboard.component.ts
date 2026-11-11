@@ -1,14 +1,15 @@
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { ReportService } from '../reports/services/report.service';
-import { NotificationService } from '../../core/services/notification.service';
+import { HasPermissionDirective } from '../../core/directives/has-permission.directive';
 import { DashboardSummary } from '../../core/models/report.model';
+import { NotificationService } from '../../core/services/notification.service';
+import { ReportService } from '../reports/services/report.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, HasPermissionDirective],
   template: `
     <div class="dashboard-page">
       <!-- Welcome & Action Bar -->
@@ -21,7 +22,7 @@ import { DashboardSummary } from '../../core/models/report.model';
           <button class="btn btn-secondary" (click)="loadDashboardData()" [disabled]="loading">
             🔄 Refresh Metrics
           </button>
-          <a routerLink="/reports/profit-loss" class="btn btn-primary">
+          <a *appHasPermission="'REPORT_VIEW'" routerLink="/reports/profit-loss" class="btn btn-primary">
             📈 View Full Reports
           </a>
         </div>
@@ -33,11 +34,12 @@ import { DashboardSummary } from '../../core/models/report.model';
       </div>
 
       <div *ngIf="summary" class="dashboard-content">
-        <!-- ROW 1: Financial KPI Cards -->
-        <div class="section-title">
-          <span>Financial Performance (YTD)</span>
-        </div>
-        <div class="kpi-grid financial-grid">
+        <!-- ROW 1: Financial KPI Cards (Hidden if user lacks financial visibility) -->
+        <ng-container *appHasPermission="['REPORT_VIEW', 'LEDGER_VIEW', 'JOURNAL_VIEW']">
+          <div class="section-title">
+            <span>Financial Performance (YTD)</span>
+          </div>
+          <div class="kpi-grid financial-grid">
           <div class="kpi-card revenue-card">
             <div class="kpi-icon-box bg-blue">💰</div>
             <div class="kpi-meta">
@@ -83,13 +85,14 @@ import { DashboardSummary } from '../../core/models/report.model';
             </div>
           </div>
         </div>
+        </ng-container>
 
         <!-- ROW 2: Operational KPI Cards -->
-        <div class="section-title mt-4">
+        <div class="section-title mt-4" *appHasPermission="['OPPORTUNITY_VIEW', 'CRM_VIEW_ALL', 'ITEM_VIEW', 'EXPENSE_VIEW', 'EXPENSE_APPROVE']">
           <span>Operational Efficiency & Pipeline</span>
         </div>
         <div class="kpi-grid operational-grid">
-          <div class="kpi-card pipeline-card">
+          <div class="kpi-card pipeline-card" *appHasPermission="['OPPORTUNITY_VIEW', 'CRM_VIEW_ALL']">
             <div class="kpi-icon-box bg-indigo">🎯</div>
             <div class="kpi-meta">
               <span class="kpi-label">Open CRM Pipeline</span>
@@ -98,7 +101,7 @@ import { DashboardSummary } from '../../core/models/report.model';
             </div>
           </div>
 
-          <div class="kpi-card stock-card">
+          <div class="kpi-card stock-card" *appHasPermission="'ITEM_VIEW'">
             <div class="kpi-icon-box bg-teal">📦</div>
             <div class="kpi-meta">
               <span class="kpi-label">Inventory Valuation</span>
@@ -109,7 +112,7 @@ import { DashboardSummary } from '../../core/models/report.model';
             </div>
           </div>
 
-          <div class="kpi-card approval-card">
+          <div class="kpi-card approval-card" *appHasPermission="['EXPENSE_APPROVE', 'EXPENSE_VIEW']">
             <div class="kpi-icon-box bg-orange">⏳</div>
             <div class="kpi-meta">
               <span class="kpi-label">Awaiting Expense Approval</span>
@@ -119,8 +122,8 @@ import { DashboardSummary } from '../../core/models/report.model';
           </div>
         </div>
 
-        <!-- Visualizations Grid -->
-        <div class="analytics-grid mt-4">
+        <!-- Visualizations Grid (Gated by REPORT_VIEW / LEDGER_VIEW) -->
+        <div class="analytics-grid mt-4" *appHasPermission="['REPORT_VIEW', 'LEDGER_VIEW']">
           <!-- 6-Month Revenue vs Expenses Visual Chart -->
           <div class="card chart-card">
             <div class="card-header">
@@ -192,7 +195,7 @@ import { DashboardSummary } from '../../core/models/report.model';
         </div>
 
         <!-- Recent Transactions Table -->
-        <div class="card transactions-card mt-4">
+        <div class="card transactions-card mt-4" *appHasPermission="['JOURNAL_VIEW', 'LEDGER_VIEW', 'REPORT_VIEW']">
           <div class="card-header">
             <h3>Recent Financial Transactions</h3>
             <span class="badge badge-light">Latest 10 Journal & Voucher Postings</span>

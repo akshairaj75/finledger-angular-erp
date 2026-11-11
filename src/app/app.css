@@ -175,6 +175,120 @@
   color: #64748b;
 }
 
+/* Interactive User Dropdown & Top Activity Bar */
+.top-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(37, 99, 235, 0.15);
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.top-loading-progress {
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  animation: loadingSlide 1s infinite ease-in-out;
+}
+
+@keyframes loadingSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.user-menu-wrapper {
+  position: relative;
+}
+
+.user-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.user-profile-btn:hover {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.caret {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 240px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.16);
+  padding: 0.5rem;
+  z-index: 1000;
+}
+
+.dropdown-roles {
+  padding: 0.45rem 0.65rem 0.6rem;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.role-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.role-chip {
+  font-size: 0.68rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.dropdown-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f5f9;
+}
+
+.logout-item {
+  color: #dc2626;
+}
+
+.logout-item:hover {
+  background-color: #fef2f2;
+}
+
 .content-area {
   flex: 1;
   background-color: #f8fafc;

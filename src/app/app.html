@@ -1,16 +1,22 @@
-<div class="app-layout">
-  <!-- Toast Notification Container -->
-  <div class="toast-container" *ngIf="notificationService.messages().length > 0">
-    <div
-      *ngFor="let toast of notificationService.messages()"
-      class="toast"
-      [ngClass]="'toast-' + toast.type"
-    >
-      <span>{{ toast.message }}</span>
-      <button (click)="notificationService.remove(toast.id)" class="toast-close">&times;</button>
-    </div>
-  </div>
+<!-- Global Top HTTP Activity Bar -->
+<div class="top-loading-bar" *ngIf="loadingService.isLoading()">
+  <div class="top-loading-progress"></div>
+</div>
 
+<!-- Toast Notification Container (Rendered across both Login & App Views) -->
+<div class="toast-container" *ngIf="notificationService.messages().length > 0">
+  <div
+    *ngFor="let toast of notificationService.messages()"
+    class="toast"
+    [ngClass]="'toast-' + toast.type"
+  >
+    <span>{{ toast.message }}</span>
+    <button (click)="notificationService.remove(toast.id)" class="toast-close">&times;</button>
+  </div>
+</div>
+
+<!-- Authenticated ERP Workspace Layout -->
+<div class="app-layout" *ngIf="authService.isAuthenticated(); else unauthLayout">
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-brand">
@@ -28,117 +34,178 @@
         <span class="nav-label">Executive Dashboard</span>
       </a>
 
-      <div class="nav-section-title mt-3">Banking & Treasury</div>
-      <a routerLink="/banking/reconciliation" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🏦</span>
-        <span class="nav-label">Bank Reconciliation</span>
-      </a>
+      <!-- Banking & Treasury -->
+      <ng-container *appHasPermission="'BANK_RECONCILE'">
+        <div class="nav-section-title mt-3">Banking & Treasury</div>
+        <a routerLink="/banking/reconciliation" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🏦</span>
+          <span class="nav-label">Bank Reconciliation</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">Financial Reports</div>
-      <a routerLink="/reports/profit-loss" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📈</span>
-        <span class="nav-label">Profit & Loss</span>
-      </a>
-      <a routerLink="/reports/balance-sheet" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⚖️</span>
-        <span class="nav-label">Balance Sheet</span>
-      </a>
-      <a routerLink="/reports/vat-return" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📑</span>
-        <span class="nav-label">VAT 201 Return</span>
-      </a>
-      <a routerLink="/reports/stock-valuation" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📦</span>
-        <span class="nav-label">Stock Valuation</span>
-      </a>
+      <!-- Financial Reports -->
+      <ng-container *appHasPermission="['REPORT_VIEW', 'LEDGER_VIEW']">
+        <div class="nav-section-title mt-3">Financial Reports</div>
+        <a routerLink="/reports/profit-loss" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Profit & Loss</span>
+        </a>
+        <a routerLink="/reports/balance-sheet" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">⚖️</span>
+          <span class="nav-label">Balance Sheet</span>
+        </a>
+        <a routerLink="/reports/vat-return" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📑</span>
+          <span class="nav-label">VAT 201 Return</span>
+        </a>
+        <a routerLink="/reports/stock-valuation" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📦</span>
+          <span class="nav-label">Stock Valuation</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">CRM & Pipeline</div>
-      <a routerLink="/crm/pipeline" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Sales Pipeline</span>
-      </a>
-      <a routerLink="/crm/leads" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🎯</span>
-        <span class="nav-label">Leads Management</span>
-      </a>
-      <a routerLink="/crm/quotations/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📝</span>
-        <span class="nav-label">New Quotation</span>
-      </a>
+      <!-- CRM & Pipeline -->
+      <ng-container *appHasPermission="['OPPORTUNITY_VIEW', 'LEAD_VIEW', 'QUOTATION_VIEW', 'CRM_VIEW_ALL']">
+        <div class="nav-section-title mt-3">CRM & Pipeline</div>
+        <a *appHasPermission="['OPPORTUNITY_VIEW', 'CRM_VIEW_ALL']" routerLink="/crm/pipeline" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Sales Pipeline</span>
+        </a>
+        <a *appHasPermission="['LEAD_VIEW', 'CRM_VIEW_ALL']" routerLink="/crm/leads" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-label">Leads Management</span>
+        </a>
+        <a *appHasPermission="['QUOTATION_CREATE', 'QUOTATION_VIEW', 'CRM_VIEW_ALL']" routerLink="/crm/quotations/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">New Quotation</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">Sales & Accounts Receivable</div>
-      <a routerLink="/sales/invoices" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🧾</span>
-        <span class="nav-label">Sales Invoices</span>
-      </a>
-      <a routerLink="/sales/invoices/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">New Tax Invoice</span>
-      </a>
-      <a routerLink="/sales/receipts/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">💳</span>
-        <span class="nav-label">Customer Receipts</span>
-      </a>
-      <a routerLink="/sales/customers" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">👥</span>
-        <span class="nav-label">Customer Accounts</span>
-      </a>
+      <!-- Sales & AR -->
+      <ng-container *appHasPermission="['INVOICE_VIEW', 'INVOICE_CREATE', 'RECEIPT_VIEW', 'CUSTOMER_VIEW']">
+        <div class="nav-section-title mt-3">Sales & Accounts Receivable</div>
+        <a *appHasPermission="'INVOICE_VIEW'" routerLink="/sales/invoices" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🧾</span>
+          <span class="nav-label">Sales Invoices</span>
+        </a>
+        <a *appHasPermission="'INVOICE_CREATE'" routerLink="/sales/invoices/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">➕</span>
+          <span class="nav-label">New Tax Invoice</span>
+        </a>
+        <a *appHasPermission="['RECEIPT_CREATE', 'RECEIPT_VIEW']" routerLink="/sales/receipts/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Customer Receipts</span>
+        </a>
+        <a *appHasPermission="'CUSTOMER_VIEW'" routerLink="/sales/customers" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Customer Accounts</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">Purchases & Accounts Payable</div>
-      <a routerLink="/purchases/bills" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📥</span>
-        <span class="nav-label">Vendor Bills</span>
-      </a>
-      <a routerLink="/purchases/bills/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">New Vendor Bill</span>
-      </a>
-      <a routerLink="/purchases/payments/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">💸</span>
-        <span class="nav-label">Vendor Payments</span>
-      </a>
-      <a routerLink="/purchases/vendors" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🏢</span>
-        <span class="nav-label">Vendor Accounts</span>
-      </a>
+      <!-- Purchases & AP -->
+      <ng-container *appHasPermission="['BILL_VIEW', 'BILL_CREATE', 'PAYMENT_VIEW', 'VENDOR_VIEW']">
+        <div class="nav-section-title mt-3">Purchases & Accounts Payable</div>
+        <a *appHasPermission="'BILL_VIEW'" routerLink="/purchases/bills" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📥</span>
+          <span class="nav-label">Vendor Bills</span>
+        </a>
+        <a *appHasPermission="'BILL_CREATE'" routerLink="/purchases/bills/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">➕</span>
+          <span class="nav-label">New Vendor Bill</span>
+        </a>
+        <a *appHasPermission="['PAYMENT_CREATE', 'PAYMENT_VIEW']" routerLink="/purchases/payments/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">💸</span>
+          <span class="nav-label">Vendor Payments</span>
+        </a>
+        <a *appHasPermission="'VENDOR_VIEW'" routerLink="/purchases/vendors" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🏢</span>
+          <span class="nav-label">Vendor Accounts</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">Inventory & Stock</div>
-      <a routerLink="/inventory/items" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📦</span>
-        <span class="nav-label">Stock Overview</span>
-      </a>
-      <a routerLink="/inventory/adjustments/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⚖️</span>
-        <span class="nav-label">Stock Adjustment</span>
-      </a>
-      <a routerLink="/inventory/transfers/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⇄</span>
-        <span class="nav-label">Stock Transfer</span>
-      </a>
+      <!-- Inventory -->
+      <ng-container *appHasPermission="['ITEM_VIEW', 'STOCK_ADJUST', 'STOCK_TRANSFER']">
+        <div class="nav-section-title mt-3">Inventory & Stock</div>
+        <a *appHasPermission="'ITEM_VIEW'" routerLink="/inventory/items" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📦</span>
+          <span class="nav-label">Stock Overview</span>
+        </a>
+        <a *appHasPermission="'STOCK_ADJUST'" routerLink="/inventory/adjustments/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">⚖️</span>
+          <span class="nav-label">Stock Adjustment</span>
+        </a>
+        <a *appHasPermission="'STOCK_TRANSFER'" routerLink="/inventory/transfers/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">⇄</span>
+          <span class="nav-label">Stock Transfer</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">Expenses & Approvals</div>
-      <a routerLink="/expenses" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
-        <span class="nav-icon">🧾</span>
-        <span class="nav-label">Expenses & Approvals</span>
-      </a>
-      <a routerLink="/expenses/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">New Expense Claim</span>
-      </a>
+      <!-- Expenses -->
+      <ng-container *appHasPermission="['EXPENSE_VIEW', 'EXPENSE_CREATE', 'EXPENSE_APPROVE', 'EXPENSE_REIMBURSE']">
+        <div class="nav-section-title mt-3">Expenses & Approvals</div>
+        <a routerLink="/expenses" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+          <span class="nav-icon">🧾</span>
+          <span class="nav-label">Expenses & Approvals</span>
+        </a>
+        <a *appHasPermission="'EXPENSE_APPROVE'" routerLink="/expenses/approvals" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">✅</span>
+          <span class="nav-label">Approval Queue</span>
+        </a>
+        <a *appHasPermission="'EXPENSE_CREATE'" routerLink="/expenses/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">➕</span>
+          <span class="nav-label">New Expense Claim</span>
+        </a>
+      </ng-container>
 
-      <div class="nav-section-title mt-3">General Ledger</div>
-      <a routerLink="/accounting/journals" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📖</span>
-        <span class="nav-label">Journal Entries</span>
-      </a>
-      <a routerLink="/accounting/journals/new" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">✏️</span>
-        <span class="nav-label">New Journal Entry</span>
-      </a>
-      <a routerLink="/accounting/ledger" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">General Ledger Enquiry</span>
-      </a>
+      <!-- General Ledger -->
+      <ng-container *appHasPermission="['JOURNAL_VIEW', 'JOURNAL_CREATE', 'LEDGER_VIEW', 'ACCOUNT_VIEW']">
+        <div class="nav-section-title mt-3">General Ledger</div>
+        <a *appHasPermission="'ACCOUNT_VIEW'" routerLink="/accounting/accounts" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🗂️</span>
+          <span class="nav-label">Chart of Accounts</span>
+        </a>
+        <a *appHasPermission="'JOURNAL_VIEW'" routerLink="/accounting/journals" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📖</span>
+          <span class="nav-label">Journal Entries</span>
+        </a>
+        <a *appHasPermission="'JOURNAL_CREATE'" routerLink="/accounting/journals/new" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">✏️</span>
+          <span class="nav-label">New Journal Entry</span>
+        </a>
+        <a *appHasPermission="'LEDGER_VIEW'" routerLink="/accounting/ledger" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">General Ledger Enquiry</span>
+        </a>
+      </ng-container>
+
+      <!-- Administration & Setup -->
+      <ng-container *appHasPermission="['COMPANY_VIEW', 'SETTINGS_VIEW', 'SETTINGS_EDIT', 'USER_VIEW', 'ROLE_VIEW', 'ACCOUNT_VIEW']">
+        <div class="nav-section-title mt-3">Administration</div>
+        <a *appHasPermission="['COMPANY_VIEW', 'SETTINGS_EDIT']" routerLink="/settings/company" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🏛️</span>
+          <span class="nav-label">Company Profile</span>
+        </a>
+        <a *appHasPermission="['USER_VIEW', 'SETTINGS_EDIT']" routerLink="/settings/users" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">Users & Access</span>
+        </a>
+        <a *appHasPermission="['ROLE_VIEW', 'SETTINGS_EDIT']" routerLink="/settings/roles" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🔐</span>
+          <span class="nav-label">Roles & Permissions</span>
+        </a>
+        <a *appHasPermission="['SETTINGS_VIEW', 'SETTINGS_EDIT', 'ACCOUNT_VIEW']" routerLink="/settings/fiscal-years" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Fiscal Years & Periods</span>
+        </a>
+        <a *appHasPermission="['ACCOUNT_VIEW', 'SETTINGS_EDIT']" routerLink="/settings/accounts" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">🗂️</span>
+          <span class="nav-label">Chart of Accounts</span>
+        </a>
+        <a *appHasPermission="['SETTINGS_EDIT', 'COMPANY_VIEW']" routerLink="/settings/setup" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Banks, Tax & Master Setup</span>
+        </a>
+      </ng-container>
     </nav>
   </aside>
 
@@ -147,21 +214,49 @@
     <!-- Top Bar -->
     <header class="topbar">
       <div class="tenant-selector">
-        <span class="tenant-badge">BSB Trading LLC</span>
-        <span class="currency-tag">Base: AED</span>
+        <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }}</span>
+        <span class="currency-tag">Base: {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
       </div>
-      <div class="user-profile">
-        <div class="user-avatar">A</div>
-        <div class="user-info">
-          <span class="user-name">Administrator</span>
-          <span class="user-email">admin@finledger.com</span>
+
+      <div class="user-menu-wrapper">
+        <button type="button" class="user-profile-btn" (click)="toggleUserMenu()">
+          <div class="user-avatar">{{ userInitials() }}</div>
+          <div class="user-info">
+            <span class="user-name">{{ authService.currentUser()?.fullName }}</span>
+            <span class="user-email">{{ authService.currentUser()?.email }}</span>
+          </div>
+          <span class="caret">▾</span>
+        </button>
+
+        <div class="user-dropdown" *ngIf="showUserMenu()">
+          <div class="dropdown-roles" *ngIf="authService.currentUser()?.roles?.length">
+            <span class="role-label">Roles:</span>
+            <span class="role-chip" *ngFor="let r of authService.currentUser()?.roles">{{ r }}</span>
+          </div>
+          <button type="button" class="dropdown-item" (click)="openChangePassword()">
+            🔑 Change Password
+          </button>
+          <button type="button" class="dropdown-item logout-item" (click)="logout()">
+            🚪 Sign Out
+          </button>
         </div>
       </div>
     </header>
 
     <!-- Page View Outlet -->
-    <main class="content-area">
+    <main class="content-area" (click)="showUserMenu.set(false)">
       <router-outlet></router-outlet>
     </main>
   </div>
 </div>
+
+<!-- Full-bleed Auth Layout (Login / Public Views) -->
+<ng-template #unauthLayout>
+  <router-outlet></router-outlet>
+</ng-template>
+
+<!-- Change Password Modal -->
+<app-change-password-modal
+  *ngIf="showChangePasswordModal()"
+  (closed)="showChangePasswordModal.set(false)"
+></app-change-password-modal>

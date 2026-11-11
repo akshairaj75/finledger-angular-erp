@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { JournalEntry, JournalQuery, JournalSourceType, JournalStatus } from '../../../core/models/journal.model';
 import { Page } from '../../../core/models/page.model';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -10,7 +11,7 @@ import { JournalService } from '../services/journal.service';
 @Component({
   selector: 'app-journal-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, HasPermissionDirective],
   templateUrl: './journal-list.component.html',
   styleUrls: ['./journal-list.component.css']
 })

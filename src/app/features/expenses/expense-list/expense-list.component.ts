@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../../core/auth/auth.service';
+import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { BankAccount } from '../../../core/models/bank-account.model';
 import {
   Attachment,
@@ -23,11 +25,12 @@ export type ExpenseTab = 'all' | 'mine' | 'approvals' | 'reimburse';
 @Component({
   selector: 'app-expense-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, HasPermissionDirective],
   templateUrl: './expense-list.component.html',
   styleUrls: ['./expense-list.component.css']
 })
 export class ExpenseListComponent implements OnInit {
+  private authService = inject(AuthService);
   private expenseService = inject(ExpenseService);
   private bankAccountService = inject(BankAccountService);
   private notificationService = inject(NotificationService);
@@ -107,12 +110,22 @@ export class ExpenseListComponent implements OnInit {
   // Approve in progress
   approvingIds = new Set<number>();
 
+  canApproveExpense(exp: Expense): boolean {
+    const currentId = this.authService.currentUser()?.id;
+    return (
+      this.authService.hasPermission('EXPENSE_APPROVE') &&
+      exp.status === 'SUBMITTED' &&
+      exp.employeeUserId !== currentId
+    );
+  }
+
   ngOnInit(): void {
     this.loadCategories();
     this.loadBankAccounts();
 
     this.route.queryParams.subscribe(params => {
-      this.activeTab = (params['tab'] as ExpenseTab) || 'all';
+      const routeDefaultTab = (this.route.snapshot.data['defaultTab'] as ExpenseTab) || 'all';
+      this.activeTab = (params['tab'] as ExpenseTab) || routeDefaultTab;
       this.filterStatus = (params['status'] as ExpenseStatus) || '';
       this.filterFrom = params['from'] || '';
       this.filterTo = params['to'] || '';

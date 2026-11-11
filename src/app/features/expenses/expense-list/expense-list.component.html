@@ -5,7 +5,7 @@
       <h1 class="page-title">Expenses & Approvals</h1>
       <p class="page-subtitle">Track, approve, and reimburse employee claims and company-paid expenditures</p>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" *appHasPermission="'EXPENSE_CREATE'">
       <a routerLink="/expenses/new" class="btn btn-primary">
         <span>➕</span> New Expense Claim
       </a>
@@ -122,6 +122,7 @@
     </div>
     <div class="bulk-buttons">
       <button
+        *appHasPermission="'EXPENSE_APPROVE'"
         type="button"
         class="btn btn-sm btn-success"
         (click)="bulkApprove()"
@@ -129,6 +130,7 @@
         <span>✓</span> Approve Selected
       </button>
       <button
+        *appHasPermission="'EXPENSE_APPROVE'"
         type="button"
         class="btn btn-sm btn-danger"
         (click)="promptBulkReject()"
@@ -136,6 +138,7 @@
         <span>✕</span> Reject Selected
       </button>
       <button
+        *appHasPermission="'EXPENSE_REIMBURSE'"
         type="button"
         class="btn btn-sm btn-reimburse"
         (click)="promptReimburse()"
@@ -292,9 +295,9 @@
           <!-- Actions -->
           <td class="text-center actions-cell">
             <div class="action-btn-group">
-              <!-- Inline Approve for SUBMITTED -->
+              <!-- Inline Approve for SUBMITTED (blocked for self-approval or missing permission) -->
               <button
-                *ngIf="exp.status === 'SUBMITTED'"
+                *ngIf="canApproveExpense(exp)"
                 type="button"
                 class="btn-icon btn-icon-approve"
                 title="Approve Expense"
@@ -306,7 +309,7 @@
 
               <!-- Inline Reject for SUBMITTED -->
               <button
-                *ngIf="exp.status === 'SUBMITTED'"
+                *ngIf="canApproveExpense(exp)"
                 type="button"
                 class="btn-icon btn-icon-reject"
                 title="Reject Expense"

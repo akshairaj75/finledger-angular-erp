@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { Bill, BillQuery, BillStatus } from '../../../core/models/bill.model';
 import { Page } from '../../../core/models/page.model';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -17,7 +18,7 @@ interface SummaryCards {
 @Component({
   selector: 'app-bill-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, HasPermissionDirective],
   templateUrl: './bill-list.component.html',
   styleUrls: ['./bill-list.component.css']
 })
