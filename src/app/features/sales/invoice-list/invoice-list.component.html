@@ -19,7 +19,7 @@
       <div class="card-icon">📝</div>
       <div class="card-content">
         <span class="card-label">Draft Invoices</span>
-        <span class="card-value">{{ summary.draftCount }}</span>
+        <span class="card-value">{{ summary().draftCount }}</span>
         <span class="card-subtext">Pending dispatch & posting</span>
       </div>
     </div>
@@ -28,7 +28,7 @@
       <div class="card-icon">⏳</div>
       <div class="card-content">
         <span class="card-label">Unpaid Receivables</span>
-        <span class="card-value">{{ summary.unpaidTotal | number:'1.2-2' }} AED</span>
+        <span class="card-value">{{ summary().unpaidTotal | number:'1.2-2' }} AED</span>
         <span class="card-subtext">Open customer balances</span>
       </div>
     </div>
@@ -37,7 +37,7 @@
       <div class="card-icon">⚠️</div>
       <div class="card-content">
         <span class="card-label">Overdue Balance</span>
-        <span class="card-value">{{ summary.overdueTotal | number:'1.2-2' }} AED</span>
+        <span class="card-value">{{ summary().overdueTotal | number:'1.2-2' }} AED</span>
         <span class="card-subtext">Past due payment terms</span>
       </div>
     </div>
@@ -46,7 +46,7 @@
       <div class="card-icon">💰</div>
       <div class="card-content">
         <span class="card-label">Paid This Month</span>
-        <span class="card-value">{{ summary.paidThisMonthTotal | number:'1.2-2' }} AED</span>
+        <span class="card-value">{{ summary().paidThisMonthTotal | number:'1.2-2' }} AED</span>
         <span class="card-subtext">Current month collections</span>
       </div>
     </div>
@@ -60,7 +60,8 @@
         <input
           type="text"
           id="searchQuery"
-          [(ngModel)]="searchQuery"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
           (keyup.enter)="applyFilters()"
           placeholder="Search by invoice # or customer..."
           class="form-control"
@@ -69,7 +70,7 @@
 
       <div class="form-group">
         <label for="filterStatus">Status</label>
-        <select id="filterStatus" [(ngModel)]="filterStatus" class="form-control">
+        <select id="filterStatus" [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)" class="form-control">
           <option value="">All Statuses</option>
           <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
         </select>
@@ -77,12 +78,12 @@
 
       <div class="form-group">
         <label for="filterFrom">From Date</label>
-        <input type="date" id="filterFrom" [(ngModel)]="filterFrom" class="form-control" />
+        <input type="date" id="filterFrom" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
         <label for="filterTo">To Date</label>
-        <input type="date" id="filterTo" [(ngModel)]="filterTo" class="form-control" />
+        <input type="date" id="filterTo" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" class="form-control" />
       </div>
 
       <div class="filter-buttons">
@@ -94,19 +95,19 @@
 
   <!-- Invoices Table Card -->
   <div class="table-card">
-    <div *ngIf="loading" class="loading-state">
+    <div *ngIf="loading()" class="loading-state">
       <div class="spinner"></div>
       <p>Loading invoices...</p>
     </div>
 
-    <div *ngIf="!loading && invoicesPage.content.length === 0" class="empty-state">
+    <div *ngIf="!loading() && invoicesPage().content.length === 0" class="empty-state">
       <div class="empty-icon">📄</div>
       <h3>No Invoices Found</h3>
       <p>Create your first tax invoice or adjust your search filters.</p>
       <a routerLink="/sales/invoices/new" class="btn btn-primary mt-3">Create Invoice</a>
     </div>
 
-    <div *ngIf="!loading && invoicesPage.content.length > 0" class="table-responsive">
+    <div *ngIf="!loading() && invoicesPage().content.length > 0" class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
@@ -123,7 +124,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let inv of invoicesPage.content" (click)="viewDetails(inv)" class="clickable-row">
+          <tr *ngFor="let inv of invoicesPage().content" (click)="viewDetails(inv)" class="clickable-row">
             <td>
               <span class="inv-number">{{ inv.invoiceNo || 'DRAFT' }}</span>
             </td>
@@ -161,20 +162,20 @@
                 [hidden]="inv.status !== 'DRAFT'"
                 (click)="sendInvoice(inv, $event)"
                 class="btn btn-primary btn-xs"
-                [disabled]="sendingId === inv.id"
+                [disabled]="sendingId() === inv.id"
                 title="Post to GL & Send Invoice"
               >
-                {{ sendingId === inv.id ? 'Posting...' : 'Send' }}
+                {{ sendingId() === inv.id ? 'Posting...' : 'Send' }}
               </button>
 
               <!-- Action: Preview PDF -->
               <button
                 (click)="downloadPdf(inv, $event)"
                 class="btn btn-outline btn-xs ml-1"
-                [disabled]="pdfLoadingId === inv.id"
+                [disabled]="pdfLoadingId() === inv.id"
                 title="Download / View PDF"
               >
-                {{ pdfLoadingId === inv.id ? 'PDF...' : 'PDF' }}
+                {{ pdfLoadingId() === inv.id ? 'PDF...' : 'PDF' }}
               </button>
 
               <!-- Action: Void (for non-VOID) -->
@@ -195,23 +196,23 @@
       <!-- Pagination -->
       <div class="pagination-footer">
         <span class="pagination-info">
-          Showing {{ invoicesPage.page * invoicesPage.size + 1 }} to
-          {{ (invoicesPage.page + 1) * invoicesPage.size > invoicesPage.totalElements ? invoicesPage.totalElements : (invoicesPage.page + 1) * invoicesPage.size }}
-          of {{ invoicesPage.totalElements }} entries
+          Showing {{ invoicesPage().page * invoicesPage().size + 1 }} to
+          {{ (invoicesPage().page + 1) * invoicesPage().size > invoicesPage().totalElements ? invoicesPage().totalElements : (invoicesPage().page + 1) * invoicesPage().size }}
+          of {{ invoicesPage().totalElements }} entries
         </span>
         <div class="pagination-buttons">
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="invoicesPage.page === 0"
-            (click)="goToPage(invoicesPage.page - 1)"
+            [disabled]="invoicesPage().page === 0"
+            (click)="goToPage(invoicesPage().page - 1)"
           >
             Previous
           </button>
-          <span class="current-page-badge">Page {{ invoicesPage.page + 1 }} of {{ invoicesPage.totalPages || 1 }}</span>
+          <span class="current-page-badge">Page {{ invoicesPage().page + 1 }} of {{ invoicesPage().totalPages || 1 }}</span>
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="invoicesPage.page >= invoicesPage.totalPages - 1"
-            (click)="goToPage(invoicesPage.page + 1)"
+            [disabled]="invoicesPage().page >= invoicesPage().totalPages - 1"
+            (click)="goToPage(invoicesPage().page + 1)"
           >
             Next
           </button>
@@ -221,19 +222,19 @@
   </div>
 
   <!-- Invoice Detail Modal -->
-  <div *ngIf="showDetailModal && selectedInvoice" class="modal-backdrop">
+  <div *ngIf="showDetailModal() && selectedInvoice() as selInv" class="modal-backdrop">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
           <div>
             <div class="detail-header-tags">
-              <span class="inv-number-lg">{{ selectedInvoice.invoiceNo || 'DRAFT INVOICE' }}</span>
-              <span class="chip" [ngClass]="getStatusClass(selectedInvoice.status)">{{ selectedInvoice.status }}</span>
-              <span class="type-tag" [ngClass]="selectedInvoice.docType === 'CREDIT_NOTE' ? 'type-cn' : 'type-inv'">
-                {{ selectedInvoice.docType }}
+              <span class="inv-number-lg">{{ selInv.invoiceNo || 'DRAFT INVOICE' }}</span>
+              <span class="chip" [ngClass]="getStatusClass(selInv.status)">{{ selInv.status }}</span>
+              <span class="type-tag" [ngClass]="selInv.docType === 'CREDIT_NOTE' ? 'type-cn' : 'type-inv'">
+                {{ selInv.docType }}
               </span>
             </div>
-            <p class="text-muted text-sm mt-1">Invoice ID: #{{ selectedInvoice.id }}</p>
+            <p class="text-muted text-sm mt-1">Invoice ID: #{{ selInv.id }}</p>
           </div>
           <button (click)="closeDetailModal()" class="modal-close">&times;</button>
         </div>
@@ -243,22 +244,22 @@
           <div class="detail-grid">
             <div class="detail-card">
               <span class="detail-label">Customer Details</span>
-              <span class="detail-main-text">{{ selectedInvoice.customerName }}</span>
-              <span class="detail-sub-text">Code: {{ selectedInvoice.customerCode }}</span>
+              <span class="detail-main-text">{{ selInv.customerName }}</span>
+              <span class="detail-sub-text">Code: {{ selInv.customerCode }}</span>
             </div>
 
             <div class="detail-card">
               <span class="detail-label">Invoice Dates</span>
-              <span class="detail-main-text">Issued: {{ selectedInvoice.invoiceDate | date:'mediumDate' }}</span>
-              <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(selectedInvoice)}">
-                Due: {{ selectedInvoice.dueDate | date:'mediumDate' }}
+              <span class="detail-main-text">Issued: {{ selInv.invoiceDate | date:'mediumDate' }}</span>
+              <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(selInv)}">
+                Due: {{ selInv.dueDate | date:'mediumDate' }}
               </span>
             </div>
 
             <div class="detail-card">
               <span class="detail-label">Financial Overview</span>
-              <span class="detail-main-text">{{ selectedInvoice.total | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
-              <span class="detail-sub-text text-danger font-bold">Balance: {{ selectedInvoice.balanceDue | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span class="detail-main-text">{{ selInv.total | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
+              <span class="detail-sub-text text-danger font-bold">Balance: {{ selInv.balanceDue | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
           </div>
 
@@ -278,7 +279,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let line of selectedInvoice.lines; let i = index">
+                <tr *ngFor="let line of selInv.lines; let i = index">
                   <td>{{ line.lineNo || (i + 1) }}</td>
                   <td>{{ line.description }}</td>
                   <td class="text-right">{{ line.quantity | number:'1.2-2' }}</td>
@@ -295,56 +296,56 @@
           <div class="totals-breakdown">
             <div class="totals-row">
               <span>Subtotal:</span>
-              <span>{{ selectedInvoice.subtotal | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span>{{ selInv.subtotal | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
-            <div class="totals-row" *ngIf="selectedInvoice.discountTotal > 0">
+            <div class="totals-row" *ngIf="selInv.discountTotal > 0">
               <span>Discount Total:</span>
-              <span class="text-danger">-{{ selectedInvoice.discountTotal | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span class="text-danger">-{{ selInv.discountTotal | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row">
               <span>VAT Total:</span>
-              <span>{{ selectedInvoice.taxTotal | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span>{{ selInv.taxTotal | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row totals-grand">
               <span>Grand Total:</span>
-              <span>{{ selectedInvoice.total | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span>{{ selInv.total | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row text-success">
               <span>Amount Paid:</span>
-              <span>{{ selectedInvoice.amountPaid | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span>{{ selInv.amountPaid | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row totals-balance text-danger font-bold">
               <span>Balance Due:</span>
-              <span>{{ selectedInvoice.balanceDue | number:'1.2-2' }} {{ selectedInvoice.currencyCode }}</span>
+              <span>{{ selInv.balanceDue | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
           </div>
 
-          <div *ngIf="selectedInvoice.notes" class="invoice-notes mt-3">
+          <div *ngIf="selInv.notes" class="invoice-notes mt-3">
             <strong>Notes / Terms:</strong>
-            <p>{{ selectedInvoice.notes }}</p>
+            <p>{{ selInv.notes }}</p>
           </div>
         </div>
 
         <div class="modal-footer">
           <div class="footer-left">
             <button
-              *ngIf="selectedInvoice.status === 'DRAFT'"
-              (click)="sendInvoice(selectedInvoice)"
+              *ngIf="selInv.status === 'DRAFT'"
+              (click)="sendInvoice(selInv)"
               class="btn btn-primary"
-              [disabled]="sendingId === selectedInvoice.id"
+              [disabled]="sendingId() === selInv.id"
             >
-              {{ sendingId === selectedInvoice.id ? 'Posting...' : 'Save & Send to GL' }}
+              {{ sendingId() === selInv.id ? 'Posting...' : 'Save & Send to GL' }}
             </button>
             <button
-              (click)="downloadPdf(selectedInvoice)"
+              (click)="downloadPdf(selInv)"
               class="btn btn-outline ml-1"
-              [disabled]="pdfLoadingId === selectedInvoice.id"
+              [disabled]="pdfLoadingId() === selInv.id"
             >
-              {{ pdfLoadingId === selectedInvoice.id ? 'Generating...' : 'Download PDF' }}
+              {{ pdfLoadingId() === selInv.id ? 'Generating...' : 'Download PDF' }}
             </button>
             <button
-              *ngIf="selectedInvoice.status !== 'VOID'"
-              (click)="openVoidModal(selectedInvoice)"
+              *ngIf="selInv.status !== 'VOID'"
+              (click)="openVoidModal(selInv)"
               class="btn btn-outline btn-danger-hover ml-1"
             >
               Void Invoice
@@ -357,11 +358,11 @@
   </div>
 
   <!-- Void Reason Confirmation Modal -->
-  <div *ngIf="showVoidModal && invoiceToVoid" class="modal-backdrop">
+  <div *ngIf="showVoidModal() && invoiceToVoid() as voidTarget" class="modal-backdrop">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title">Void Invoice {{ invoiceToVoid.invoiceNo }}</h2>
+          <h2 class="modal-title">Void Invoice {{ voidTarget.invoiceNo }}</h2>
           <button (click)="closeVoidModal()" class="modal-close">&times;</button>
         </div>
 
@@ -374,7 +375,8 @@
             <label for="voidReason">Reason for Voiding</label>
             <textarea
               id="voidReason"
-              [(ngModel)]="voidReason"
+              [ngModel]="voidReason()"
+              (ngModelChange)="voidReason.set($event)"
               rows="3"
               class="form-control"
               placeholder="e.g. Invoiced wrong pricing, customer cancelled order..."
@@ -384,8 +386,8 @@
 
         <div class="modal-footer">
           <button (click)="closeVoidModal()" class="btn btn-outline">Cancel</button>
-          <button (click)="confirmVoid()" class="btn btn-danger" [disabled]="voiding">
-            {{ voiding ? 'Voiding...' : 'Confirm Void' }}
+          <button (click)="confirmVoid()" class="btn btn-danger" [disabled]="voiding()">
+            {{ voiding() ? 'Voiding...' : 'Confirm Void' }}
           </button>
         </div>
       </div>

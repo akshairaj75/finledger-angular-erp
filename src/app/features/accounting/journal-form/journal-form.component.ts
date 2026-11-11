@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -27,10 +27,11 @@ export class JournalFormComponent implements OnInit {
   private router = inject(Router);
 
   journalForm!: FormGroup;
-  accounts: Account[] = [];
-  costCenters: CostCenter[] = [];
-  submitting = false;
-  backendFieldErrors: Record<string, string> = {};
+  accounts = signal<Account[]>([]);
+  costCenters = signal<CostCenter[]>([]);
+  submitting = signal(false);
+  backendFieldErrors = signal<Record<string, string>>({});
+  private formRevision = signal(0);
 
   readonly currencies = ['AED', 'SAR', 'USD', 'EUR', 'GBP'];
 
@@ -57,6 +58,8 @@ export class JournalFormComponent implements OnInit {
     // Initialize with two blank lines
     this.addLine();
     this.addLine();
+    this.journalForm.valueChanges.subscribe(() => this.formRevision.update(v => v + 1));
+    this.journalForm.statusChanges.subscribe(() => this.formRevision.update(v => v + 1));
   }
 
   get lines(): FormArray {
@@ -75,11 +78,13 @@ export class JournalFormComponent implements OnInit {
 
   addLine(): void {
     this.lines.push(this.createLineGroup());
+    this.formRevision.update(v => v + 1);
   }
 
   removeLine(index: number): void {
     if (this.lines.length > 2) {
       this.lines.removeAt(index);
+      this.formRevision.update(v => v + 1);
     } else {
       this.notificationService.warning('A journal entry must contain at least two lines.');
     }
@@ -107,55 +112,61 @@ export class JournalFormComponent implements OnInit {
     // Load non-group posting accounts
     this.accountService.getAccounts(0, 500).subscribe({
       next: (page) => {
-        this.accounts = page.content.filter(a => !a.isGroup && a.isActive);
+        this.accounts.set(page.content.filter(a => !a.isGroup && a.isActive));
       }
     });
 
     // Load active cost centers
     this.costCenterService.getCostCenters(true).subscribe({
       next: (list) => {
-        this.costCenters = list;
+        this.costCenters.set(list);
       }
     });
   }
 
   // Running totals calculations for display
-  get totalDebit(): number {
+  readonly totalDebit = computed(() => {
+    this.formRevision();
+    if (!this.journalForm) return 0;
     let total = 0;
     for (let i = 0; i < this.lines.length; i++) {
       total += Number(this.lines.at(i).get('debit')?.value) || 0;
     }
     return Math.round(total * 100) / 100;
-  }
+  });
 
-  get totalCredit(): number {
+  readonly totalCredit = computed(() => {
+    this.formRevision();
+    if (!this.journalForm) return 0;
     let total = 0;
     for (let i = 0; i < this.lines.length; i++) {
       total += Number(this.lines.at(i).get('credit')?.value) || 0;
     }
     return Math.round(total * 100) / 100;
-  }
+  });
 
-  get difference(): number {
-    return Math.abs(Math.round((this.totalDebit - this.totalCredit) * 100) / 100);
-  }
+  readonly difference = computed(() => {
+    return Math.abs(Math.round((this.totalDebit() - this.totalCredit()) * 100) / 100);
+  });
 
-  get isBalanced(): boolean {
-    return this.difference < 0.005 && this.totalDebit > 0 && this.lines.length >= 2;
-  }
+  readonly isBalanced = computed(() => {
+    this.formRevision();
+    return this.difference() < 0.005 && this.totalDebit() > 0 && !!this.journalForm && this.lines.length >= 2;
+  });
 
-  get canSubmit(): boolean {
-    return this.journalForm.valid && this.isBalanced && !this.submitting;
-  }
+  readonly canSubmit = computed(() => {
+    this.formRevision();
+    return !!this.journalForm && this.journalForm.valid && this.isBalanced() && !this.submitting();
+  });
 
   submit(postImmediately: boolean): void {
-    if (!this.canSubmit) {
+    if (!this.canSubmit()) {
       this.journalForm.markAllAsTouched();
       return;
     }
 
-    this.submitting = true;
-    this.backendFieldErrors = {};
+    this.submitting.set(true);
+    this.backendFieldErrors.set({});
 
     const formVal = this.journalForm.value;
     const lineRequests: JournalLineRequest[] = formVal.lines.map((l: any) => ({
@@ -179,17 +190,19 @@ export class JournalFormComponent implements OnInit {
 
     this.journalService.createJournalEntry(req).subscribe({
       next: (created) => {
-        this.submitting = false;
+        this.submitting.set(false);
         const actionVerb = postImmediately ? 'posted' : 'saved as draft';
         this.notificationService.success(`Journal entry ${created.entryNo} successfully ${actionVerb}.`);
         this.router.navigate(['/accounting/journals']);
       },
       error: (err) => {
-        this.submitting = false;
+        this.submitting.set(false);
         if (err.error?.fieldErrors) {
+          const map: Record<string, string> = {};
           err.error.fieldErrors.forEach((fe: any) => {
-            this.backendFieldErrors[fe.field] = fe.message;
+            map[fe.field] = fe.message;
           });
+          this.backendFieldErrors.set(map);
         }
       }
     });

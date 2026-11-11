@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -49,25 +49,25 @@ export class StockAdjustmentFormComponent implements OnInit {
 
   adjustmentForm!: FormGroup;
 
-  warehouses: Warehouse[] = [];
-  expenseAccounts: Account[] = [];
-  catalogItems: Item[] = [];
+  warehouses = signal<Warehouse[]>([]);
+  expenseAccounts = signal<Account[]>([]);
+  catalogItems = signal<Item[]>([]);
 
   // Barcode / Item Search
-  barcodeInput = '';
-  selectedItemId: number | null = null;
+  barcodeInput = signal('');
+  selectedItemId = signal<number | null>(null);
 
-  loading = true;
-  saving = false;
-  posting = false;
-  loadingWarehouseStock = false;
+  loading = signal(true);
+  saving = signal(false);
+  posting = signal(false);
+  loadingWarehouseStock = signal(false);
 
   // Live Calculations
-  lineSummaries: AdjustmentLineSummary[] = [];
-  totalShortageValue = 0;
-  totalSurplusValue = 0;
-  netValueImpact = 0;
-  journalPreview: JournalPreviewLine[] = [];
+  lineSummaries = signal<AdjustmentLineSummary[]>([]);
+  totalShortageValue = signal(0);
+  totalSurplusValue = signal(0);
+  netValueImpact = signal(0);
+  journalPreview = signal<JournalPreviewLine[]>([]);
 
   reasons: { value: AdjustmentReason; label: string }[] = [
     { value: 'STOCK_COUNT', label: 'Stock Count Variance' },
@@ -113,12 +113,12 @@ export class StockAdjustmentFormComponent implements OnInit {
   }
 
   private loadDependencies(): void {
-    this.loading = true;
+    this.loading.set(true);
 
     // 1. Warehouses
     this.inventoryService.getWarehouses().subscribe({
       next: whs => {
-        this.warehouses = whs;
+        this.warehouses.set(whs);
         const defaultWh = whs.find(w => w.isDefault) || (whs.length > 0 ? whs[0] : null);
         if (defaultWh) {
           this.adjustmentForm.patchValue({ warehouseId: defaultWh.id });
@@ -129,12 +129,13 @@ export class StockAdjustmentFormComponent implements OnInit {
     // 2. Expense / Adjustment Accounts
     this.accountService.getAccounts(0, 200).subscribe({
       next: page => {
-        this.expenseAccounts = page.content.filter(
+        const filtered = page.content.filter(
           a => a.accountType === 'EXPENSE' || a.code === '5150' || a.code === '5200'
         );
+        this.expenseAccounts.set(filtered);
         // Default to 5150 Inventory Adjustments or first expense
-        const defaultAdj = this.expenseAccounts.find(a => a.code === '5150' || a.name.includes('Adjustment')) ||
-          (this.expenseAccounts.length > 0 ? this.expenseAccounts[0] : null);
+        const defaultAdj = filtered.find(a => a.code === '5150' || a.name.includes('Adjustment')) ||
+          (filtered.length > 0 ? filtered[0] : null);
         if (defaultAdj) {
           this.adjustmentForm.patchValue({ adjustmentAccountId: defaultAdj.id });
         }
@@ -144,10 +145,10 @@ export class StockAdjustmentFormComponent implements OnInit {
     // 3. Catalog Items (for dropdown search)
     this.inventoryService.getItems({ itemType: 'INVENTORY', active: true, size: 500 }).subscribe({
       next: page => {
-        this.catalogItems = page.content;
-        this.loading = false;
+        this.catalogItems.set(page.content);
+        this.loading.set(false);
       },
-      error: () => (this.loading = false)
+      error: () => this.loading.set(false)
     });
   }
 
@@ -182,7 +183,7 @@ export class StockAdjustmentFormComponent implements OnInit {
       return;
     }
 
-    this.loadingWarehouseStock = true;
+    this.loadingWarehouseStock.set(true);
     this.inventoryService.getStockBalances(whId).subscribe({
       next: balances => {
         this.linesArray.clear();
@@ -201,34 +202,36 @@ export class StockAdjustmentFormComponent implements OnInit {
           );
         }
 
-        this.loadingWarehouseStock = false;
+        this.loadingWarehouseStock.set(false);
         this.notificationService.success(`Loaded ${balances.length} items from selected warehouse.`);
         this.recalculateAll();
       },
       error: () => {
         this.notificationService.error('Failed to load warehouse stock balances.');
-        this.loadingWarehouseStock = false;
+        this.loadingWarehouseStock.set(false);
       }
     });
   }
 
   addItemFromSelect(): void {
-    if (!this.selectedItemId) return;
-    this.addItemById(this.selectedItemId);
-    this.selectedItemId = null;
+    const id = this.selectedItemId();
+    if (!id) return;
+    this.addItemById(id);
+    this.selectedItemId.set(null);
   }
 
   scanBarcode(): void {
-    if (!this.barcodeInput.trim()) return;
-    const code = this.barcodeInput.trim().toUpperCase();
+    const raw = this.barcodeInput().trim();
+    if (!raw) return;
+    const code = raw.toUpperCase();
 
-    const item = this.catalogItems.find(
+    const item = this.catalogItems().find(
       i => (i.barcode && i.barcode.toUpperCase() === code) || i.sku.toUpperCase() === code
     );
 
     if (item) {
       this.addItemById(item.id);
-      this.barcodeInput = '';
+      this.barcodeInput.set('');
     } else {
       this.notificationService.error(`Item with barcode/SKU "${code}" not found.`);
     }
@@ -316,17 +319,17 @@ export class StockAdjustmentFormComponent implements OnInit {
   }
 
   getDifferenceQty(index: number): number {
-    return this.lineSummaries[index]?.differenceQty ?? 0;
+    return this.lineSummaries()[index]?.differenceQty ?? 0;
   }
 
   getValueImpact(index: number): number {
-    return this.lineSummaries[index]?.valueImpact ?? 0;
+    return this.lineSummaries()[index]?.valueImpact ?? 0;
   }
 
   recalculateAll(): void {
-    this.lineSummaries = [];
-    this.totalShortageValue = 0;
-    this.totalSurplusValue = 0;
+    const summaries: AdjustmentLineSummary[] = [];
+    let shortage = 0;
+    let surplus = 0;
 
     for (let i = 0; i < this.linesArray.length; i++) {
       const g = this.linesArray.at(i).value;
@@ -338,12 +341,12 @@ export class StockAdjustmentFormComponent implements OnInit {
       const impact = diff * cost;
 
       if (diff < 0) {
-        this.totalShortageValue += Math.abs(impact);
+        shortage += Math.abs(impact);
       } else if (diff > 0) {
-        this.totalSurplusValue += impact;
+        surplus += impact;
       }
 
-      this.lineSummaries.push({
+      summaries.push({
         itemId: g.itemId,
         sku: g.sku,
         name: g.name,
@@ -355,52 +358,57 @@ export class StockAdjustmentFormComponent implements OnInit {
       });
     }
 
-    this.netValueImpact = this.totalSurplusValue - this.totalShortageValue;
-    this.generateJournalPreview();
+    this.lineSummaries.set(summaries);
+    this.totalShortageValue.set(shortage);
+    this.totalSurplusValue.set(surplus);
+    this.netValueImpact.set(surplus - shortage);
+    this.generateJournalPreview(shortage, surplus);
   }
 
-  private generateJournalPreview(): void {
-    this.journalPreview = [];
+  private generateJournalPreview(shortage: number, surplus: number): void {
+    const preview: JournalPreviewLine[] = [];
 
     const adjAccId = this.adjustmentForm.get('adjustmentAccountId')?.value;
-    const adjAccount = this.expenseAccounts.find(a => a.id === adjAccId);
+    const adjAccount = this.expenseAccounts().find(a => a.id === adjAccId);
     const adjName = adjAccount ? `${adjAccount.code} - ${adjAccount.name}` : 'Inventory Adjustments';
 
     // Shortage journal: Dr Adjustment Expense, Cr Inventory (1300)
-    if (this.totalShortageValue > 0) {
-      this.journalPreview.push({
+    if (shortage > 0) {
+      preview.push({
         accountCode: adjAccount?.code || '5150',
         accountName: `${adjName} (Shortage/Loss)`,
-        debit: this.totalShortageValue,
+        debit: shortage,
         credit: 0
       });
-      this.journalPreview.push({
+      preview.push({
         accountCode: '1300',
         accountName: '1300 - Merchandise Inventory',
         debit: 0,
-        credit: this.totalShortageValue
+        credit: shortage
       });
     }
 
     // Surplus journal: Dr Inventory (1300), Cr Adjustment Expense
-    if (this.totalSurplusValue > 0) {
-      this.journalPreview.push({
+    if (surplus > 0) {
+      preview.push({
         accountCode: '1300',
         accountName: '1300 - Merchandise Inventory',
-        debit: this.totalSurplusValue,
+        debit: surplus,
         credit: 0
       });
-      this.journalPreview.push({
+      preview.push({
         accountCode: adjAccount?.code || '5150',
         accountName: `${adjName} (Surplus Offset)`,
         debit: 0,
-        credit: this.totalSurplusValue
+        credit: surplus
       });
     }
+
+    this.journalPreview.set(preview);
   }
 
   private findCatalogItem(itemId: number): Item | undefined {
-    return this.catalogItems.find(i => i.id === itemId);
+    return this.catalogItems().find(i => i.id === itemId);
   }
 
   saveDraft(): void {
@@ -410,16 +418,16 @@ export class StockAdjustmentFormComponent implements OnInit {
       return;
     }
 
-    this.saving = true;
+    this.saving.set(true);
     const req = this.buildRequest();
 
     this.inventoryService.createAdjustment(req).subscribe({
       next: res => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.success(`Draft stock adjustment ${res.adjustmentNo} saved successfully.`);
         this.router.navigate(['/inventory/items']);
       },
-      error: () => (this.saving = false)
+      error: () => this.saving.set(false)
     });
   }
 
@@ -430,23 +438,23 @@ export class StockAdjustmentFormComponent implements OnInit {
       return;
     }
 
-    this.posting = true;
+    this.posting.set(true);
     const req = this.buildRequest();
 
     this.inventoryService.createAdjustment(req).subscribe({
       next: draft => {
         this.inventoryService.postAdjustment(draft.id).subscribe({
           next: posted => {
-            this.posting = false;
+            this.posting.set(false);
             this.notificationService.success(
               `Stock adjustment ${posted.adjustmentNo} posted to General Ledger successfully.`
             );
             this.router.navigate(['/inventory/items']);
           },
-          error: () => (this.posting = false)
+          error: () => this.posting.set(false)
         });
       },
-      error: () => (this.posting = false)
+      error: () => this.posting.set(false)
     });
   }
 

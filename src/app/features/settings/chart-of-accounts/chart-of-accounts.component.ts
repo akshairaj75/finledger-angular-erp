@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { Account, AccountType, NormalBalance } from '../../../core/models/account.model';
@@ -36,7 +36,7 @@ import { SettingsService } from '../services/settings.service';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let a of accounts" [class.group-row]="a.isGroup">
+            <tr *ngFor="let a of accounts()" [class.group-row]="a.isGroup">
               <td class="mono font-bold">{{ a.code }}</td>
               <td>
                 <span [style.padding-left.px]="a.parentId ? 18 : 0">
@@ -63,11 +63,11 @@ import { SettingsService } from '../services/settings.service';
         </table>
       </div>
 
-      <div class="modal-backdrop" *ngIf="showModal">
+      <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>{{ editing ? 'Edit Account: ' + editing.code : 'New Ledger Account' }}</h3>
-            <button class="close-btn" (click)="showModal = false">&times;</button>
+            <h3>{{ editing() ? 'Edit Account: ' + editing()!.code : 'New Ledger Account' }}</h3>
+            <button class="close-btn" (click)="showModal.set(false)">&times;</button>
           </div>
           <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
             <div class="row-2">
@@ -110,7 +110,7 @@ import { SettingsService } from '../services/settings.service';
               <label>Parent Group</label>
               <select formControlName="parentId">
                 <option [ngValue]="null">None (Root Level)</option>
-                <option *ngFor="let g of groupAccounts" [ngValue]="g.id">{{ g.code }} - {{ g.name }}</option>
+                <option *ngFor="let g of groupAccounts()" [ngValue]="g.id">{{ g.code }} - {{ g.name }}</option>
               </select>
             </div>
 
@@ -120,9 +120,9 @@ import { SettingsService } from '../services/settings.service';
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showModal = false">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="form.invalid || saving">
-                {{ saving ? 'Saving...' : 'Save Account' }}
+              <button type="button" class="btn-outline" (click)="showModal.set(false)">Cancel</button>
+              <button type="submit" class="btn-primary" [disabled]="form.invalid || saving()">
+                {{ saving() ? 'Saving...' : 'Save Account' }}
               </button>
             </div>
           </form>
@@ -167,10 +167,10 @@ export class ChartOfAccountsComponent implements OnInit {
   private notification = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  accounts: Account[] = [];
-  showModal = false;
-  saving = false;
-  editing: Account | null = null;
+  accounts = signal<Account[]>([]);
+  showModal = signal<boolean>(false);
+  saving = signal<boolean>(false);
+  editing = signal<Account | null>(null);
 
   form = this.fb.group({
     code: ['', Validators.required],
@@ -183,20 +183,18 @@ export class ChartOfAccountsComponent implements OnInit {
     isActive: [true]
   });
 
-  get groupAccounts(): Account[] {
-    return this.accounts.filter(a => a.isGroup);
-  }
+  groupAccounts = computed<Account[]>(() => this.accounts().filter(a => a.isGroup));
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
-    this.settingsService.getAccounts().subscribe(res => (this.accounts = res.content || []));
+    this.settingsService.getAccounts().subscribe(res => this.accounts.set(res.content || []));
   }
 
   openNew(): void {
-    this.editing = null;
+    this.editing.set(null);
     this.form.reset({
       code: '',
       name: '',
@@ -207,11 +205,11 @@ export class ChartOfAccountsComponent implements OnInit {
       isGroup: false,
       isActive: true
     });
-    this.showModal = true;
+    this.showModal.set(true);
   }
 
   openEdit(acc: Account): void {
-    this.editing = acc;
+    this.editing.set(acc);
     this.form.patchValue({
       code: acc.code,
       name: acc.name,
@@ -222,12 +220,12 @@ export class ChartOfAccountsComponent implements OnInit {
       isGroup: acc.isGroup,
       isActive: acc.isActive
     });
-    this.showModal = true;
+    this.showModal.set(true);
   }
 
   save(): void {
-    if (this.form.invalid || this.saving) return;
-    this.saving = true;
+    if (this.form.invalid || this.saving()) return;
+    this.saving.set(true);
     const raw = this.form.getRawValue();
     const payload = {
       code: raw.code!,
@@ -240,18 +238,19 @@ export class ChartOfAccountsComponent implements OnInit {
       isActive: raw.isActive !== false
     };
 
-    const obs = this.editing
-      ? this.settingsService.updateAccount(this.editing.id, payload)
+    const editingAcc = this.editing();
+    const obs = editingAcc
+      ? this.settingsService.updateAccount(editingAcc.id, payload)
       : this.settingsService.createAccount(payload);
 
     obs.subscribe({
       next: () => {
-        this.saving = false;
-        this.showModal = false;
+        this.saving.set(false);
+        this.showModal.set(false);
         this.notification.success('Account saved');
         this.load();
       },
-      error: () => (this.saving = false)
+      error: () => this.saving.set(false)
     });
   }
 }

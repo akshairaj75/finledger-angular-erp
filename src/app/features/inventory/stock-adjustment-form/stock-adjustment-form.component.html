@@ -7,11 +7,11 @@
     </div>
     <div class="header-actions">
       <a routerLink="/inventory/items" class="btn btn-secondary">Cancel</a>
-      <button type="button" class="btn btn-secondary" [disabled]="saving || posting" (click)="saveDraft()">
-        {{ saving ? 'Saving...' : 'Save Draft' }}
+      <button type="button" class="btn btn-secondary" [disabled]="saving() || posting()" (click)="saveDraft()">
+        {{ saving() ? 'Saving...' : 'Save Draft' }}
       </button>
-      <button type="button" class="btn btn-primary" [disabled]="saving || posting" (click)="saveAndPost()">
-        {{ posting ? 'Posting to GL...' : 'Save & Post to GL' }}
+      <button type="button" class="btn btn-primary" [disabled]="saving() || posting()" (click)="saveAndPost()">
+        {{ posting() ? 'Posting to GL...' : 'Save & Post to GL' }}
       </button>
     </div>
   </div>
@@ -33,7 +33,7 @@
           <label class="form-label">Warehouse <span class="required">*</span></label>
           <select class="form-control" formControlName="warehouseId">
             <option [ngValue]="null" disabled>Select warehouse...</option>
-            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+            <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
           </select>
@@ -52,7 +52,7 @@
           <label class="form-label">Adjustment GL Account <span class="required">*</span></label>
           <select class="form-control" formControlName="adjustmentAccountId">
             <option [ngValue]="null" disabled>Select adjustment account...</option>
-            <option *ngFor="let acc of expenseAccounts" [ngValue]="acc.id">
+            <option *ngFor="let acc of expenseAccounts()" [ngValue]="acc.id">
               {{ acc.code }} - {{ acc.name }}
             </option>
           </select>
@@ -80,7 +80,8 @@
             type="text"
             class="form-control"
             placeholder="Scan barcode or type exact SKU..."
-            [(ngModel)]="barcodeInput"
+            [ngModel]="barcodeInput()"
+            (ngModelChange)="barcodeInput.set($event)"
             [ngModelOptions]="{standalone: true}"
             (keyup.enter)="scanBarcode()"
           />
@@ -89,13 +90,13 @@
 
         <!-- Search Item Catalog -->
         <div class="catalog-select-wrap">
-          <select class="form-control" [(ngModel)]="selectedItemId" [ngModelOptions]="{standalone: true}">
+          <select class="form-control" [ngModel]="selectedItemId()" (ngModelChange)="selectedItemId.set($event)" [ngModelOptions]="{standalone: true}">
             <option [ngValue]="null">Select item to add...</option>
-            <option *ngFor="let item of catalogItems" [ngValue]="item.id">
+            <option *ngFor="let item of catalogItems()" [ngValue]="item.id">
               {{ item.sku }} - {{ item.name }}
             </option>
           </select>
-          <button type="button" class="btn btn-secondary btn-sm" [disabled]="!selectedItemId" (click)="addItemFromSelect()">
+          <button type="button" class="btn btn-secondary btn-sm" [disabled]="!selectedItemId()" (click)="addItemFromSelect()">
             Add Item
           </button>
         </div>
@@ -104,10 +105,10 @@
         <button
           type="button"
           class="btn btn-outline-primary ml-auto"
-          [disabled]="loadingWarehouseStock"
+          [disabled]="loadingWarehouseStock()"
           (click)="loadEntireWarehouse()"
         >
-          {{ loadingWarehouseStock ? 'Loading Warehouse...' : '📋 Load Entire Warehouse for Count' }}
+          {{ loadingWarehouseStock() ? 'Loading Warehouse...' : '📋 Load Entire Warehouse for Count' }}
         </button>
       </div>
     </div>
@@ -197,20 +198,20 @@
         <div class="summary-rows">
           <div class="summary-row">
             <span>Total Shortage (Loss):</span>
-            <span class="text-red font-bold">- {{ totalShortageValue | currency:'AED ':'symbol':'1.2-2' }}</span>
+            <span class="text-red font-bold">- {{ totalShortageValue() | currency:'AED ':'symbol':'1.2-2' }}</span>
           </div>
           <div class="summary-row">
             <span>Total Surplus (Gain):</span>
-            <span class="text-green font-bold">+ {{ totalSurplusValue | currency:'AED ':'symbol':'1.2-2' }}</span>
+            <span class="text-green font-bold">+ {{ totalSurplusValue() | currency:'AED ':'symbol':'1.2-2' }}</span>
           </div>
           <div class="summary-row summary-total">
             <span>Net Financial Impact:</span>
             <span
               class="font-bold"
-              [class.text-red]="netValueImpact < 0"
-              [class.text-green]="netValueImpact > 0"
+              [class.text-red]="netValueImpact() < 0"
+              [class.text-green]="netValueImpact() > 0"
             >
-              {{ netValueImpact | currency:'AED ':'symbol':'1.2-2' }}
+              {{ netValueImpact() | currency:'AED ':'symbol':'1.2-2' }}
             </span>
           </div>
         </div>
@@ -219,7 +220,7 @@
       <!-- Journal Entry Live Preview Card -->
       <div class="card preview-card">
         <h4 class="preview-title">📖 Double-Entry GL Preview</h4>
-        <table class="table journal-table" *ngIf="journalPreview.length > 0; else noGlTpl">
+        <table class="table journal-table" *ngIf="journalPreview().length > 0; else noGlTpl">
           <thead>
             <tr>
               <th>Account</th>
@@ -228,7 +229,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let j of journalPreview">
+            <tr *ngFor="let j of journalPreview()">
               <td>
                 <span class="journal-acc">{{ j.accountName }}</span>
               </td>

@@ -26,7 +26,7 @@
             class="form-control"
           >
             <option [ngValue]="null">-- Select Customer --</option>
-            <option *ngFor="let c of customers" [value]="c.id">
+            <option *ngFor="let c of customers()" [value]="c.id">
               {{ c.code }} - {{ c.name }}
             </option>
           </select>
@@ -35,18 +35,18 @@
           </span>
 
           <!-- Customer Info Callout -->
-          <div *ngIf="selectedCustomer" class="customer-info-box mt-2">
+          <div *ngIf="selectedCustomer() as cust" class="customer-info-box mt-2">
             <div class="info-item">
               <span class="info-label">TRN:</span>
-              <span class="info-value font-mono">{{ selectedCustomer.trn || 'Non-registered' }}</span>
+              <span class="info-value font-mono">{{ cust.trn || 'Non-registered' }}</span>
             </div>
-            <div class="info-item" *ngIf="selectedCustomer.billingAddress">
+            <div class="info-item" *ngIf="cust.billingAddress">
               <span class="info-label">Billing Address:</span>
-              <span class="info-value">{{ selectedCustomer.billingAddress }}</span>
+              <span class="info-value">{{ cust.billingAddress }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Terms & Limit:</span>
-              <span class="info-value">{{ selectedCustomer.paymentTermsDays ?? 30 }} Days (Limit: {{ selectedCustomer.creditLimit | number:'1.2-2' }} AED)</span>
+              <span class="info-value">{{ cust.paymentTermsDays ?? 30 }} Days (Limit: {{ cust.creditLimit | number:'1.2-2' }} AED)</span>
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@
           <label for="warehouseId">Issue Warehouse</label>
           <select id="warehouseId" formControlName="warehouseId" class="form-control">
             <option [ngValue]="null">Default Company Warehouse</option>
-            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+            <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
           </select>
@@ -173,7 +173,7 @@
                   class="form-control mb-1 text-sm"
                 >
                   <option [ngValue]="null">-- Select Catalog Item (Optional) --</option>
-                  <option *ngFor="let it of catalogItems" [ngValue]="it.id">
+                  <option *ngFor="let it of catalogItems()" [ngValue]="it.id">
                     {{ it.sku }} - {{ it.name }}
                   </option>
                 </select>
@@ -194,7 +194,7 @@
                   [ngClass]="{'is-invalid': line.get('accountId')?.touched && line.get('accountId')?.invalid}"
                 >
                   <option [ngValue]="null">-- Select Account --</option>
-                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                  <option *ngFor="let acc of accounts()" [value]="acc.id">
                     {{ acc.code }} - {{ acc.name }}
                   </option>
                 </select>
@@ -246,7 +246,7 @@
               <td>
                 <select formControlName="taxRateId" class="form-control">
                   <option [ngValue]="null">None / 0%</option>
-                  <option *ngFor="let t of taxRates" [value]="t.id">
+                  <option *ngFor="let t of taxRates()" [value]="t.id">
                     {{ t.name }} ({{ t.rate }}%)
                   </option>
                 </select>
@@ -295,22 +295,22 @@
         <div class="totals-panel">
           <div class="totals-row">
             <span class="totals-label">Subtotal:</span>
-            <span class="totals-amount">{{ totals.subtotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+            <span class="totals-amount">{{ totals().subtotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
 
-          <div class="totals-row" *ngIf="totals.discountTotal > 0">
+          <div class="totals-row" *ngIf="totals().discountTotal > 0">
             <span class="totals-label">Discount Total:</span>
-            <span class="totals-amount text-danger">-{{ totals.discountTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+            <span class="totals-amount text-danger">-{{ totals().discountTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
 
           <div class="totals-row">
             <span class="totals-label">VAT Output:</span>
-            <span class="totals-amount">{{ totals.taxTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+            <span class="totals-amount">{{ totals().taxTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
 
           <div class="totals-row totals-grand-total">
             <span class="totals-label">Total Amount:</span>
-            <span class="totals-amount font-bold">{{ totals.total | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
+            <span class="totals-amount font-bold">{{ totals().total | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
         </div>
       </div>
@@ -325,7 +325,7 @@
           type="button"
           (click)="saveDraft()"
           class="btn btn-secondary"
-          [disabled]="saving || previewingPdf"
+          [disabled]="saving() || previewingPdf()"
         >
           Save Draft
         </button>
@@ -334,18 +334,18 @@
           type="button"
           (click)="previewPdf()"
           class="btn btn-outline"
-          [disabled]="saving || previewingPdf"
+          [disabled]="saving() || previewingPdf()"
         >
-          {{ previewingPdf ? 'Generating PDF...' : 'Preview PDF' }}
+          {{ previewingPdf() ? 'Generating PDF...' : 'Preview PDF' }}
         </button>
 
         <button
           type="button"
           (click)="saveAndSend()"
           class="btn btn-primary"
-          [disabled]="saving || previewingPdf"
+          [disabled]="saving() || previewingPdf()"
         >
-          {{ saving ? 'Posting to GL...' : 'Save & Send' }}
+          {{ saving() ? 'Posting to GL...' : 'Save & Send' }}
         </button>
       </div>
     </div>

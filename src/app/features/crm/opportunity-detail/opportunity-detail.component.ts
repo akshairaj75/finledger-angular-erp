@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import {
@@ -34,27 +34,40 @@ export class OpportunityDetailComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   opportunityId!: number;
-  opportunity: Opportunity | null = null;
-  stages: CrmPipelineStage[] = [];
-  activities: CrmActivity[] = [];
-  quotations: Quotation[] = [];
-  loading = true;
+  opportunity = signal<Opportunity | null>(null);
+  stages = signal<CrmPipelineStage[]>([]);
+  activities = signal<CrmActivity[]>([]);
+  quotations = signal<Quotation[]>([]);
+  loading = signal<boolean>(true);
 
   // Quick Activity Log Modal
-  showActivityModal = false;
-  activeLogType: ActivityType = 'NOTE';
+  showActivityModal = signal<boolean>(false);
+  activeLogType = signal<ActivityType>('NOTE');
   activityForm!: FormGroup;
-  savingActivity = false;
+  savingActivity = signal<boolean>(false);
 
   // Mark Lost Modal
-  showLostModal = false;
-  lostReason = '';
-  submittingLost = false;
+  showLostModal = signal<boolean>(false);
+  lostReason = signal<string>('');
+  submittingLost = signal<boolean>(false);
 
   // Convert to Customer Modal
-  showConvertModal = false;
+  showConvertModal = signal<boolean>(false);
   convertForm!: FormGroup;
-  convertingCustomer = false;
+  convertingCustomer = signal<boolean>(false);
+
+  // Tasks in Right Panel
+  openTasks = computed<CrmActivity[]>(() =>
+    this.activities().filter(a => a.activityType === 'TASK' && !a.completedAt)
+  );
+
+  completedTasks = computed<CrmActivity[]>(() =>
+    this.activities().filter(a => a.activityType === 'TASK' && !!a.completedAt)
+  );
+
+  timelineActivities = computed<CrmActivity[]>(() =>
+    this.activities().filter(a => a.activityType !== 'TASK')
+  );
 
   ngOnInit(): void {
     this.initForms();
@@ -83,27 +96,27 @@ export class OpportunityDetailComponent implements OnInit {
   }
 
   loadAllData(): void {
-    this.loading = true;
+    this.loading.set(true);
 
     // Load Opportunity Detail
     this.opportunityService.getOpportunityById(this.opportunityId).subscribe({
       next: opp => {
-        this.opportunity = opp;
+        this.opportunity.set(opp);
         this.convertForm.patchValue({
           customerName: opp.customerName || opp.title
         });
-        this.loading = false;
+        this.loading.set(false);
       },
       error: () => {
         this.notificationService.error('Failed to load opportunity details');
-        this.loading = false;
+        this.loading.set(false);
       }
     });
 
     // Load Stages for progress bar
     this.opportunityService.getStages().subscribe({
       next: stages => {
-        this.stages = stages.sort((a, b) => a.sortOrder - b.sortOrder);
+        this.stages.set([...stages].sort((a, b) => a.sortOrder - b.sortOrder));
       }
     });
 
@@ -119,8 +132,10 @@ export class OpportunityDetailComponent implements OnInit {
       .getActivities('OPPORTUNITY', this.opportunityId)
       .subscribe({
         next: acts => {
-          this.activities = acts.sort(
-            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          this.activities.set(
+            [...acts].sort(
+              (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            )
           );
         }
       });
@@ -131,14 +146,15 @@ export class OpportunityDetailComponent implements OnInit {
       .getQuotations(undefined, this.opportunityId, undefined, undefined, undefined, undefined, 0, 50)
       .subscribe({
         next: page => {
-          this.quotations = page.content;
+          this.quotations.set(page.content);
         }
       });
   }
 
   // Stage Progress Bar Navigation
   onStageClick(targetStage: CrmPipelineStage): void {
-    if (!this.opportunity || this.opportunity.stageId === targetStage.id) return;
+    const opp = this.opportunity();
+    if (!opp || opp.stageId === targetStage.id) return;
 
     if (targetStage.stageType === 'LOST') {
       this.openMarkLostModal();
@@ -149,7 +165,7 @@ export class OpportunityDetailComponent implements OnInit {
       .updateOpportunityStage(this.opportunityId, { stageId: targetStage.id })
       .subscribe({
         next: updated => {
-          this.opportunity = updated;
+          this.opportunity.set(updated);
           this.notificationService.success(`Opportunity moved to "${targetStage.name}"`);
           this.loadActivities();
         },
@@ -161,25 +177,26 @@ export class OpportunityDetailComponent implements OnInit {
   }
 
   isStageCompleted(stage: CrmPipelineStage): boolean {
-    if (!this.opportunity) return false;
-    const currentStage = this.stages.find(s => s.id === this.opportunity!.stageId);
+    const opp = this.opportunity();
+    if (!opp) return false;
+    const currentStage = this.stages().find(s => s.id === opp.stageId);
     if (!currentStage) return false;
     return stage.sortOrder < currentStage.sortOrder;
   }
 
   isStageCurrent(stage: CrmPipelineStage): boolean {
-    return this.opportunity?.stageId === stage.id;
+    return this.opportunity()?.stageId === stage.id;
   }
 
   // Quick Log Activity
   openQuickLog(type: ActivityType): void {
-    this.activeLogType = type;
+    this.activeLogType.set(type);
     this.activityForm.reset({
       subject: '',
       details: '',
       dueAt: ''
     });
-    this.showActivityModal = true;
+    this.showActivityModal.set(true);
   }
 
   saveActivity(): void {
@@ -188,10 +205,11 @@ export class OpportunityDetailComponent implements OnInit {
       return;
     }
 
-    this.savingActivity = true;
+    this.savingActivity.set(true);
     const formVal = this.activityForm.value;
+    const logType = this.activeLogType();
     const req: CrmActivityRequest = {
-      activityType: this.activeLogType,
+      activityType: logType,
       subject: formVal.subject,
       details: formVal.details || undefined,
       relatedType: 'OPPORTUNITY',
@@ -201,40 +219,26 @@ export class OpportunityDetailComponent implements OnInit {
 
     this.activityService.createActivity(req).subscribe({
       next: () => {
-        this.savingActivity = false;
-        this.showActivityModal = false;
-        this.notificationService.success(`Logged ${this.activeLogType.toLowerCase()} successfully!`);
+        this.savingActivity.set(false);
+        this.showActivityModal.set(false);
+        this.notificationService.success(`Logged ${logType.toLowerCase()} successfully!`);
         this.loadActivities();
       },
       error: err => {
-        this.savingActivity = false;
+        this.savingActivity.set(false);
         const msg = err.error?.message || 'Failed to log activity';
         this.notificationService.error(msg);
       }
     });
   }
 
-  // Tasks in Right Panel
-  get openTasks(): CrmActivity[] {
-    return this.activities.filter(
-      a => a.activityType === 'TASK' && !a.completedAt
-    );
-  }
-
-  get completedTasks(): CrmActivity[] {
-    return this.activities.filter(
-      a => a.activityType === 'TASK' && !!a.completedAt
-    );
-  }
-
-  get timelineActivities(): CrmActivity[] {
-    return this.activities.filter(a => a.activityType !== 'TASK');
-  }
-
   toggleTaskComplete(task: CrmActivity): void {
     this.activityService.completeActivity(task.id).subscribe({
       next: updated => {
-        task.completedAt = updated.completedAt || new Date().toISOString();
+        const completedAt = updated.completedAt || new Date().toISOString();
+        this.activities.update(list =>
+          list.map(a => a.id === task.id ? { ...a, completedAt } : a)
+        );
         this.notificationService.success(`Task "${task.subject}" marked complete!`);
       },
       error: () => {
@@ -245,32 +249,34 @@ export class OpportunityDetailComponent implements OnInit {
 
   // Mark Lost Action
   openMarkLostModal(): void {
-    this.lostReason = '';
-    this.showLostModal = true;
+    this.lostReason.set('');
+    this.showLostModal.set(true);
   }
 
   confirmMarkLost(): void {
-    if (!this.lostReason.trim()) return;
+    const reason = this.lostReason().trim();
+    if (!reason) return;
 
-    const lostStage = this.stages.find(s => s.stageType === 'LOST') || this.stages[this.stages.length - 1];
+    const currentStages = this.stages();
+    const lostStage = currentStages.find(s => s.stageType === 'LOST') || currentStages[currentStages.length - 1];
     if (!lostStage) return;
 
-    this.submittingLost = true;
+    this.submittingLost.set(true);
     this.opportunityService
       .updateOpportunityStage(this.opportunityId, {
         stageId: lostStage.id,
-        lostReason: this.lostReason.trim()
+        lostReason: reason
       })
       .subscribe({
         next: updated => {
-          this.opportunity = updated;
-          this.submittingLost = false;
-          this.showLostModal = false;
-          this.notificationService.warning(`Opportunity marked as Lost: "${this.lostReason}"`);
+          this.opportunity.set(updated);
+          this.submittingLost.set(false);
+          this.showLostModal.set(false);
+          this.notificationService.warning(`Opportunity marked as Lost: "${reason}"`);
           this.loadActivities();
         },
         error: err => {
-          this.submittingLost = false;
+          this.submittingLost.set(false);
           const msg = err.error?.message || 'Failed to mark as lost';
           this.notificationService.error(msg);
         }
@@ -279,7 +285,7 @@ export class OpportunityDetailComponent implements OnInit {
 
   // Convert to Customer
   openConvertModal(): void {
-    this.showConvertModal = true;
+    this.showConvertModal.set(true);
   }
 
   confirmConvertToCustomer(): void {
@@ -288,12 +294,13 @@ export class OpportunityDetailComponent implements OnInit {
       return;
     }
 
-    this.convertingCustomer = true;
+    this.convertingCustomer.set(true);
     const formVal = this.convertForm.value;
+    const opp = this.opportunity();
 
-    if (this.opportunity?.leadId) {
+    if (opp?.leadId) {
       this.leadService
-        .convertLead(this.opportunity.leadId, {
+        .convertLead(opp.leadId, {
           customerCode: formVal.customerCode,
           customerName: formVal.customerName,
           trn: formVal.trn || undefined,
@@ -301,23 +308,23 @@ export class OpportunityDetailComponent implements OnInit {
         })
         .subscribe({
           next: res => {
-            this.convertingCustomer = false;
-            this.showConvertModal = false;
+            this.convertingCustomer.set(false);
+            this.showConvertModal.set(false);
             this.notificationService.success(
               `Lead converted to customer "${res.customerName}" (${res.customerCode})!`
             );
             this.loadAllData();
           },
           error: err => {
-            this.convertingCustomer = false;
+            this.convertingCustomer.set(false);
             const msg = err.error?.message || 'Failed to convert to customer';
             this.notificationService.error(msg);
           }
         });
     } else {
       // Mock / Direct linking
-      this.convertingCustomer = false;
-      this.showConvertModal = false;
+      this.convertingCustomer.set(false);
+      this.showConvertModal.set(false);
       this.notificationService.info(
         `Customer profile "${formVal.customerName}" prepared for opportunity.`
       );

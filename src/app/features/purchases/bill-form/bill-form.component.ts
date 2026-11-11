@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -34,23 +34,23 @@ export class BillFormComponent implements OnInit {
 
   billForm!: FormGroup;
 
-  vendors: Vendor[] = [];
-  selectedVendor: Vendor | null = null;
-  taxRates: TaxRate[] = [];
-  accounts: Account[] = [];
-  warehouses: Warehouse[] = [];
-  catalogItems: Item[] = [];
-  stockBalances: Map<string, number> = new Map();
+  vendors = signal<Vendor[]>([]);
+  selectedVendor = signal<Vendor | null>(null);
+  taxRates = signal<TaxRate[]>([]);
+  accounts = signal<Account[]>([]);
+  warehouses = signal<Warehouse[]>([]);
+  catalogItems = signal<Item[]>([]);
+  stockBalances = signal<Map<string, number>>(new Map());
 
-  loadingData = true;
-  saving = false;
+  loadingData = signal(true);
+  saving = signal(false);
 
-  totals: InvoiceCalculationSummary = {
+  totals = signal<InvoiceCalculationSummary>({
     subtotal: 0,
     discountTotal: 0,
     taxTotal: 0,
     total: 0
-  };
+  });
 
   ngOnInit(): void {
     this.initForm();
@@ -93,33 +93,34 @@ export class BillFormComponent implements OnInit {
   }
 
   private loadDependencies(): void {
-    this.loadingData = true;
+    this.loadingData.set(true);
 
     // Load vendors
     this.vendorService.getVendors({ page: 0, size: 200, isActive: true }).subscribe({
       next: page => {
-        this.vendors = page.content;
+        this.vendors.set(page.content);
       }
     });
 
     // Load tax rates
     this.taxRateService.getTaxRates().subscribe({
       next: rates => {
-        this.taxRates = rates;
+        this.taxRates.set(rates);
+        this.recalculateAllTotals();
       }
     });
 
     // Load expense accounts
     this.accountService.getAccounts(0, 200).subscribe({
       next: page => {
-        this.accounts = page.content;
+        this.accounts.set(page.content);
       }
     });
 
     // Load warehouses
     this.inventoryService.getWarehouses().subscribe({
       next: whs => {
-        this.warehouses = whs;
+        this.warehouses.set(whs);
         const defaultWh = whs.find(w => w.isDefault) || (whs.length > 0 ? whs[0] : null);
         if (defaultWh) {
           this.billForm.patchValue({ warehouseId: defaultWh.id });
@@ -130,25 +131,27 @@ export class BillFormComponent implements OnInit {
     // Load inventory catalog items
     this.inventoryService.getItems({ active: true, size: 500 }).subscribe({
       next: page => {
-        this.catalogItems = page.content;
-        this.loadingData = false;
+        this.catalogItems.set(page.content);
+        this.loadingData.set(false);
       },
       error: () => {
-        this.loadingData = false;
+        this.loadingData.set(false);
       }
     });
   }
 
   createLineGroup(): FormGroup {
+    const accList = this.accounts();
+    const rateList = this.taxRates();
     // Look for default expense account (code 5000 or type EXPENSE)
-    const expAcc = this.accounts.find(a => a.code?.startsWith('5') || a.accountType === 'EXPENSE');
+    const expAcc = accList.find(a => a.code?.startsWith('5') || a.accountType === 'EXPENSE');
     // Look for standard 5% tax rate
-    const standardTax = this.taxRates.find(t => t.rate === 5.0 || t.code.includes('STANDARD'));
+    const standardTax = rateList.find(t => t.rate === 5.0 || t.code.includes('STANDARD'));
 
     return this.fb.group({
       itemId: [null],
       description: ['', [Validators.required]],
-      accountId: [expAcc ? expAcc.id : (this.accounts.length > 0 ? this.accounts[0].id : null), [Validators.required]],
+      accountId: [expAcc ? expAcc.id : (accList.length > 0 ? accList[0].id : null), [Validators.required]],
       quantity: [1, [Validators.required, Validators.min(0.0001)]],
       unitPrice: [0, [Validators.required, Validators.min(0)]],
       taxRateId: [standardTax ? standardTax.id : null]
@@ -158,7 +161,7 @@ export class BillFormComponent implements OnInit {
   onItemSelect(index: number, event: Event): void {
     const target = event.target as HTMLSelectElement;
     const itemId = Number(target.value);
-    const item = this.catalogItems.find(i => i.id === itemId);
+    const item = this.catalogItems().find(i => i.id === itemId);
     const lineGroup = this.linesArray.at(index) as FormGroup;
 
     if (item) {
@@ -178,10 +181,18 @@ export class BillFormComponent implements OnInit {
     if (whId) {
       this.inventoryService.getStockBalance(itemId, whId).subscribe({
         next: bal => {
-          this.stockBalances.set(`${itemId}_${whId}`, bal.qtyOnHand);
+          this.stockBalances.update(prev => {
+            const next = new Map(prev);
+            next.set(`${itemId}_${whId}`, bal.qtyOnHand);
+            return next;
+          });
         },
         error: () => {
-          this.stockBalances.set(`${itemId}_${whId}`, 0);
+          this.stockBalances.update(prev => {
+            const next = new Map(prev);
+            next.set(`${itemId}_${whId}`, 0);
+            return next;
+          });
         }
       });
     }
@@ -201,13 +212,13 @@ export class BillFormComponent implements OnInit {
     const itemId = line.get('itemId')?.value;
     if (!itemId) return null;
 
-    const item = this.catalogItems.find(i => i.id === itemId);
+    const item = this.catalogItems().find(i => i.id === itemId);
     if (!item) return null;
 
     const whId = this.billForm.get('warehouseId')?.value;
-    const wh = this.warehouses.find(w => w.id === whId);
+    const wh = this.warehouses().find(w => w.id === whId);
     const key = `${itemId}_${whId}`;
-    const onHand = this.stockBalances.get(key) ?? 0;
+    const onHand = this.stockBalances().get(key) ?? 0;
 
     return `Current Stock: ${onHand} ${item.unit} in ${wh ? wh.code : 'Warehouse'}`;
   }
@@ -229,8 +240,8 @@ export class BillFormComponent implements OnInit {
   onVendorSelect(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const vendorId = Number(target.value);
-    const vendor = this.vendors.find(v => v.id === vendorId) || null;
-    this.selectedVendor = vendor;
+    const vendor = this.vendors().find(v => v.id === vendorId) || null;
+    this.selectedVendor.set(vendor);
 
     if (vendor) {
       const terms = vendor.paymentTermsDays ?? 30;
@@ -272,7 +283,7 @@ export class BillFormComponent implements OnInit {
 
     let taxPct = 0;
     if (taxRateId) {
-      const rate = this.taxRates.find(r => r.id === Number(taxRateId));
+      const rate = this.taxRates().find(r => r.id === Number(taxRateId));
       if (rate) taxPct = rate.rate;
     }
 
@@ -280,11 +291,12 @@ export class BillFormComponent implements OnInit {
   }
 
   private recalculateAllTotals(): void {
+    const rates = this.taxRates();
     const linesData = this.linesArray.controls.map(control => {
       const taxRateId = control.get('taxRateId')?.value;
       let taxRatePct = 0;
       if (taxRateId) {
-        const rate = this.taxRates.find(r => r.id === Number(taxRateId));
+        const rate = rates.find(r => r.id === Number(taxRateId));
         if (rate) taxRatePct = rate.rate;
       }
       return {
@@ -295,7 +307,7 @@ export class BillFormComponent implements OnInit {
       };
     });
 
-    this.totals = LineTotalsCalculator.calculateInvoiceTotals(linesData);
+    this.totals.set(LineTotalsCalculator.calculateInvoiceTotals(linesData));
   }
 
   private preparePayload(): BillRequest | null {
@@ -334,15 +346,15 @@ export class BillFormComponent implements OnInit {
     const payload = this.preparePayload();
     if (!payload) return;
 
-    this.saving = true;
+    this.saving.set(true);
     this.billService.createBill(payload).subscribe({
       next: created => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.success(`Draft Bill ${created.billNo || '#' + created.id} saved successfully!`);
         this.router.navigate(['/purchases/bills']);
       },
       error: err => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to save draft bill');
       }
     });
@@ -352,25 +364,25 @@ export class BillFormComponent implements OnInit {
     const payload = this.preparePayload();
     if (!payload) return;
 
-    this.saving = true;
+    this.saving.set(true);
     this.billService.createBill(payload).subscribe({
       next: created => {
         // Approve bill to post to General Ledger
         this.billService.approveBill(created.id).subscribe({
           next: approved => {
-            this.saving = false;
+            this.saving.set(false);
             this.notificationService.success(`Bill ${approved.billNo} approved and successfully posted to General Ledger!`);
             this.router.navigate(['/purchases/bills']);
           },
           error: err => {
-            this.saving = false;
+            this.saving.set(false);
             this.notificationService.warning(`Bill saved as Draft (#${created.id}), but approval failed: ` + (err?.error?.message || 'Unknown error'));
             this.router.navigate(['/purchases/bills']);
           }
         });
       },
       error: err => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to create bill');
       }
     });

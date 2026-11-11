@@ -7,11 +7,11 @@
     </div>
     <div class="header-actions">
       <a routerLink="/inventory/items" class="btn btn-secondary">Cancel</a>
-      <button type="button" class="btn btn-secondary" [disabled]="saving || dispatching" (click)="saveDraft()">
-        {{ saving ? 'Saving...' : 'Save Draft' }}
+      <button type="button" class="btn btn-secondary" [disabled]="saving() || dispatching()" (click)="saveDraft()">
+        {{ saving() ? 'Saving...' : 'Save Draft' }}
       </button>
-      <button type="button" class="btn btn-primary" [disabled]="saving || dispatching" (click)="saveAndDispatch()">
-        {{ dispatching ? 'Dispatching...' : 'Save & Dispatch' }}
+      <button type="button" class="btn btn-primary" [disabled]="saving() || dispatching()" (click)="saveAndDispatch()">
+        {{ dispatching() ? 'Dispatching...' : 'Save & Dispatch' }}
       </button>
     </div>
   </div>
@@ -33,7 +33,7 @@
           <label class="form-label">From Warehouse (Source) <span class="required">*</span></label>
           <select class="form-control" formControlName="fromWarehouseId">
             <option [ngValue]="null" disabled>Select source warehouse...</option>
-            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+            <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
           </select>
@@ -44,7 +44,7 @@
           <label class="form-label">To Warehouse (Destination) <span class="required">*</span></label>
           <select class="form-control" formControlName="toWarehouseId">
             <option [ngValue]="null" disabled>Select destination warehouse...</option>
-            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+            <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
           </select>
@@ -88,7 +88,7 @@
               <td>
                 <select class="form-control" formControlName="itemId" (change)="onItemSelect(i, $event)">
                   <option [ngValue]="null" disabled>Select item...</option>
-                  <option *ngFor="let item of catalogItems" [ngValue]="item.id">
+                  <option *ngFor="let item of catalogItems()" [ngValue]="item.id">
                     {{ item.sku }} - {{ item.name }} ({{ item.unit }})
                   </option>
                 </select>
@@ -132,12 +132,12 @@
         </div>
         <div class="summary-col">
           <span class="summary-label">Total Units</span>
-          <span class="summary-val">{{ totalItemsCount | number:'1.0-2' }}</span>
+          <span class="summary-val">{{ totalItemsCount() | number:'1.0-2' }}</span>
         </div>
         <div class="summary-col">
           <span class="summary-label">Total Transfer Value</span>
           <span class="summary-val font-bold text-blue">
-            {{ totalTransferValue | currency:'AED ':'symbol':'1.2-2' }}
+            {{ totalTransferValue() | currency:'AED ':'symbol':'1.2-2' }}
           </span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormBuilder,
@@ -35,6 +36,7 @@ import { QuotationService } from '../services/quotation.service';
 })
 export class QuotationFormComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private destroyRef = inject(DestroyRef);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private quotationService = inject(QuotationService);
@@ -44,22 +46,44 @@ export class QuotationFormComponent implements OnInit {
   private taxRateService = inject(TaxRateService);
   private notificationService = inject(NotificationService);
 
-  quoteId: number | null = null;
-  currentQuotation: Quotation | null = null;
+  quoteId = signal<number | null>(null);
+  currentQuotation = signal<Quotation | null>(null);
   quotationForm!: FormGroup;
+  private formRevision = signal<number>(0);
 
-  customers: Customer[] = [];
-  opportunities: Opportunity[] = [];
-  items: Item[] = [];
-  taxRates: TaxRate[] = [];
+  customers = signal<Customer[]>([]);
+  opportunities = signal<Opportunity[]>([]);
+  items = signal<Item[]>([]);
+  taxRates = signal<TaxRate[]>([]);
 
-  loading = false;
-  saving = false;
-  actionInProgress = false;
+  loading = signal<boolean>(false);
+  saving = signal<boolean>(false);
+  actionInProgress = signal<boolean>(false);
 
   // Recent Quotes List view toggle
-  recentQuotations: Quotation[] = [];
-  showRecentQuotes = false;
+  recentQuotations = signal<Quotation[]>([]);
+  showRecentQuotes = signal<boolean>(false);
+
+  // Real-time Calculations
+  subtotal = computed<number>(() => {
+    this.formRevision();
+    return this.linesArray.controls.reduce((sum, ctrl) => {
+      const qty = Number(ctrl.get('quantity')?.value || 0);
+      const price = Number(ctrl.get('unitPrice')?.value || 0);
+      const disc = Number(ctrl.get('discountPct')?.value || 0);
+      const net = qty * price * (1 - disc / 100);
+      return sum + net;
+    }, 0);
+  });
+
+  taxTotal = computed<number>(() => {
+    // 5% standard VAT
+    return Math.round(this.subtotal() * 0.05 * 100) / 100;
+  });
+
+  grandTotal = computed<number>(() => {
+    return Math.round((this.subtotal() + this.taxTotal()) * 100) / 100;
+  });
 
   ngOnInit(): void {
     this.initForm();
@@ -68,10 +92,11 @@ export class QuotationFormComponent implements OnInit {
     this.route.paramMap.subscribe(params => {
       const idParam = params.get('id');
       if (idParam && idParam !== 'new') {
-        this.quoteId = Number(idParam);
-        this.loadQuotation(this.quoteId);
+        const parsedId = Number(idParam);
+        this.quoteId.set(parsedId);
+        this.loadQuotation(parsedId);
       } else {
-        this.quoteId = null;
+        this.quoteId.set(null);
         this.checkQueryParams();
       }
     });
@@ -95,6 +120,10 @@ export class QuotationFormComponent implements OnInit {
       lines: this.fb.array([])
     });
 
+    this.quotationForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.formRevision.update(v => v + 1));
+
     // Add at least one default line
     this.addLine();
   }
@@ -117,6 +146,7 @@ export class QuotationFormComponent implements OnInit {
 
   addLine(): void {
     this.linesArray.push(this.createLineGroup());
+    this.formRevision.update(v => v + 1);
   }
 
   removeLine(index: number): void {
@@ -126,39 +156,41 @@ export class QuotationFormComponent implements OnInit {
       this.linesArray.controls.forEach((ctrl, i) => {
         ctrl.patchValue({ lineNo: i + 1 }, { emitEvent: false });
       });
+      this.formRevision.update(v => v + 1);
     } else {
       this.notificationService.warning('Quotation must contain at least one line item');
     }
   }
 
   onItemSelect(index: number, itemId: number): void {
-    const item = this.items.find(it => it.id === itemId);
+    const item = this.items().find(it => it.id === itemId);
     if (item) {
+      const currentRates = this.taxRates();
       const lineCtrl = this.linesArray.at(index);
       lineCtrl.patchValue({
         description: item.name,
         unitPrice: item.salesPrice || 0,
-        taxRateId: item.taxRateId || (this.taxRates.length > 0 ? this.taxRates[0].id : null)
+        taxRateId: item.taxRateId || (currentRates.length > 0 ? currentRates[0].id : null)
       });
     }
   }
 
   private loadLookups(): void {
     this.customerService.getCustomers({ page: 0, size: 200, isActive: true }).subscribe({
-      next: p => (this.customers = p.content)
+      next: p => this.customers.set(p.content)
     });
 
     this.opportunityService.getOpportunities(undefined, undefined, undefined, undefined, 0, 100).subscribe({
-      next: p => (this.opportunities = p.content)
+      next: p => this.opportunities.set(p.content)
     });
 
     this.inventoryService.getItems({ page: 0, size: 200, active: true }).subscribe({
-      next: p => (this.items = p.content)
+      next: p => this.items.set(p.content)
     });
 
     this.taxRateService.getTaxRates().subscribe({
       next: rates => {
-        this.taxRates = rates;
+        this.taxRates.set(rates);
         // Apply default tax rate to lines if null
         const defaultRate = rates.find(r => r.code === 'STANDARD' || r.rate === 5) || rates[0];
         if (defaultRate) {
@@ -185,10 +217,10 @@ export class QuotationFormComponent implements OnInit {
   }
 
   loadQuotation(id: number): void {
-    this.loading = true;
+    this.loading.set(true);
     this.quotationService.getQuotationById(id).subscribe({
       next: q => {
-        this.currentQuotation = q;
+        this.currentQuotation.set(q);
         this.quotationForm.patchValue({
           quoteDate: q.quoteDate,
           validUntil: q.validUntil,
@@ -217,39 +249,20 @@ export class QuotationFormComponent implements OnInit {
         } else {
           this.addLine();
         }
-        this.loading = false;
+        this.formRevision.update(v => v + 1);
+        this.loading.set(false);
       },
       error: () => {
         this.notificationService.error('Failed to load quotation');
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
 
   loadRecentQuotes(): void {
     this.quotationService.getQuotations(undefined, undefined, undefined, undefined, undefined, undefined, 0, 10).subscribe({
-      next: p => (this.recentQuotations = p.content)
+      next: p => this.recentQuotations.set(p.content)
     });
-  }
-
-  // Real-time Calculations
-  get subtotal(): number {
-    return this.linesArray.controls.reduce((sum, ctrl) => {
-      const qty = Number(ctrl.get('quantity')?.value || 0);
-      const price = Number(ctrl.get('unitPrice')?.value || 0);
-      const disc = Number(ctrl.get('discountPct')?.value || 0);
-      const net = qty * price * (1 - disc / 100);
-      return sum + net;
-    }, 0);
-  }
-
-  get taxTotal(): number {
-    // 5% standard VAT
-    return Math.round(this.subtotal * 0.05 * 100) / 100;
-  }
-
-  get grandTotal(): number {
-    return Math.round((this.subtotal + this.taxTotal) * 100) / 100;
   }
 
   calculateLineNet(lineCtrl: any): number {
@@ -267,7 +280,7 @@ export class QuotationFormComponent implements OnInit {
       return;
     }
 
-    this.saving = true;
+    this.saving.set(true);
     const formVal = this.quotationForm.value;
 
     const lines: QuotationLineRequest[] = formVal.lines.map((l: any, i: number) => ({
@@ -290,16 +303,17 @@ export class QuotationFormComponent implements OnInit {
       lines
     };
 
-    if (this.quoteId) {
-      this.quotationService.updateQuotation(this.quoteId, req).subscribe({
+    const currentId = this.quoteId();
+    if (currentId) {
+      this.quotationService.updateQuotation(currentId, req).subscribe({
         next: q => {
-          this.saving = false;
-          this.currentQuotation = q;
+          this.saving.set(false);
+          this.currentQuotation.set(q);
           this.notificationService.success(`Quotation ${q.quotationNo} updated successfully!`);
           this.loadRecentQuotes();
         },
         error: err => {
-          this.saving = false;
+          this.saving.set(false);
           const msg = err.error?.message || 'Failed to update quotation';
           this.notificationService.error(msg);
         }
@@ -307,15 +321,15 @@ export class QuotationFormComponent implements OnInit {
     } else {
       this.quotationService.createQuotation(req).subscribe({
         next: q => {
-          this.saving = false;
-          this.currentQuotation = q;
-          this.quoteId = q.id;
+          this.saving.set(false);
+          this.currentQuotation.set(q);
+          this.quoteId.set(q.id);
           this.notificationService.success(`Quotation ${q.quotationNo} created successfully!`);
           this.router.navigate(['/crm/quotations', q.id]);
           this.loadRecentQuotes();
         },
         error: err => {
-          this.saving = false;
+          this.saving.set(false);
           const msg = err.error?.message || 'Failed to create quotation';
           this.notificationService.error(msg);
         }
@@ -325,55 +339,58 @@ export class QuotationFormComponent implements OnInit {
 
   // Lifecycle & Conversion Actions (Section 3.2, 4.3, 4.4)
   sendQuotation(): void {
-    if (!this.quoteId) return;
-    this.actionInProgress = true;
+    const id = this.quoteId();
+    if (!id) return;
+    this.actionInProgress.set(true);
 
-    this.quotationService.sendQuotation(this.quoteId).subscribe({
+    this.quotationService.sendQuotation(id).subscribe({
       next: q => {
-        this.actionInProgress = false;
-        this.currentQuotation = q;
+        this.actionInProgress.set(false);
+        this.currentQuotation.set(q);
         this.notificationService.success(`Quotation ${q.quotationNo} marked as SENT!`);
       },
       error: () => {
-        this.actionInProgress = false;
+        this.actionInProgress.set(false);
         this.notificationService.error('Failed to send quotation');
       }
     });
   }
 
   acceptQuotation(): void {
-    if (!this.quoteId) return;
-    this.actionInProgress = true;
+    const id = this.quoteId();
+    if (!id) return;
+    this.actionInProgress.set(true);
 
-    this.quotationService.acceptQuotation(this.quoteId).subscribe({
+    this.quotationService.acceptQuotation(id).subscribe({
       next: q => {
-        this.actionInProgress = false;
-        this.currentQuotation = q;
+        this.actionInProgress.set(false);
+        this.currentQuotation.set(q);
         this.notificationService.success(
           `Quotation ${q.quotationNo} ACCEPTED! Inventory reservation applied.`
         );
       },
       error: () => {
-        this.actionInProgress = false;
+        this.actionInProgress.set(false);
         this.notificationService.error('Failed to accept quotation');
       }
     });
   }
 
   convertToInvoice(): void {
-    if (!this.quoteId) return;
-    this.actionInProgress = true;
+    const id = this.quoteId();
+    if (!id) return;
+    this.actionInProgress.set(true);
 
-    this.quotationService.convertToInvoice(this.quoteId).subscribe({
+    this.quotationService.convertToInvoice(id).subscribe({
       next: res => {
-        this.actionInProgress = false;
+        this.actionInProgress.set(false);
         this.notificationService.success(
           `Quotation successfully converted to Sales Invoice ${res.invoiceNo}!`
         );
-        this.loadQuotation(this.quoteId!);
+        this.loadQuotation(id);
       },
       error: err => {
-        this.actionInProgress = false;
+        this.actionInProgress.set(false);
         const msg = err.error?.message || 'Failed to convert quotation to invoice';
         this.notificationService.error(msg);
       }
@@ -381,14 +398,16 @@ export class QuotationFormComponent implements OnInit {
   }
 
   downloadPdf(): void {
-    if (!this.quoteId || !this.currentQuotation) return;
+    const id = this.quoteId();
+    const quote = this.currentQuotation();
+    if (!id || !quote) return;
 
-    this.quotationService.getQuotationPdf(this.quoteId).subscribe({
+    this.quotationService.getQuotationPdf(id).subscribe({
       next: blob => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `quotation-${this.currentQuotation?.quotationNo || this.quoteId}.pdf`;
+        a.download = `quotation-${quote.quotationNo || id}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

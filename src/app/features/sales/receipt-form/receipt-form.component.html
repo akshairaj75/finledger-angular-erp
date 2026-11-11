@@ -26,7 +26,7 @@
             class="form-control"
           >
             <option [ngValue]="null">-- Select Customer --</option>
-            <option *ngFor="let c of customers" [value]="c.id">
+            <option *ngFor="let c of customers()" [value]="c.id">
               {{ c.code }} - {{ c.name }}
             </option>
           </select>
@@ -35,14 +35,14 @@
           </span>
 
           <!-- Customer Info Callout -->
-          <div *ngIf="selectedCustomer" class="customer-info-box mt-2">
+          <div *ngIf="selectedCustomer() as cust" class="customer-info-box mt-2">
             <div class="info-item">
               <span class="info-label">TRN:</span>
-              <span class="info-value font-mono">{{ selectedCustomer.trn || 'Non-registered' }}</span>
+              <span class="info-value font-mono">{{ cust.trn || 'Non-registered' }}</span>
             </div>
-            <div class="info-item" *ngIf="selectedCustomer.billingAddress">
+            <div class="info-item" *ngIf="cust.billingAddress">
               <span class="info-label">Address:</span>
-              <span class="info-value">{{ selectedCustomer.billingAddress }}</span>
+              <span class="info-value">{{ cust.billingAddress }}</span>
             </div>
           </div>
         </div>
@@ -77,7 +77,7 @@
           <label for="bankAccountId" class="required">Deposit Bank / Cash Account</label>
           <select id="bankAccountId" formControlName="bankAccountId" class="form-control">
             <option [ngValue]="null">-- Select Bank Account --</option>
-            <option *ngFor="let b of bankAccounts" [value]="b.id">
+            <option *ngFor="let b of bankAccounts()" [value]="b.id">
               {{ b.name }} ({{ b.accountNumber }}) - {{ b.currencyCode }}
             </option>
           </select>
@@ -136,7 +136,7 @@
           <h3 class="card-title">Open Invoices & Settlement Allocation</h3>
           <p class="card-subtitle">Oldest-first auto-allocation enabled. You can manually adjust allocation amounts per invoice.</p>
         </div>
-        <div class="alloc-buttons" *ngIf="openInvoices.length > 0">
+        <div class="alloc-buttons" *ngIf="openInvoices().length > 0">
           <button type="button" (click)="autoAllocateOldestFirst()" class="btn btn-outline btn-sm">
             ⚡ Auto Allocate (Oldest First)
           </button>
@@ -147,23 +147,23 @@
       </div>
 
       <!-- State: No Customer Selected -->
-      <div *ngIf="!selectedCustomer" class="empty-state">
+      <div *ngIf="!selectedCustomer()" class="empty-state">
         <p>Please select a customer above to view their open invoices.</p>
       </div>
 
       <!-- State: Loading Invoices -->
-      <div *ngIf="selectedCustomer && loadingInvoices" class="loading-state">
+      <div *ngIf="selectedCustomer() && loadingInvoices()" class="loading-state">
         <div class="spinner"></div>
         <p>Loading customer open invoices...</p>
       </div>
 
       <!-- State: No Invoices Found -->
-      <div *ngIf="selectedCustomer && !loadingInvoices && openInvoices.length === 0" class="empty-state">
+      <div *ngIf="selectedCustomer() && !loadingInvoices() && openInvoices().length === 0" class="empty-state">
         <p>No open or unpaid invoices found for this customer. Any amount received will be recorded as an unapplied customer advance.</p>
       </div>
 
       <!-- State: Invoices Table -->
-      <div *ngIf="selectedCustomer && !loadingInvoices && openInvoices.length > 0" class="table-responsive mt-2">
+      <div *ngIf="selectedCustomer() && !loadingInvoices() && openInvoices().length > 0" class="table-responsive mt-2">
         <table class="data-table">
           <thead>
             <tr>
@@ -177,7 +177,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let inv of openInvoices">
+            <tr *ngFor="let inv of openInvoices()">
               <td>
                 <span class="font-mono font-bold">{{ inv.invoiceNo }}</span>
               </td>
@@ -215,8 +215,8 @@
       </div>
 
       <!-- Allocation Warning -->
-      <div *ngIf="isOverAllocated" class="alert-box alert-danger mt-3">
-        ⚠️ Total allocated amount ({{ totalAllocated | number:'1.2-2' }} AED) exceeds total received amount ({{ receivedAmount | number:'1.2-2' }} AED). Please adjust line allocations.
+      <div *ngIf="isOverAllocated()" class="alert-box alert-danger mt-3">
+        ⚠️ Total allocated amount ({{ totalAllocated() | number:'1.2-2' }} AED) exceeds total received amount ({{ receivedAmount() | number:'1.2-2' }} AED). Please adjust line allocations.
       </div>
 
       <!-- Summary & Auto Journal Preview Grid -->
@@ -231,20 +231,20 @@
             <div class="journal-line-preview">
               <div class="account-side">
                 <span class="dr-tag">Dr</span>
-                <span class="account-name">{{ selectedBankAccount?.name || 'Selected Bank Account' }}</span>
+                <span class="account-name">{{ selectedBankAccount()?.name || 'Selected Bank Account' }}</span>
               </div>
               <div class="amount-side font-mono font-bold">
-                {{ receivedAmount | number:'1.2-2' }} AED
+                {{ receivedAmount() | number:'1.2-2' }} AED
               </div>
             </div>
 
             <div class="journal-line-preview">
               <div class="account-side">
                 <span class="cr-tag">Cr</span>
-                <span class="account-name">1200 Accounts Receivable - {{ selectedCustomer?.name || 'Customer' }}</span>
+                <span class="account-name">1200 Accounts Receivable - {{ selectedCustomer()?.name || 'Customer' }}</span>
               </div>
               <div class="amount-side font-mono font-bold">
-                {{ receivedAmount | number:'1.2-2' }} AED
+                {{ receivedAmount() | number:'1.2-2' }} AED
               </div>
             </div>
 
@@ -258,19 +258,19 @@
         <div class="totals-panel">
           <div class="totals-row">
             <span class="totals-label">Total Received:</span>
-            <span class="totals-amount font-bold">{{ receivedAmount | number:'1.2-2' }} AED</span>
+            <span class="totals-amount font-bold">{{ receivedAmount() | number:'1.2-2' }} AED</span>
           </div>
 
           <div class="totals-row">
             <span class="totals-label">Applied to Invoices:</span>
-            <span class="totals-amount text-success font-medium">{{ totalAllocated | number:'1.2-2' }} AED</span>
+            <span class="totals-amount text-success font-medium">{{ totalAllocated() | number:'1.2-2' }} AED</span>
           </div>
 
-          <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount > 0}">
+          <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount() > 0}">
             <span class="totals-label">Unapplied (Advance):</span>
-            <span class="totals-amount font-bold">{{ unappliedAmount | number:'1.2-2' }} AED</span>
+            <span class="totals-amount font-bold">{{ unappliedAmount() | number:'1.2-2' }} AED</span>
           </div>
-          <p *ngIf="unappliedAmount > 0" class="advance-subtext">
+          <p *ngIf="unappliedAmount() > 0" class="advance-subtext">
             * Recorded as unapplied customer credit for future invoice settlements.
           </p>
         </div>
@@ -284,9 +284,9 @@
       <button
         type="submit"
         class="btn btn-primary"
-        [disabled]="submitting || receiptForm.invalid || isOverAllocated"
+        [disabled]="submitting() || receiptForm.invalid || isOverAllocated()"
       >
-        {{ submitting ? 'Posting Receipt...' : 'Post Customer Receipt' }}
+        {{ submitting() ? 'Posting Receipt...' : 'Post Customer Receipt' }}
       </button>
     </div>
   </form>

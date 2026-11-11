@@ -8,11 +8,12 @@ export class LoadingService {
   public readonly isLoading = computed(() => this.activeCount() > 0);
 
   start(): void {
-    this.activeCount.update(c => c + 1);
+    // Defer to microtask so HTTP calls triggered during child ngOnInit do not flip App's loading bar mid-check.
+    queueMicrotask(() => this.activeCount.update(c => c + 1));
   }
 
   stop(): void {
-    this.activeCount.update(c => Math.max(0, c - 1));
+    queueMicrotask(() => this.activeCount.update(c => Math.max(0, c - 1)));
   }
 }
 

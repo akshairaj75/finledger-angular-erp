@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -26,8 +26,8 @@ import { NotificationService } from '../../../core/services/notification.service
           </div>
           <div class="modal-footer">
             <button type="button" class="btn-outline" (click)="closed.emit()">Cancel</button>
-            <button type="submit" class="btn-primary" [disabled]="form.invalid || saving">
-              {{ saving ? 'Updating...' : 'Update Password' }}
+            <button type="submit" class="btn-primary" [disabled]="form.invalid || saving()">
+              {{ saving() ? 'Updating...' : 'Update Password' }}
             </button>
           </div>
         </form>
@@ -56,22 +56,22 @@ export class ChangePasswordModalComponent {
   private authService = inject(AuthService);
   private notification = inject(NotificationService);
 
-  saving = false;
+  saving = signal(false);
   form = this.fb.nonNullable.group({
     currentPassword: ['', Validators.required],
     newPassword: ['', [Validators.required, Validators.minLength(8)]]
   });
 
   submit(): void {
-    if (this.form.invalid || this.saving) return;
-    this.saving = true;
+    if (this.form.invalid || this.saving()) return;
+    this.saving.set(true);
     this.authService.changePassword(this.form.getRawValue()).subscribe({
       next: () => {
-        this.saving = false;
+        this.saving.set(false);
         this.notification.success('Password updated successfully');
         this.closed.emit();
       },
-      error: () => (this.saving = false)
+      error: () => this.saving.set(false)
     });
   }
 }

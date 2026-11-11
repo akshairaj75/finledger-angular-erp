@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
@@ -75,8 +75,8 @@ import { SettingsService } from '../services/settings.service';
           </div>
 
           <div class="form-actions full-width" *appHasPermission="['COMPANY_EDIT', 'SETTINGS_EDIT']">
-            <button type="submit" class="btn-primary" [disabled]="saving || form.invalid">
-              {{ saving ? 'Saving...' : 'Save Company Profile' }}
+            <button type="submit" class="btn-primary" [disabled]="saving() || form.invalid">
+              {{ saving() ? 'Saving...' : 'Save Company Profile' }}
             </button>
           </div>
         </form>
@@ -127,7 +127,7 @@ export class CompanySettingsComponent implements OnInit {
   private authService = inject(AuthService);
   private notification = inject(NotificationService);
 
-  saving = false;
+  saving = signal<boolean>(false);
   months = [
     { val: 1, label: 'January' }, { val: 2, label: 'February' }, { val: 3, label: 'March' },
     { val: 4, label: 'April' }, { val: 5, label: 'May' }, { val: 6, label: 'June' },
@@ -164,8 +164,8 @@ export class CompanySettingsComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid || this.saving) return;
-    this.saving = true;
+    if (this.form.invalid || this.saving()) return;
+    this.saving.set(true);
     const val = this.form.getRawValue();
     this.settingsService.updateCurrentCompany({
       ...val,
@@ -173,12 +173,12 @@ export class CompanySettingsComponent implements OnInit {
       isActive: true
     }).subscribe({
       next: () => {
-        this.saving = false;
+        this.saving.set(false);
         this.notification.success('Company settings saved');
         this.authService.reloadProfile().subscribe();
       },
       error: () => {
-        this.saving = false;
+        this.saving.set(false);
       }
     });
   }

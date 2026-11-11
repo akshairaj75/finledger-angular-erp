@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -17,12 +17,12 @@ import { SettingsService } from '../services/settings.service';
           <h2>Fiscal Years & Accounting Periods</h2>
           <p class="subtitle">Manage open/closed posting windows to protect historical accounting ledgers</p>
         </div>
-        <button *appHasPermission="'SETTINGS_EDIT'" class="btn-primary" (click)="showModal = true">
+        <button *appHasPermission="'SETTINGS_EDIT'" class="btn-primary" (click)="showModal.set(true)">
           + New Fiscal Year
         </button>
       </div>
 
-      <div *ngFor="let fy of fiscalYears" class="fy-card">
+      <div *ngFor="let fy of fiscalYears()" class="fy-card">
         <div class="fy-header">
           <div>
             <h3>{{ fy.name }}</h3>
@@ -71,11 +71,11 @@ import { SettingsService } from '../services/settings.service';
         </table>
       </div>
 
-      <div class="modal-backdrop" *ngIf="showModal">
+      <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
             <h3>Create Fiscal Year</h3>
-            <button class="close-btn" (click)="showModal = false">&times;</button>
+            <button class="close-btn" (click)="showModal.set(false)">&times;</button>
           </div>
           <form [formGroup]="form" (ngSubmit)="createFy()" class="modal-body">
             <div class="form-group">
@@ -95,9 +95,9 @@ import { SettingsService } from '../services/settings.service';
               <span>Auto-generate 12 monthly OPEN periods</span>
             </label>
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showModal = false">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="form.invalid || saving">
-                {{ saving ? 'Creating...' : 'Create Fiscal Year' }}
+              <button type="button" class="btn-outline" (click)="showModal.set(false)">Cancel</button>
+              <button type="submit" class="btn-primary" [disabled]="form.invalid || saving()">
+                {{ saving() ? 'Creating...' : 'Create Fiscal Year' }}
               </button>
             </div>
           </form>
@@ -157,9 +157,9 @@ export class FiscalYearsComponent implements OnInit {
   private notification = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  fiscalYears: FiscalYear[] = [];
-  showModal = false;
-  saving = false;
+  fiscalYears = signal<FiscalYear[]>([]);
+  showModal = signal<boolean>(false);
+  saving = signal<boolean>(false);
   canEdit = true;
 
   form = this.fb.nonNullable.group({
@@ -174,7 +174,7 @@ export class FiscalYearsComponent implements OnInit {
   }
 
   load(): void {
-    this.settingsService.getFiscalYears().subscribe(res => (this.fiscalYears = res || []));
+    this.settingsService.getFiscalYears().subscribe(res => this.fiscalYears.set(res || []));
   }
 
   closePeriod(periodId: number): void {
@@ -188,16 +188,16 @@ export class FiscalYearsComponent implements OnInit {
   }
 
   createFy(): void {
-    if (this.form.invalid || this.saving) return;
-    this.saving = true;
+    if (this.form.invalid || this.saving()) return;
+    this.saving.set(true);
     this.settingsService.createFiscalYear(this.form.getRawValue()).subscribe({
       next: () => {
-        this.saving = false;
-        this.showModal = false;
+        this.saving.set(false);
+        this.showModal.set(false);
         this.notification.success('Fiscal year created with 12 periods');
         this.load();
       },
-      error: () => (this.saving = false)
+      error: () => this.saving.set(false)
     });
   }
 }

@@ -22,7 +22,8 @@
           <input
             type="text"
             id="search"
-            [(ngModel)]="searchQuery"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
             (keyup.enter)="onSearch()"
             placeholder="Search by code, vendor name, TRN, or IBAN..."
             class="form-control"
@@ -39,19 +40,19 @@
 
   <!-- Vendors Table Card -->
   <div class="table-card">
-    <div *ngIf="loading" class="loading-state">
+    <div *ngIf="loading()" class="loading-state">
       <div class="spinner"></div>
       <p>Loading vendors...</p>
     </div>
 
-    <div *ngIf="!loading && vendorsPage.content.length === 0" class="empty-state">
+    <div *ngIf="!loading() && vendorsPage().content.length === 0" class="empty-state">
       <div class="empty-icon">🏢</div>
       <h3>No Vendors Found</h3>
       <p>Get started by adding your first vendor profile.</p>
       <button (click)="openCreateModal()" class="btn btn-primary mt-3">Add Vendor</button>
     </div>
 
-    <div *ngIf="!loading && vendorsPage.content.length > 0" class="table-responsive">
+    <div *ngIf="!loading() && vendorsPage().content.length > 0" class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
@@ -66,7 +67,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let v of vendorsPage.content">
+          <tr *ngFor="let v of vendorsPage().content">
             <td>
               <span class="code-badge">{{ v.code }}</span>
             </td>
@@ -110,23 +111,23 @@
       <!-- Pagination -->
       <div class="pagination-footer">
         <span class="pagination-info">
-          Showing {{ vendorsPage.page * vendorsPage.size + 1 }} to
-          {{ (vendorsPage.page + 1) * vendorsPage.size > vendorsPage.totalElements ? vendorsPage.totalElements : (vendorsPage.page + 1) * vendorsPage.size }}
-          of {{ vendorsPage.totalElements }} entries
+          Showing {{ vendorsPage().page * vendorsPage().size + 1 }} to
+          {{ (vendorsPage().page + 1) * vendorsPage().size > vendorsPage().totalElements ? vendorsPage().totalElements : (vendorsPage().page + 1) * vendorsPage().size }}
+          of {{ vendorsPage().totalElements }} entries
         </span>
         <div class="pagination-buttons">
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="vendorsPage.page === 0"
-            (click)="goToPage(vendorsPage.page - 1)"
+            [disabled]="vendorsPage().page === 0"
+            (click)="goToPage(vendorsPage().page - 1)"
           >
             Previous
           </button>
-          <span class="current-page-badge">Page {{ vendorsPage.page + 1 }} of {{ vendorsPage.totalPages || 1 }}</span>
+          <span class="current-page-badge">Page {{ vendorsPage().page + 1 }} of {{ vendorsPage().totalPages || 1 }}</span>
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="vendorsPage.page >= vendorsPage.totalPages - 1"
-            (click)="goToPage(vendorsPage.page + 1)"
+            [disabled]="vendorsPage().page >= vendorsPage().totalPages - 1"
+            (click)="goToPage(vendorsPage().page + 1)"
           >
             Next
           </button>
@@ -136,11 +137,11 @@
   </div>
 
   <!-- Vendor Create / Edit Modal -->
-  <div *ngIf="showVendorModal" class="modal-backdrop">
+  <div *ngIf="showVendorModal()" class="modal-backdrop">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title">{{ isEditMode ? 'Edit Vendor' : 'Add New Vendor' }}</h2>
+          <h2 class="modal-title">{{ isEditMode() ? 'Edit Vendor' : 'Add New Vendor' }}</h2>
           <button (click)="closeVendorModal()" class="modal-close">&times;</button>
         </div>
 
@@ -268,7 +269,7 @@
                 <label for="apAccountId" class="required">AP GL Account</label>
                 <select id="apAccountId" formControlName="apAccountId" class="form-control">
                   <option [ngValue]="null">-- Select AP Account --</option>
-                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                  <option *ngFor="let acc of accounts()" [ngValue]="acc.id">
                     {{ acc.code }} - {{ acc.name }}
                   </option>
                 </select>
@@ -289,7 +290,7 @@
           <div class="modal-footer">
             <button type="button" (click)="closeVendorModal()" class="btn btn-outline">Cancel</button>
             <button type="submit" class="btn btn-primary" [disabled]="vendorForm.invalid">
-              {{ isEditMode ? 'Update Vendor' : 'Save Vendor' }}
+              {{ isEditMode() ? 'Update Vendor' : 'Save Vendor' }}
             </button>
           </div>
         </form>
@@ -298,28 +299,28 @@
   </div>
 
   <!-- Open Bills Modal -->
-  <div *ngIf="showOpenBillsModal" class="modal-backdrop">
+  <div *ngIf="showOpenBillsModal()" class="modal-backdrop">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <div>
-            <h2 class="modal-title">Open Bills for {{ selectedVendorForBills?.name }}</h2>
-            <p class="text-muted text-sm">{{ selectedVendorForBills?.code }} | IBAN: {{ selectedVendorForBills?.bankIban || 'N/A' }}</p>
+            <h2 class="modal-title">Open Bills for {{ selectedVendorForBills()?.name }}</h2>
+            <p class="text-muted text-sm">{{ selectedVendorForBills()?.code }} | IBAN: {{ selectedVendorForBills()?.bankIban || 'N/A' }}</p>
           </div>
           <button (click)="closeOpenBillsModal()" class="modal-close">&times;</button>
         </div>
 
         <div class="modal-body">
-          <div *ngIf="loadingOpenBills" class="loading-state">
+          <div *ngIf="loadingOpenBills()" class="loading-state">
             <div class="spinner"></div>
             <p>Fetching open bills...</p>
           </div>
 
-          <div *ngIf="!loadingOpenBills && openBills.length === 0" class="empty-state">
+          <div *ngIf="!loadingOpenBills() && openBills().length === 0" class="empty-state">
             <p>No open or outstanding bills for this vendor. All bills are settled!</p>
           </div>
 
-          <div *ngIf="!loadingOpenBills && openBills.length > 0" class="table-responsive">
+          <div *ngIf="!loadingOpenBills() && openBills().length > 0" class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -333,7 +334,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let b of openBills">
+                <tr *ngFor="let b of openBills()">
                   <td><strong>{{ b.billNo }}</strong></td>
                   <td>{{ b.vendorInvoiceNo || '—' }}</td>
                   <td>{{ b.billDate | date:'mediumDate' }}</td>

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Account } from '../../../core/models/account.model';
 import { AccountKind, BankAccount } from '../../../core/models/bank-account.model';
@@ -34,25 +34,25 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <div class="tabs-bar">
-        <button [class.active]="tab === 'banks'" (click)="tab = 'banks'">🏦 Bank Accounts</button>
-        <button [class.active]="tab === 'taxes'" (click)="tab = 'taxes'">📑 Tax Rates</button>
-        <button [class.active]="tab === 'currencies'" (click)="tab = 'currencies'">💱 Currencies &amp; FX</button>
-        <button [class.active]="tab === 'categories'" (click)="tab = 'categories'">🧾 Expense Categories</button>
-        <button [class.active]="tab === 'warehouses'" (click)="tab = 'warehouses'">🏭 Warehouses</button>
-        <button [class.active]="tab === 'stages'" (click)="tab = 'stages'">🎯 CRM Stages</button>
-        <button [class.active]="tab === 'series'" (click)="tab = 'series'">🔢 Number Series</button>
-        <button [class.active]="tab === 'audit'" (click)="tab = 'audit'; loadAuditLogs()">📜 Audit Log</button>
+        <button [class.active]="tab() === 'banks'" (click)="tab.set('banks')">🏦 Bank Accounts</button>
+        <button [class.active]="tab() === 'taxes'" (click)="tab.set('taxes')">📑 Tax Rates</button>
+        <button [class.active]="tab() === 'currencies'" (click)="tab.set('currencies')">💱 Currencies &amp; FX</button>
+        <button [class.active]="tab() === 'categories'" (click)="tab.set('categories')">🧾 Expense Categories</button>
+        <button [class.active]="tab() === 'warehouses'" (click)="tab.set('warehouses')">🏭 Warehouses</button>
+        <button [class.active]="tab() === 'stages'" (click)="tab.set('stages')">🎯 CRM Stages</button>
+        <button [class.active]="tab() === 'series'" (click)="tab.set('series')">🔢 Number Series</button>
+        <button [class.active]="tab() === 'audit'" (click)="tab.set('audit'); loadAuditLogs()">📜 Audit Log</button>
       </div>
 
       <!-- TAB 1: BANK ACCOUNTS -->
-      <div class="tab-panel" *ngIf="tab === 'banks'">
+      <div class="tab-panel" *ngIf="tab() === 'banks'">
         <div class="panel-grid">
           <div class="card">
             <h3>Active Bank &amp; Cash Accounts</h3>
             <table class="data-table">
               <thead><tr><th>Name</th><th>Bank</th><th>Currency</th><th>Kind</th><th>GL Account</th></tr></thead>
               <tbody>
-                <tr *ngFor="let b of bankAccounts">
+                <tr *ngFor="let b of bankAccounts()">
                   <td class="font-medium">{{ b.name }}</td>
                   <td>{{ b.bankName || '-' }}</td>
                   <td>{{ b.currencyCode }}</td>
@@ -78,7 +78,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
               </label>
               <label>Linked GL Account *
                 <select formControlName="glAccountId">
-                  <option *ngFor="let a of assetAccounts" [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
+                  <option *ngFor="let a of assetAccounts()" [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
                 </select>
               </label>
               <button type="submit" class="btn-primary" [disabled]="bankForm.invalid">Add Bank Account</button>
@@ -88,14 +88,14 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 2: TAX RATES -->
-      <div class="tab-panel" *ngIf="tab === 'taxes'">
+      <div class="tab-panel" *ngIf="tab() === 'taxes'">
         <div class="panel-grid">
           <div class="card">
             <h3>Configured Tax Rates</h3>
             <table class="data-table">
               <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Rate (%)</th></tr></thead>
               <tbody>
-                <tr *ngFor="let t of taxRates">
+                <tr *ngFor="let t of taxRates()">
                   <td class="font-medium">{{ t.code }}</td>
                   <td>{{ t.name }}</td>
                   <td>{{ t.taxType }}</td>
@@ -125,19 +125,19 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 3: CURRENCIES & FX -->
-      <div class="tab-panel" *ngIf="tab === 'currencies'">
+      <div class="tab-panel" *ngIf="tab() === 'currencies'">
         <div class="panel-grid">
           <div class="card">
             <h3>Exchange Rates</h3>
             <table class="data-table">
               <thead><tr><th>Pair</th><th>Effective Date</th><th>Rate</th></tr></thead>
               <tbody>
-                <tr *ngFor="let fx of exchangeRates">
+                <tr *ngFor="let fx of exchangeRates()">
                   <td class="font-medium">{{ fx.fromCurrency }} → {{ fx.toCurrency }}</td>
                   <td>{{ fx.rateDate }}</td>
                   <td>{{ fx.rate }}</td>
                 </tr>
-                <tr *ngIf="!exchangeRates.length"><td colspan="3" class="text-muted">No custom exchange rates recorded yet.</td></tr>
+                <tr *ngIf="!exchangeRates().length"><td colspan="3" class="text-muted">No custom exchange rates recorded yet.</td></tr>
               </tbody>
             </table>
           </div>
@@ -146,12 +146,12 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
             <form [formGroup]="fxForm" (ngSubmit)="saveFx()" class="stack-form">
               <label>From Currency *
                 <select formControlName="fromCurrency">
-                  <option *ngFor="let c of currencies" [value]="c.code">{{ c.code }} - {{ c.name }}</option>
+                  <option *ngFor="let c of currencies()" [value]="c.code">{{ c.code }} - {{ c.name }}</option>
                 </select>
               </label>
               <label>To Currency *
                 <select formControlName="toCurrency">
-                  <option *ngFor="let c of currencies" [value]="c.code">{{ c.code }} - {{ c.name }}</option>
+                  <option *ngFor="let c of currencies()" [value]="c.code">{{ c.code }} - {{ c.name }}</option>
                 </select>
               </label>
               <label>Effective Date * <input type="date" formControlName="rateDate" /></label>
@@ -163,14 +163,14 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 4: EXPENSE CATEGORIES -->
-      <div class="tab-panel" *ngIf="tab === 'categories'">
+      <div class="tab-panel" *ngIf="tab() === 'categories'">
         <div class="panel-grid">
           <div class="card">
             <h3>Expense Policy Categories</h3>
             <table class="data-table">
               <thead><tr><th>Name</th><th>GL Account</th><th>Limit / Claim</th><th>Receipt Required</th></tr></thead>
               <tbody>
-                <tr *ngFor="let c of categories">
+                <tr *ngFor="let c of categories()">
                   <td class="font-medium">{{ c.name }}</td>
                   <td>{{ getAccountLabel(c.accountId) }}</td>
                   <td>{{ c.limitPerClaim ? (c.limitPerClaim | number:'1.2-2') : 'No Limit' }}</td>
@@ -185,7 +185,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
               <label>Category Name * <input type="text" formControlName="name" placeholder="Client Gifts" /></label>
               <label>Expense GL Account *
                 <select formControlName="accountId">
-                  <option *ngFor="let a of expenseAccounts" [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
+                  <option *ngFor="let a of expenseAccounts()" [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
                 </select>
               </label>
               <label>Per-Claim Limit (Optional) <input type="number" formControlName="limitPerClaim" /></label>
@@ -197,14 +197,14 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 5: WAREHOUSES -->
-      <div class="tab-panel" *ngIf="tab === 'warehouses'">
+      <div class="tab-panel" *ngIf="tab() === 'warehouses'">
         <div class="panel-grid">
           <div class="card">
             <h3>Configured Warehouses</h3>
             <table class="data-table">
               <thead><tr><th>Code</th><th>Name</th><th>Address</th><th>Default</th></tr></thead>
               <tbody>
-                <tr *ngFor="let w of warehouses">
+                <tr *ngFor="let w of warehouses()">
                   <td class="font-medium">{{ w.code }}</td>
                   <td>{{ w.name }}</td>
                   <td>{{ w.address || '-' }}</td>
@@ -227,14 +227,14 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 6: CRM PIPELINE STAGES (Section 4.16) -->
-      <div class="tab-panel" *ngIf="tab === 'stages'">
+      <div class="tab-panel" *ngIf="tab() === 'stages'">
         <div class="panel-grid">
           <div class="card">
             <h3>Sales Pipeline Stages</h3>
             <table class="data-table">
               <thead><tr><th>Order</th><th>Stage Name</th><th>Win Probability</th><th>Stage Type</th></tr></thead>
               <tbody>
-                <tr *ngFor="let s of crmStages">
+                <tr *ngFor="let s of crmStages()">
                   <td>{{ s.sortOrder }}</td>
                   <td class="font-medium">{{ s.name }}</td>
                   <td>{{ s.probabilityPct }}%</td>
@@ -263,7 +263,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 7: NUMBER SERIES (Section 4.16) -->
-      <div class="tab-panel" *ngIf="tab === 'series'">
+      <div class="tab-panel" *ngIf="tab() === 'series'">
         <div class="card">
           <h3>Document Number Series</h3>
           <table class="data-table">
@@ -277,11 +277,11 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let ns of numberSeries">
+              <tr *ngFor="let ns of numberSeries()">
                 <td class="font-medium">{{ ns.docType }}</td>
-                <td><input type="text" [(ngModel)]="ns.prefix" class="inline-input" /></td>
-                <td><input type="number" [(ngModel)]="ns.nextNumber" min="1" class="inline-input short" /></td>
-                <td><input type="number" [(ngModel)]="ns.padding" min="1" max="8" class="inline-input short" /></td>
+                <td><input type="text" [ngModel]="ns.prefix" (ngModelChange)="ns.prefix = $event" class="inline-input" /></td>
+                <td><input type="number" [ngModel]="ns.nextNumber" (ngModelChange)="ns.nextNumber = $event" min="1" class="inline-input short" /></td>
+                <td><input type="number" [ngModel]="ns.padding" (ngModelChange)="ns.padding = $event" min="1" max="8" class="inline-input short" /></td>
                 <td class="text-right">
                   <button type="button" class="btn-sm" (click)="saveSeries(ns)">Save</button>
                 </td>
@@ -292,14 +292,14 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       </div>
 
       <!-- TAB 8: AUDIT LOGS (Section 4.16 / 6.2) -->
-      <div class="tab-panel" *ngIf="tab === 'audit'">
+      <div class="tab-panel" *ngIf="tab() === 'audit'">
         <div class="card">
           <div class="audit-toolbar">
             <h3>Immutable System Audit Trail</h3>
             <div class="audit-filters">
-              <input type="text" [(ngModel)]="auditEntityFilter" placeholder="Filter by entity (Invoice, JournalEntry...)" class="inline-input" />
-              <input type="date" [(ngModel)]="auditFrom" class="inline-input" />
-              <input type="date" [(ngModel)]="auditTo" class="inline-input" />
+              <input type="text" [ngModel]="auditEntityFilter()" (ngModelChange)="auditEntityFilter.set($event)" placeholder="Filter by entity (Invoice, JournalEntry...)" class="inline-input" />
+              <input type="date" [ngModel]="auditFrom()" (ngModelChange)="auditFrom.set($event)" class="inline-input" />
+              <input type="date" [ngModel]="auditTo()" (ngModelChange)="auditTo.set($event)" class="inline-input" />
               <button type="button" class="btn-sm" (click)="loadAuditLogs(0)">Filter</button>
             </div>
           </div>
@@ -316,7 +316,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let log of auditLogs">
+              <tr *ngFor="let log of auditLogs()">
                 <td>{{ log.createdAt | date:'short' }}</td>
                 <td class="font-medium">{{ log.userName }}</td>
                 <td><span class="pill pill-OPEN">{{ log.action }}</span></td>
@@ -324,7 +324,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
                 <td>#{{ log.entityId }}</td>
                 <td class="audit-json">{{ log.newValues || log.oldValues || '-' }}</td>
               </tr>
-              <tr *ngIf="!auditLogs.length">
+              <tr *ngIf="!auditLogs().length">
                 <td colspan="6" class="text-muted">No audit entries matching the selected filters.</td>
               </tr>
             </tbody>
@@ -382,21 +382,21 @@ export class MasterSetupComponent implements OnInit {
   private notification = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  tab: SetupTab = 'banks';
-  accounts: Account[] = [];
-  bankAccounts: BankAccount[] = [];
-  taxRates: TaxRate[] = [];
-  currencies: CurrencyItem[] = [];
-  exchangeRates: ExchangeRateItem[] = [];
-  categories: ExpenseCategory[] = [];
-  warehouses: Warehouse[] = [];
-  crmStages: CrmStageItem[] = [];
-  numberSeries: NumberSeriesItem[] = [];
-  auditLogs: AuditLogItem[] = [];
+  tab = signal<SetupTab>('banks');
+  accounts = signal<Account[]>([]);
+  bankAccounts = signal<BankAccount[]>([]);
+  taxRates = signal<TaxRate[]>([]);
+  currencies = signal<CurrencyItem[]>([]);
+  exchangeRates = signal<ExchangeRateItem[]>([]);
+  categories = signal<ExpenseCategory[]>([]);
+  warehouses = signal<Warehouse[]>([]);
+  crmStages = signal<CrmStageItem[]>([]);
+  numberSeries = signal<NumberSeriesItem[]>([]);
+  auditLogs = signal<AuditLogItem[]>([]);
 
-  auditEntityFilter = '';
-  auditFrom = '';
-  auditTo = '';
+  auditEntityFilter = signal<string>('');
+  auditFrom = signal<string>('');
+  auditTo = signal<string>('');
 
   bankForm = this.fb.group({
     name: ['', Validators.required],
@@ -442,16 +442,16 @@ export class MasterSetupComponent implements OnInit {
     stageType: ['OPEN' as 'OPEN' | 'WON' | 'LOST', Validators.required]
   });
 
-  get assetAccounts(): Account[] {
-    return this.accounts.filter(a => !a.isGroup && a.accountType === 'ASSET');
-  }
+  assetAccounts = computed<Account[]>(() =>
+    this.accounts().filter(a => !a.isGroup && a.accountType === 'ASSET')
+  );
 
-  get expenseAccounts(): Account[] {
-    return this.accounts.filter(a => !a.isGroup && a.accountType === 'EXPENSE');
-  }
+  expenseAccounts = computed<Account[]>(() =>
+    this.accounts().filter(a => !a.isGroup && a.accountType === 'EXPENSE')
+  );
 
   ngOnInit(): void {
-    this.settingsService.getAccounts().subscribe(res => (this.accounts = res.content || []));
+    this.settingsService.getAccounts().subscribe(res => this.accounts.set(res.content || []));
     this.loadBanks();
     this.loadTaxes();
     this.loadCurrencies();
@@ -463,25 +463,30 @@ export class MasterSetupComponent implements OnInit {
 
   getAccountLabel(id?: number): string {
     if (!id) return '-';
-    const acc = this.accounts.find(a => a.id === id);
+    const acc = this.accounts().find(a => a.id === id);
     return acc ? `${acc.code} - ${acc.name}` : `#${id}`;
   }
 
-  loadBanks(): void { this.settingsService.getBankAccounts().subscribe(r => (this.bankAccounts = r || [])); }
-  loadTaxes(): void { this.settingsService.getTaxRates().subscribe(r => (this.taxRates = r || [])); }
+  loadBanks(): void { this.settingsService.getBankAccounts().subscribe(r => this.bankAccounts.set(r || [])); }
+  loadTaxes(): void { this.settingsService.getTaxRates().subscribe(r => this.taxRates.set(r || [])); }
   loadCurrencies(): void {
-    this.settingsService.getCurrencies().subscribe(r => (this.currencies = r || []));
-    this.settingsService.getExchangeRates().subscribe(r => (this.exchangeRates = r || []));
+    this.settingsService.getCurrencies().subscribe(r => this.currencies.set(r || []));
+    this.settingsService.getExchangeRates().subscribe(r => this.exchangeRates.set(r || []));
   }
-  loadCategories(): void { this.settingsService.getExpenseCategories().subscribe(r => (this.categories = r || [])); }
-  loadWarehouses(): void { this.settingsService.getWarehouses().subscribe(r => (this.warehouses = r || [])); }
-  loadStages(): void { this.settingsService.getCrmStages().subscribe(r => (this.crmStages = r || [])); }
-  loadNumberSeries(): void { this.settingsService.getNumberSeries().subscribe(r => (this.numberSeries = r || [])); }
+  loadCategories(): void { this.settingsService.getExpenseCategories().subscribe(r => this.categories.set(r || [])); }
+  loadWarehouses(): void { this.settingsService.getWarehouses().subscribe(r => this.warehouses.set(r || [])); }
+  loadStages(): void { this.settingsService.getCrmStages().subscribe(r => this.crmStages.set(r || [])); }
+  loadNumberSeries(): void { this.settingsService.getNumberSeries().subscribe(r => this.numberSeries.set(r || [])); }
 
   loadAuditLogs(page: number = 0): void {
     this.settingsService
-      .getAuditLogs(this.auditEntityFilter.trim() || undefined, this.auditFrom || undefined, this.auditTo || undefined, page)
-      .subscribe(res => (this.auditLogs = res.content || []));
+      .getAuditLogs(
+        this.auditEntityFilter().trim() || undefined,
+        this.auditFrom() || undefined,
+        this.auditTo() || undefined,
+        page
+      )
+      .subscribe(res => this.auditLogs.set(res.content || []));
   }
 
   saveBank(): void {

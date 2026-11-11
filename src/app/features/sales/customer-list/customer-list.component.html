@@ -22,7 +22,8 @@
           <input
             type="text"
             id="search"
-            [(ngModel)]="searchQuery"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
             (keyup.enter)="onSearch()"
             placeholder="Search by code, customer name, TRN, or email..."
             class="form-control"
@@ -39,19 +40,19 @@
 
   <!-- Customers Table Card -->
   <div class="table-card">
-    <div *ngIf="loading" class="loading-state">
+    <div *ngIf="loading()" class="loading-state">
       <div class="spinner"></div>
       <p>Loading customers...</p>
     </div>
 
-    <div *ngIf="!loading && customersPage.content.length === 0" class="empty-state">
+    <div *ngIf="!loading() && customersPage().content.length === 0" class="empty-state">
       <div class="empty-icon">👥</div>
       <h3>No Customers Found</h3>
       <p>Get started by adding your first customer or clearing your search filters.</p>
       <button (click)="openCreateModal()" class="btn btn-primary mt-3">Add Customer</button>
     </div>
 
-    <div *ngIf="!loading && customersPage.content.length > 0" class="table-responsive">
+    <div *ngIf="!loading() && customersPage().content.length > 0" class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
@@ -66,7 +67,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let c of customersPage.content">
+          <tr *ngFor="let c of customersPage().content">
             <td>
               <span class="code-badge">{{ c.code }}</span>
             </td>
@@ -113,23 +114,23 @@
       <!-- Pagination -->
       <div class="pagination-footer">
         <span class="pagination-info">
-          Showing {{ customersPage.page * customersPage.size + 1 }} to
-          {{ (customersPage.page + 1) * customersPage.size > customersPage.totalElements ? customersPage.totalElements : (customersPage.page + 1) * customersPage.size }}
-          of {{ customersPage.totalElements }} entries
+          Showing {{ customersPage().page * customersPage().size + 1 }} to
+          {{ (customersPage().page + 1) * customersPage().size > customersPage().totalElements ? customersPage().totalElements : (customersPage().page + 1) * customersPage().size }}
+          of {{ customersPage().totalElements }} entries
         </span>
         <div class="pagination-buttons">
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="customersPage.page === 0"
-            (click)="goToPage(customersPage.page - 1)"
+            [disabled]="customersPage().page === 0"
+            (click)="goToPage(customersPage().page - 1)"
           >
             Previous
           </button>
-          <span class="current-page-badge">Page {{ customersPage.page + 1 }} of {{ customersPage.totalPages || 1 }}</span>
+          <span class="current-page-badge">Page {{ customersPage().page + 1 }} of {{ customersPage().totalPages || 1 }}</span>
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="customersPage.page >= customersPage.totalPages - 1"
-            (click)="goToPage(customersPage.page + 1)"
+            [disabled]="customersPage().page >= customersPage().totalPages - 1"
+            (click)="goToPage(customersPage().page + 1)"
           >
             Next
           </button>
@@ -139,27 +140,27 @@
   </div>
 
   <!-- Customer Create / Edit Modal -->
-  <div *ngIf="showCustomerModal" class="modal-backdrop">
+  <div *ngIf="showCustomerModal()" class="modal-backdrop">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title">{{ isEditMode ? 'Edit Customer' : 'Add New Customer' }}</h2>
+          <h2 class="modal-title">{{ isEditMode() ? 'Edit Customer' : 'Add New Customer' }}</h2>
           <button (click)="closeCustomerModal()" class="modal-close">&times;</button>
         </div>
 
         <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
           <div class="modal-body">
-            <div *ngIf="modalError" class="modal-error-alert" role="alert">
+            <div *ngIf="modalError() as merr" class="modal-error-alert" role="alert">
               <div class="modal-error-header">
                 <strong>
-                  Error{{ modalError.status ? ' (' + modalError.status + ')' : '' }}
-                  <span *ngIf="modalError.code">[{{ modalError.code }}]</span>
+                  Error{{ merr.status ? ' (' + merr.status + ')' : '' }}
+                  <span *ngIf="merr.code">[{{ merr.code }}]</span>
                 </strong>
-                <button type="button" class="modal-error-close" (click)="modalError = null" aria-label="Dismiss error">&times;</button>
+                <button type="button" class="modal-error-close" (click)="modalError.set(null)" aria-label="Dismiss error">&times;</button>
               </div>
-              <p class="modal-error-message">{{ modalError.message }}</p>
-              <ul *ngIf="modalError.fieldErrors.length > 0" class="modal-error-fields">
-                <li *ngFor="let fe of modalError.fieldErrors">
+              <p class="modal-error-message">{{ merr.message }}</p>
+              <ul *ngIf="merr.fieldErrors.length > 0" class="modal-error-fields">
+                <li *ngFor="let fe of merr.fieldErrors">
                   <strong>{{ fe.field }}:</strong> {{ fe.message }}
                 </li>
               </ul>
@@ -329,7 +330,7 @@
                 <label for="arAccountId" class="required">AR GL Account</label>
                 <select id="arAccountId" formControlName="arAccountId" class="form-control">
                   <option [ngValue]="null">-- Select AR Account --</option>
-                  <option *ngFor="let acc of accounts" [ngValue]="acc.id">
+                  <option *ngFor="let acc of accounts()" [ngValue]="acc.id">
                     {{ acc.code }} - {{ acc.name }}
                   </option>
                 </select>
@@ -353,7 +354,7 @@
           <div class="modal-footer">
             <button type="button" (click)="closeCustomerModal()" class="btn btn-outline">Cancel</button>
             <button type="submit" class="btn btn-primary" [disabled]="customerForm.invalid">
-              {{ isEditMode ? 'Update Customer' : 'Save Customer' }}
+              {{ isEditMode() ? 'Update Customer' : 'Save Customer' }}
             </button>
           </div>
         </form>
@@ -362,28 +363,28 @@
   </div>
 
   <!-- Open Invoices Modal -->
-  <div *ngIf="showOpenInvoicesModal" class="modal-backdrop">
+  <div *ngIf="showOpenInvoicesModal()" class="modal-backdrop">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <div>
-            <h2 class="modal-title">Open Invoices for {{ selectedCustomerForInvoices?.name }}</h2>
-            <p class="text-muted text-sm">{{ selectedCustomerForInvoices?.code }} | TRN: {{ selectedCustomerForInvoices?.trn || 'N/A' }}</p>
+            <h2 class="modal-title">Open Invoices for {{ selectedCustomerForInvoices()?.name }}</h2>
+            <p class="text-muted text-sm">{{ selectedCustomerForInvoices()?.code }} | TRN: {{ selectedCustomerForInvoices()?.trn || 'N/A' }}</p>
           </div>
           <button (click)="closeOpenInvoicesModal()" class="modal-close">&times;</button>
         </div>
 
         <div class="modal-body">
-          <div *ngIf="loadingOpenInvoices" class="loading-state">
+          <div *ngIf="loadingOpenInvoices()" class="loading-state">
             <div class="spinner"></div>
             <p>Fetching open invoices...</p>
           </div>
 
-          <div *ngIf="!loadingOpenInvoices && openInvoices.length === 0" class="empty-state">
+          <div *ngIf="!loadingOpenInvoices() && openInvoices().length === 0" class="empty-state">
             <p>No unpaid or open invoices for this customer. All invoices are settled!</p>
           </div>
 
-          <div *ngIf="!loadingOpenInvoices && openInvoices.length > 0" class="table-responsive">
+          <div *ngIf="!loadingOpenInvoices() && openInvoices().length > 0" class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -396,7 +397,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let inv of openInvoices">
+                <tr *ngFor="let inv of openInvoices()">
                   <td><strong>{{ inv.invoiceNo }}</strong></td>
                   <td>{{ inv.invoiceDate | date:'mediumDate' }}</td>
                   <td>{{ inv.dueDate | date:'mediumDate' }}</td>

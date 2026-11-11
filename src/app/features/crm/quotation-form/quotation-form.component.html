@@ -4,14 +4,14 @@
     <div>
       <div class="title-with-status">
         <h1 class="page-title">
-          {{ currentQuotation ? ('Quotation ' + currentQuotation.quotationNo) : 'New Sales Quotation' }}
+          {{ currentQuotation() ? ('Quotation ' + currentQuotation()!.quotationNo) : 'New Sales Quotation' }}
         </h1>
         <span
           class="status-chip"
-          *ngIf="currentQuotation"
-          [ngClass]="'status-' + currentQuotation.status.toLowerCase()"
+          *ngIf="currentQuotation() as quote"
+          [ngClass]="'status-' + quote.status.toLowerCase()"
         >
-          {{ currentQuotation.status }}
+          {{ quote.status }}
         </span>
       </div>
       <p class="page-subtitle">Draft commercial proposals, reserve inventory on acceptance, and convert to sales invoices</p>
@@ -22,7 +22,7 @@
       <button
         type="button"
         class="btn btn-outline"
-        (click)="showRecentQuotes = !showRecentQuotes"
+        (click)="showRecentQuotes.set(!showRecentQuotes())"
       >
         <span>📑 Quotations List</span>
       </button>
@@ -31,7 +31,7 @@
       <button
         type="button"
         class="btn btn-outline"
-        *ngIf="quoteId"
+        *ngIf="quoteId()"
         (click)="downloadPdf()"
         title="Download official quotation PDF"
       >
@@ -42,8 +42,8 @@
       <button
         type="button"
         class="btn btn-outline"
-        *ngIf="quoteId && currentQuotation?.status === 'DRAFT'"
-        [disabled]="actionInProgress"
+        *ngIf="quoteId() && currentQuotation()?.status === 'DRAFT'"
+        [disabled]="actionInProgress()"
         (click)="sendQuotation()"
       >
         <span>✉️ Send</span>
@@ -53,8 +53,8 @@
       <button
         type="button"
         class="btn btn-success"
-        *ngIf="quoteId && (currentQuotation?.status === 'DRAFT' || currentQuotation?.status === 'SENT')"
-        [disabled]="actionInProgress"
+        *ngIf="quoteId() && (currentQuotation()?.status === 'DRAFT' || currentQuotation()?.status === 'SENT')"
+        [disabled]="actionInProgress()"
         (click)="acceptQuotation()"
         title="Mark quotation accepted and reserve stock"
       >
@@ -65,8 +65,8 @@
       <button
         type="button"
         class="btn btn-primary"
-        *ngIf="quoteId && currentQuotation?.status === 'ACCEPTED' && !currentQuotation?.invoiceId"
-        [disabled]="actionInProgress"
+        *ngIf="quoteId() && currentQuotation()?.status === 'ACCEPTED' && !currentQuotation()?.invoiceId"
+        [disabled]="actionInProgress()"
         (click)="convertToInvoice()"
         title="Convert accepted quote to a draft sales invoice"
       >
@@ -77,20 +77,20 @@
       <button
         type="button"
         class="btn btn-primary"
-        *ngIf="!currentQuotation || currentQuotation.status === 'DRAFT'"
-        [disabled]="saving"
+        *ngIf="!currentQuotation() || currentQuotation()?.status === 'DRAFT'"
+        [disabled]="saving()"
         (click)="saveQuotation()"
       >
-        <span *ngIf="!saving">💾 Save Quotation</span>
-        <span *ngIf="saving">Saving...</span>
+        <span *ngIf="!saving()">💾 Save Quotation</span>
+        <span *ngIf="saving()">Saving...</span>
       </button>
     </div>
   </div>
 
   <!-- Invoiced Banner -->
-  <div class="invoiced-banner mb-3" *ngIf="currentQuotation?.invoiceId">
+  <div class="invoiced-banner mb-3" *ngIf="currentQuotation()?.invoiceId">
     <span>
-      🎉 This quotation has been converted to <strong>Sales Invoice {{ currentQuotation?.invoiceNo || ('#' + currentQuotation?.invoiceId) }}</strong>.
+      🎉 This quotation has been converted to <strong>Sales Invoice {{ currentQuotation()?.invoiceNo || ('#' + currentQuotation()?.invoiceId) }}</strong>.
     </span>
     <a routerLink="/sales/invoices" class="btn btn-xs btn-primary ml-3">
       View in Sales →
@@ -107,7 +107,7 @@
           <label class="form-label required">Customer / Prospect Account</label>
           <select formControlName="customerId" class="form-control">
             <option [ngValue]="null">-- Select Customer --</option>
-            <option *ngFor="let c of customers" [ngValue]="c.id">
+            <option *ngFor="let c of customers()" [ngValue]="c.id">
               {{ c.name }} ({{ c.code }})
             </option>
           </select>
@@ -117,7 +117,7 @@
           <label class="form-label">Linked Sales Opportunity</label>
           <select formControlName="opportunityId" class="form-control">
             <option [ngValue]="null">-- No Opportunity Linked --</option>
-            <option *ngFor="let opp of opportunities" [ngValue]="opp.id">
+            <option *ngFor="let opp of opportunities()" [ngValue]="opp.id">
               {{ opp.opportunityNo }} - {{ opp.title }}
             </option>
           </select>
@@ -177,7 +177,7 @@
                   class="form-control form-control-sm"
                 >
                   <option [ngValue]="null">Custom / Non-Inventory</option>
-                  <option *ngFor="let it of items" [ngValue]="it.id">
+                  <option *ngFor="let it of items()" [ngValue]="it.id">
                     {{ it.sku }} - {{ it.name }}
                   </option>
                 </select>
@@ -220,7 +220,7 @@
               <td>
                 <select formControlName="taxRateId" class="form-control form-control-sm">
                   <option [ngValue]="null">Standard 5% VAT</option>
-                  <option *ngFor="let tr of taxRates" [ngValue]="tr.id">
+                  <option *ngFor="let tr of taxRates()" [ngValue]="tr.id">
                     {{ tr.name }} ({{ tr.rate }}%)
                   </option>
                 </select>
@@ -248,16 +248,16 @@
         <div class="totals-box">
           <div class="totals-row">
             <span class="totals-label">Subtotal (Net):</span>
-            <span class="totals-value">{{ subtotal | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+            <span class="totals-value">{{ subtotal() | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
           </div>
           <div class="totals-row">
             <span class="totals-label">VAT / Tax (5%):</span>
-            <span class="totals-value">{{ taxTotal | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
+            <span class="totals-value">{{ taxTotal() | currency:'AED':'symbol-narrow':'1.2-2' }}</span>
           </div>
           <div class="totals-row grand-total-row">
             <span class="totals-label font-bold">Grand Total:</span>
             <span class="totals-value font-bold total-highlight">
-              {{ grandTotal | currency:'AED':'symbol-narrow':'1.2-2' }}
+              {{ grandTotal() | currency:'AED':'symbol-narrow':'1.2-2' }}
             </span>
           </div>
         </div>
@@ -266,7 +266,7 @@
   </form>
 
   <!-- RECENT QUOTATIONS DRAWER / TABLE -->
-  <div class="form-card mt-4" *ngIf="showRecentQuotes">
+  <div class="form-card mt-4" *ngIf="showRecentQuotes()">
     <div class="card-title-row">
       <h2 class="card-title">Commercial Quotations Directory</h2>
       <a routerLink="/crm/quotations/new" class="btn btn-sm btn-primary">➕ New Quote</a>
@@ -285,7 +285,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let q of recentQuotations">
+        <tr *ngFor="let q of recentQuotations()">
           <td><span class="badge-code">{{ q.quotationNo }}</span></td>
           <td>{{ q.customerName || 'Prospect' }}</td>
           <td>{{ q.quoteDate | date:'dd-MMM-yyyy' }}</td>

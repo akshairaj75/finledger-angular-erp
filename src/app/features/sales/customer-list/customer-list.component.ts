@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -28,31 +28,31 @@ export class CustomerListComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  customersPage: Page<Customer> = {
+  customersPage = signal<Page<Customer>>({
     content: [],
     page: 0,
     size: 10,
     totalElements: 0,
     totalPages: 0
-  };
+  });
 
-  accounts: Account[] = [];
-  loading = false;
-  searchQuery = '';
-  currentPage = 0;
+  accounts = signal<Account[]>([]);
+  loading = signal(false);
+  searchQuery = signal('');
+  currentPage = signal(0);
   pageSize = 10;
 
   // Modals state
-  showCustomerModal = false;
-  isEditMode = false;
-  selectedCustomerId: number | null = null;
+  showCustomerModal = signal(false);
+  isEditMode = signal(false);
+  selectedCustomerId = signal<number | null>(null);
   customerForm!: FormGroup;
 
   // Open invoices modal
-  showOpenInvoicesModal = false;
-  selectedCustomerForInvoices: Customer | null = null;
-  openInvoices: OpenInvoice[] = [];
-  loadingOpenInvoices = false;
+  showOpenInvoicesModal = signal(false);
+  selectedCustomerForInvoices = signal<Customer | null>(null);
+  openInvoices = signal<OpenInvoice[]>([]);
+  loadingOpenInvoices = signal(false);
 
   ngOnInit(): void {
     this.initForm();
@@ -60,7 +60,7 @@ export class CustomerListComponent implements OnInit {
     this.loadCustomers();
   }
 
-  modalError: ParsedApiError | null = null;
+  modalError = signal<ParsedApiError | null>(null);
 
   getServerError(field: string): string | null {
     return getServerFieldError(this.customerForm, field);
@@ -86,9 +86,9 @@ export class CustomerListComponent implements OnInit {
   loadAccounts(): void {
     this.accountService.getAccounts(0, 200).subscribe({
       next: page => {
-        this.accounts = page.content;
+        this.accounts.set(page.content);
         // Pre-select 1200 Accounts Receivable if present
-        const arAcc = this.accounts.find(a => a.code === '1200' || a.name.toLowerCase().includes('receivable'));
+        const arAcc = page.content.find(a => a.code === '1200' || a.name.toLowerCase().includes('receivable'));
         if (arAcc && !this.customerForm.get('arAccountId')?.value) {
           this.customerForm.patchValue({ arAccountId: arAcc.id });
         }
@@ -100,41 +100,41 @@ export class CustomerListComponent implements OnInit {
   }
 
   loadCustomers(): void {
-    this.loading = true;
+    this.loading.set(true);
     const query: CustomerQuery = {
-      page: this.currentPage,
+      page: this.currentPage(),
       size: this.pageSize,
-      search: this.searchQuery.trim() || undefined
+      search: this.searchQuery().trim() || undefined
     };
 
     this.customerService.getCustomers(query).subscribe({
       next: page => {
-        this.customersPage = page;
-        this.loading = false;
+        this.customersPage.set(page);
+        this.loading.set(false);
       },
       error: err => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load customers');
       }
     });
   }
 
   onSearch(): void {
-    this.currentPage = 0;
+    this.currentPage.set(0);
     this.loadCustomers();
   }
 
   resetSearch(): void {
-    this.searchQuery = '';
-    this.currentPage = 0;
+    this.searchQuery.set('');
+    this.currentPage.set(0);
     this.loadCustomers();
   }
 
   openCreateModal(): void {
-    this.isEditMode = false;
-    this.selectedCustomerId = null;
-    this.modalError = null;
-    const arAcc = this.accounts.find(a => a.code === '1200' || a.name.toLowerCase().includes('receivable'));
+    this.isEditMode.set(false);
+    this.selectedCustomerId.set(null);
+    this.modalError.set(null);
+    const arAcc = this.accounts().find(a => a.code === '1200' || a.name.toLowerCase().includes('receivable'));
     this.customerForm.reset({
       code: '',
       name: '',
@@ -149,13 +149,13 @@ export class CustomerListComponent implements OnInit {
       arAccountId: arAcc ? arAcc.id : null,
       isActive: true
     });
-    this.showCustomerModal = true;
+    this.showCustomerModal.set(true);
   }
 
   openEditModal(customer: Customer): void {
-    this.isEditMode = true;
-    this.selectedCustomerId = customer.id;
-    this.modalError = null;
+    this.isEditMode.set(true);
+    this.selectedCustomerId.set(customer.id);
+    this.modalError.set(null);
     this.customerForm.patchValue({
       code: customer.code,
       name: customer.name,
@@ -170,17 +170,17 @@ export class CustomerListComponent implements OnInit {
       arAccountId: customer.arAccountId,
       isActive: customer.isActive
     });
-    this.showCustomerModal = true;
+    this.showCustomerModal.set(true);
   }
 
   closeCustomerModal(): void {
-    this.showCustomerModal = false;
-    this.selectedCustomerId = null;
-    this.modalError = null;
+    this.showCustomerModal.set(false);
+    this.selectedCustomerId.set(null);
+    this.modalError.set(null);
   }
 
   saveCustomer(): void {
-    this.modalError = null;
+    this.modalError.set(null);
     if (this.customerForm.invalid) {
       this.customerForm.markAllAsTouched();
       return;
@@ -193,15 +193,16 @@ export class CustomerListComponent implements OnInit {
       name: String(raw.name || '').trim()
     };
 
-    if (this.isEditMode && this.selectedCustomerId) {
-      this.customerService.updateCustomer(this.selectedCustomerId, payload).subscribe({
+    const editId = this.selectedCustomerId();
+    if (this.isEditMode() && editId) {
+      this.customerService.updateCustomer(editId, payload).subscribe({
         next: () => {
           this.notificationService.success('Customer updated successfully');
           this.closeCustomerModal();
           this.loadCustomers();
         },
         error: err => {
-          this.modalError = applyServerFieldErrors(this.customerForm, err, 'Failed to update customer');
+          this.modalError.set(applyServerFieldErrors(this.customerForm, err, 'Failed to update customer'));
         }
       });
     } else {
@@ -212,43 +213,43 @@ export class CustomerListComponent implements OnInit {
           this.loadCustomers();
         },
         error: err => {
-          this.modalError = applyServerFieldErrors(this.customerForm, err, 'Failed to create customer');
+          this.modalError.set(applyServerFieldErrors(this.customerForm, err, 'Failed to create customer'));
         }
       });
     }
   }
 
   viewOpenInvoices(customer: Customer): void {
-    this.selectedCustomerForInvoices = customer;
-    this.showOpenInvoicesModal = true;
-    this.loadingOpenInvoices = true;
+    this.selectedCustomerForInvoices.set(customer);
+    this.showOpenInvoicesModal.set(true);
+    this.loadingOpenInvoices.set(true);
     this.customerService.getOpenInvoices(customer.id).subscribe({
       next: invoices => {
-        this.openInvoices = invoices;
-        this.loadingOpenInvoices = false;
+        this.openInvoices.set(invoices);
+        this.loadingOpenInvoices.set(false);
       },
       error: err => {
-        this.loadingOpenInvoices = false;
+        this.loadingOpenInvoices.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load open invoices');
       }
     });
   }
 
   closeOpenInvoicesModal(): void {
-    this.showOpenInvoicesModal = false;
-    this.selectedCustomerForInvoices = null;
-    this.openInvoices = [];
+    this.showOpenInvoicesModal.set(false);
+    this.selectedCustomerForInvoices.set(null);
+    this.openInvoices.set([]);
   }
 
   goToPage(p: number): void {
-    if (p >= 0 && p < this.customersPage.totalPages) {
-      this.currentPage = p;
+    if (p >= 0 && p < this.customersPage().totalPages) {
+      this.currentPage.set(p);
       this.loadCustomers();
     }
   }
 
   getAccountLabel(accId: number): string {
-    const acc = this.accounts.find(a => a.id === accId);
+    const acc = this.accounts().find(a => a.id === accId);
     return acc ? `${acc.code} - ${acc.name}` : `ID: ${accId}`;
   }
 }

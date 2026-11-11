@@ -21,7 +21,7 @@
       <div class="kpi-icon-wrap bg-blue">💰</div>
       <div class="kpi-content">
         <span class="kpi-label">Total Stock Value</span>
-        <span class="kpi-value">{{ kpis.totalStockValue | currency:'AED ':'symbol':'1.2-2' }}</span>
+        <span class="kpi-value">{{ kpis().totalStockValue | currency:'AED ':'symbol':'1.2-2' }}</span>
         <span class="kpi-sub">Across all warehouses</span>
       </div>
     </div>
@@ -30,25 +30,25 @@
       <div class="kpi-icon-wrap bg-indigo">📦</div>
       <div class="kpi-content">
         <span class="kpi-label">Active SKUs</span>
-        <span class="kpi-value">{{ kpis.activeSkus }}</span>
+        <span class="kpi-value">{{ kpis().activeSkus }}</span>
         <span class="kpi-sub">Catalog inventory items</span>
       </div>
     </div>
 
-    <div class="kpi-card" [class.highlight-warning]="kpis.lowStockCount > 0">
+    <div class="kpi-card" [class.highlight-warning]="kpis().lowStockCount > 0">
       <div class="kpi-icon-wrap bg-orange">⚠️</div>
       <div class="kpi-content">
         <span class="kpi-label">Below Reorder Level</span>
-        <span class="kpi-value text-orange">{{ kpis.lowStockCount }}</span>
+        <span class="kpi-value text-orange">{{ kpis().lowStockCount }}</span>
         <span class="kpi-sub">Needs replenishment</span>
       </div>
     </div>
 
-    <div class="kpi-card" [class.highlight-danger]="kpis.outOfStockCount > 0">
+    <div class="kpi-card" [class.highlight-danger]="kpis().outOfStockCount > 0">
       <div class="kpi-icon-wrap bg-red">🚫</div>
       <div class="kpi-content">
         <span class="kpi-label">Out of Stock</span>
-        <span class="kpi-value text-red">{{ kpis.outOfStockCount }}</span>
+        <span class="kpi-value text-red">{{ kpis().outOfStockCount }}</span>
         <span class="kpi-sub">Zero available quantity</span>
       </div>
     </div>
@@ -64,24 +64,24 @@
           type="text"
           class="form-control"
           placeholder="Search by SKU, barcode, or item name..."
-          [(ngModel)]="searchTerm"
-          (input)="onSearch()"
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event); onSearch()"
         />
       </div>
 
       <!-- Warehouse Filter -->
       <div class="filter-select-wrap">
-        <select class="form-control" [(ngModel)]="selectedWarehouseId" (change)="onFilterChange()">
+        <select class="form-control" [ngModel]="selectedWarehouseId()" (ngModelChange)="selectedWarehouseId.set($event); onFilterChange()">
           <option [ngValue]="null">All Warehouses</option>
-          <option *ngFor="let wh of warehouses" [ngValue]="wh.id">{{ wh.code }} - {{ wh.name }}</option>
+          <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">{{ wh.code }} - {{ wh.name }}</option>
         </select>
       </div>
 
       <!-- Category Filter -->
       <div class="filter-select-wrap">
-        <select class="form-control" [(ngModel)]="selectedCategoryId" (change)="onFilterChange()">
+        <select class="form-control" [ngModel]="selectedCategoryId()" (ngModelChange)="selectedCategoryId.set($event); onFilterChange()">
           <option [ngValue]="null">All Categories</option>
-          <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
+          <option *ngFor="let cat of categories()" [ngValue]="cat.id">{{ cat.name }}</option>
         </select>
       </div>
 
@@ -90,7 +90,7 @@
         <button
           type="button"
           class="pill-btn"
-          [class.active]="selectedStatus === 'ALL'"
+          [class.active]="selectedStatus() === 'ALL'"
           (click)="onStatusFilter('ALL')"
         >
           All
@@ -98,7 +98,7 @@
         <button
           type="button"
           class="pill-btn pill-success"
-          [class.active]="selectedStatus === 'IN_STOCK'"
+          [class.active]="selectedStatus() === 'IN_STOCK'"
           (click)="onStatusFilter('IN_STOCK')"
         >
           In Stock
@@ -106,7 +106,7 @@
         <button
           type="button"
           class="pill-btn pill-warning"
-          [class.active]="selectedStatus === 'LOW_STOCK'"
+          [class.active]="selectedStatus() === 'LOW_STOCK'"
           (click)="onStatusFilter('LOW_STOCK')"
         >
           Low Stock
@@ -114,7 +114,7 @@
         <button
           type="button"
           class="pill-btn pill-danger"
-          [class.active]="selectedStatus === 'OUT_OF_STOCK'"
+          [class.active]="selectedStatus() === 'OUT_OF_STOCK'"
           (click)="onStatusFilter('OUT_OF_STOCK')"
         >
           Out of Stock
@@ -125,8 +125,8 @@
 
   <!-- Stock Data Table -->
   <div class="card table-card">
-    <div class="table-responsive" *ngIf="!loading; else loadingTpl">
-      <table class="table data-table" *ngIf="filteredList.length > 0; else emptyTpl">
+    <div class="table-responsive" *ngIf="!loading(); else loadingTpl">
+      <table class="table data-table" *ngIf="filteredList().length > 0; else emptyTpl">
         <thead>
           <tr>
             <th>SKU</th>
@@ -143,7 +143,7 @@
         </thead>
         <tbody>
           <tr
-            *ngFor="let item of filteredList"
+            *ngFor="let item of filteredList()"
             class="clickable-row"
             (click)="openLedger(item)"
           >
@@ -224,13 +224,13 @@
 </div>
 
 <!-- Stock Ledger Modal / Drawer -->
-<div class="modal-backdrop" *ngIf="selectedItem" (click)="closeLedger()">
+<div class="modal-backdrop" *ngIf="selectedItem() as sel" (click)="closeLedger()">
   <div class="modal-container ledger-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <div>
         <h2 class="modal-title">Stock Movement Ledger</h2>
         <p class="modal-subtitle">
-          Item: <strong>{{ selectedItem.sku }}</strong> - {{ selectedItem.name }} (Unit: {{ selectedItem.unit }})
+          Item: <strong>{{ sel.sku }}</strong> - {{ sel.name }} (Unit: {{ sel.unit }})
         </p>
       </div>
       <button type="button" class="btn-close" (click)="closeLedger()">&times;</button>
@@ -240,26 +240,26 @@
     <div class="modal-filters">
       <div class="date-filter">
         <label>From Date:</label>
-        <input type="date" class="form-control" [(ngModel)]="movementsFromDate" (change)="filterLedgerDates()" />
+        <input type="date" class="form-control" [ngModel]="movementsFromDate()" (ngModelChange)="movementsFromDate.set($event); filterLedgerDates()" />
       </div>
       <div class="date-filter">
         <label>To Date:</label>
-        <input type="date" class="form-control" [(ngModel)]="movementsToDate" (change)="filterLedgerDates()" />
+        <input type="date" class="form-control" [ngModel]="movementsToDate()" (ngModelChange)="movementsToDate.set($event); filterLedgerDates()" />
       </div>
       <div class="balance-summary">
-        <span>Current On-Hand: <strong>{{ selectedItem.totalOnHand }} {{ selectedItem.unit }}</strong></span>
-        <span>Avg Cost: <strong>{{ selectedItem.avgCost | currency:'AED ' }}</strong></span>
+        <span>Current On-Hand: <strong>{{ sel.totalOnHand }} {{ sel.unit }}</strong></span>
+        <span>Avg Cost: <strong>{{ sel.avgCost | currency:'AED ' }}</strong></span>
       </div>
     </div>
 
     <!-- Movement Ledger Table -->
     <div class="modal-body table-responsive">
-      <div *ngIf="loadingMovements" class="loading-state">
+      <div *ngIf="loadingMovements()" class="loading-state">
         <div class="spinner"></div>
         <span>Loading movement ledger...</span>
       </div>
 
-      <table class="table data-table" *ngIf="!loadingMovements && movements.length > 0">
+      <table class="table data-table" *ngIf="!loadingMovements() && movements().length > 0">
         <thead>
           <tr>
             <th>Date & Time</th>
@@ -273,7 +273,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let m of movements">
+          <tr *ngFor="let m of movements()">
             <td class="text-sm">{{ m.movementDate }}</td>
             <td>
               <span class="badge" [ngClass]="getMovementBadgeClass(m.movementType)">
@@ -298,7 +298,7 @@
         </tbody>
       </table>
 
-      <div *ngIf="!loadingMovements && movements.length === 0" class="empty-state">
+      <div *ngIf="!loadingMovements() && movements().length === 0" class="empty-state">
         <span class="empty-icon">📜</span>
         <p class="text-muted">No stock movements recorded for this item in the selected period.</p>
       </div>

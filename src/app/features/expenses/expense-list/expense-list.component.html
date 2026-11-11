@@ -19,7 +19,7 @@
       <div class="card-icon">💸</div>
       <div class="card-content">
         <span class="card-label">Posted Spend</span>
-        <span class="card-value">AED {{ summary.postedSpend | number:'1.2-2' }}</span>
+        <span class="card-value">AED {{ summary().postedSpend | number:'1.2-2' }}</span>
         <span class="card-subtext">Recognized GL expense</span>
       </div>
     </div>
@@ -29,8 +29,8 @@
       <div class="card-icon">⏳</div>
       <div class="card-content">
         <span class="card-label">Awaiting Approval</span>
-        <span class="card-value">AED {{ summary.awaitingApprovalAmount | number:'1.2-2' }}</span>
-        <span class="card-subtext">{{ summary.awaitingApprovalCount }} claim(s) pending review</span>
+        <span class="card-value">AED {{ summary().awaitingApprovalAmount | number:'1.2-2' }}</span>
+        <span class="card-subtext">{{ summary().awaitingApprovalCount }} claim(s) pending review</span>
       </div>
     </div>
 
@@ -39,8 +39,8 @@
       <div class="card-icon">👥</div>
       <div class="card-content">
         <span class="card-label">Owed to Employees</span>
-        <span class="card-value">AED {{ summary.owedToEmployees | number:'1.2-2' }}</span>
-        <span class="card-subtext">{{ summary.owedToEmployeesCount }} approved claim(s)</span>
+        <span class="card-value">AED {{ summary().owedToEmployees | number:'1.2-2' }}</span>
+        <span class="card-subtext">{{ summary().owedToEmployeesCount }} approved claim(s)</span>
       </div>
     </div>
 
@@ -49,8 +49,8 @@
       <div class="card-icon">🏷️</div>
       <div class="card-content">
         <span class="card-label">Top Expense Category</span>
-        <span class="card-value category-name">{{ summary.topCategoryName }}</span>
-        <span class="card-subtext">AED {{ summary.topCategoryAmount | number:'1.2-2' }} total</span>
+        <span class="card-value category-name">{{ summary().topCategoryName }}</span>
+        <span class="card-subtext">AED {{ summary().topCategoryAmount | number:'1.2-2' }} total</span>
       </div>
     </div>
   </div>
@@ -61,7 +61,7 @@
       *ngFor="let tab of tabs"
       type="button"
       class="tab-btn"
-      [class.active]="activeTab === tab.key"
+      [class.active]="activeTab() === tab.key"
       (click)="switchTab(tab.key)"
     >
       <span class="tab-icon">{{ tab.icon }}</span>
@@ -75,8 +75,8 @@
       <span class="search-icon">🔍</span>
       <input
         type="text"
-        [(ngModel)]="searchQuery"
-        (ngModelChange)="loadExpenses()"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event); loadExpenses()"
         placeholder="Search expense #, claimant, payee, description..."
         class="form-control"
       />
@@ -85,8 +85,8 @@
     <div class="filter-group">
       <label class="filter-label">Status:</label>
       <select
-        [(ngModel)]="filterStatus"
-        (change)="onFilterChange()"
+        [ngModel]="filterStatus()"
+        (ngModelChange)="filterStatus.set($event); onFilterChange()"
         class="form-control filter-select"
       >
         <option value="">All Statuses</option>
@@ -98,8 +98,8 @@
       <label class="filter-label">From:</label>
       <input
         type="date"
-        [(ngModel)]="filterFrom"
-        (change)="onFilterChange()"
+        [ngModel]="filterFrom()"
+        (ngModelChange)="filterFrom.set($event); onFilterChange()"
         class="form-control date-input"
       />
     </div>
@@ -108,17 +108,17 @@
       <label class="filter-label">To:</label>
       <input
         type="date"
-        [(ngModel)]="filterTo"
-        (change)="onFilterChange()"
+        [ngModel]="filterTo()"
+        (ngModelChange)="filterTo.set($event); onFilterChange()"
         class="form-control date-input"
       />
     </div>
   </div>
 
   <!-- Bulk Actions Bar -->
-  <div class="bulk-actions-bar" *ngIf="selectedIds.size > 0">
+  <div class="bulk-actions-bar" *ngIf="selectedIds().size > 0">
     <div class="bulk-info">
-      <strong>{{ selectedIds.size }}</strong> expense(s) selected
+      <strong>{{ selectedIds().size }}</strong> expense(s) selected
     </div>
     <div class="bulk-buttons">
       <button
@@ -175,13 +175,13 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="loading">
+        <tr *ngIf="loading()">
           <td colspan="12" class="text-center py-4 text-muted">
             <div class="spinner"></div> Loading expense records...
           </td>
         </tr>
 
-        <tr *ngIf="!loading && expensesPage.content.length === 0">
+        <tr *ngIf="!loading() && expensesPage().content.length === 0">
           <td colspan="12" class="text-center py-5 text-muted">
             <div class="empty-state">
               <span class="empty-icon">🧾</span>
@@ -193,7 +193,7 @@
         </tr>
 
         <tr
-          *ngFor="let exp of expensesPage.content"
+          *ngFor="let exp of expensesPage().content"
           [class.row-selected]="isSelected(exp.id)"
           [class.row-missing-receipt]="isMissingReceipt(exp)"
         >
@@ -302,7 +302,7 @@
                 class="btn-icon btn-icon-approve"
                 title="Approve Expense"
                 (click)="approveSingle(exp)"
-                [disabled]="approvingIds.has(exp.id)"
+                [disabled]="approvingIds().has(exp.id)"
               >
                 ✓
               </button>
@@ -335,21 +335,22 @@
   </div>
 
   <!-- Rejection Reason Modal -->
-  <div class="modal-backdrop" *ngIf="showRejectModal">
+  <div class="modal-backdrop" *ngIf="showRejectModal()">
     <div class="modal-dialog">
       <div class="modal-header">
         <h3 class="modal-title">Reject Expense Claim(s)</h3>
-        <button type="button" class="btn-close" (click)="showRejectModal = false">&times;</button>
+        <button type="button" class="btn-close" (click)="showRejectModal.set(false)">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-description">
-          Please provide a reason for rejecting {{ rejectTargetIds.length }} expense claim(s).
+          Please provide a reason for rejecting {{ rejectTargetIds().length }} expense claim(s).
           The employee will be notified to revise or cancel the claim.
         </p>
         <div class="form-group">
           <label class="form-label">Rejection Reason <span class="required">*</span></label>
           <textarea
-            [(ngModel)]="rejectReason"
+            [ngModel]="rejectReason()"
+            (ngModelChange)="rejectReason.set($event)"
             rows="3"
             class="form-control"
             placeholder="e.g. Missing valid tax invoice, per diem exceeded, out of policy..."
@@ -357,36 +358,36 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" (click)="showRejectModal = false">Cancel</button>
+        <button type="button" class="btn btn-outline" (click)="showRejectModal.set(false)">Cancel</button>
         <button
           type="button"
           class="btn btn-danger"
-          [disabled]="!rejectReason.trim() || rejecting"
+          [disabled]="!rejectReason().trim() || rejecting()"
           (click)="confirmReject()"
         >
-          <span *ngIf="rejecting" class="spinner-sm"></span> Reject Claim
+          <span *ngIf="rejecting()" class="spinner-sm"></span> Reject Claim
         </button>
       </div>
     </div>
   </div>
 
   <!-- Reimbursement Modal -->
-  <div class="modal-backdrop" *ngIf="showReimburseModal">
+  <div class="modal-backdrop" *ngIf="showReimburseModal()">
     <div class="modal-dialog">
       <div class="modal-header">
         <h3 class="modal-title">Reimburse Approved Employee Claims</h3>
-        <button type="button" class="btn-close" (click)="showReimburseModal = false">&times;</button>
+        <button type="button" class="btn-close" (click)="showReimburseModal.set(false)">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-description">
-          You are processing reimbursement for <strong>{{ reimburseTargetIds.length }}</strong> approved claim(s).
+          You are processing reimbursement for <strong>{{ reimburseTargetIds().length }}</strong> approved claim(s).
           A payment journal entry will be generated to clear the employee payable balance.
         </p>
 
         <div class="form-group mb-3">
           <label class="form-label">Payment Bank / Cash Account <span class="required">*</span></label>
-          <select [(ngModel)]="selectedBankAccountId" class="form-control">
-            <option *ngFor="let acc of bankAccounts" [ngValue]="acc.id">
+          <select [ngModel]="selectedBankAccountId()" (ngModelChange)="selectedBankAccountId.set($event)" class="form-control">
+            <option *ngFor="let acc of bankAccounts()" [ngValue]="acc.id">
               {{ acc.name }} ({{ acc.currencyCode }}) [{{ acc.accountKind }}]
             </option>
           </select>
@@ -394,31 +395,31 @@
 
         <div class="form-group">
           <label class="form-label">Payment Date</label>
-          <input type="date" [(ngModel)]="reimbursementDate" class="form-control" />
+          <input type="date" [ngModel]="reimbursementDate()" (ngModelChange)="reimbursementDate.set($event)" class="form-control" />
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" (click)="showReimburseModal = false">Cancel</button>
+        <button type="button" class="btn btn-outline" (click)="showReimburseModal.set(false)">Cancel</button>
         <button
           type="button"
           class="btn btn-success"
-          [disabled]="!selectedBankAccountId || reimbursing"
+          [disabled]="!selectedBankAccountId() || reimbursing()"
           (click)="confirmReimburse()"
         >
-          <span *ngIf="reimbursing" class="spinner-sm"></span> Confirm & Reimburse
+          <span *ngIf="reimbursing()" class="spinner-sm"></span> Confirm & Reimburse
         </button>
       </div>
     </div>
   </div>
 
   <!-- Expense Detail Drawer / Modal -->
-  <div class="modal-backdrop" *ngIf="showDetailModal && selectedExpense">
+  <div class="modal-backdrop" *ngIf="showDetailModal() && selectedExpense() as se">
     <div class="modal-dialog modal-lg">
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">Expense Claim: {{ selectedExpense.expenseNo }}</h3>
-          <span class="status-badge mt-1" [ngClass]="getStatusClass(selectedExpense.status)">
-            {{ selectedExpense.status }}
+          <h3 class="modal-title">Expense Claim: {{ se.expenseNo }}</h3>
+          <span class="status-badge mt-1" [ngClass]="getStatusClass(se.status)">
+            {{ se.status }}
           </span>
         </div>
         <button type="button" class="btn-close" (click)="closeDetailModal()">&times;</button>
@@ -429,34 +430,34 @@
         <div class="detail-grid">
           <div>
             <span class="detail-label">Expense Date</span>
-            <span class="detail-val">{{ selectedExpense.expenseDate | date:'dd-MMM-yyyy' }}</span>
+            <span class="detail-val">{{ se.expenseDate | date:'dd-MMM-yyyy' }}</span>
           </div>
           <div>
             <span class="detail-label">Payment Method</span>
             <span class="detail-val">
-              {{ selectedExpense.paidBy === 'COMPANY' ? '🏢 Company Paid' : '👤 Employee Reimbursable' }}
+              {{ se.paidBy === 'COMPANY' ? '🏢 Company Paid' : '👤 Employee Reimbursable' }}
             </span>
           </div>
           <div>
-            <span class="detail-label">{{ selectedExpense.paidBy === 'EMPLOYEE' ? 'Claimant' : 'Payee / Account' }}</span>
+            <span class="detail-label">{{ se.paidBy === 'EMPLOYEE' ? 'Claimant' : 'Payee / Account' }}</span>
             <span class="detail-val">
-              {{ selectedExpense.paidBy === 'EMPLOYEE' ? selectedExpense.employeeName : (selectedExpense.bankAccountName || selectedExpense.payeeName) }}
+              {{ se.paidBy === 'EMPLOYEE' ? se.employeeName : (se.bankAccountName || se.payeeName) }}
             </span>
           </div>
           <div>
             <span class="detail-label">Journal Entry</span>
-            <span class="detail-val">{{ selectedExpense.journalEntryNo || 'Pending Approval' }}</span>
+            <span class="detail-val">{{ se.journalEntryNo || 'Pending Approval' }}</span>
           </div>
         </div>
 
         <!-- Missing Receipt Alert Banner -->
-        <div class="alert alert-warning mt-3" *ngIf="isMissingReceipt(selectedExpense)">
+        <div class="alert alert-warning mt-3" *ngIf="isMissingReceipt(se)">
           ⚠️ <strong>Missing Receipt:</strong> This claim contains expense categories that require a receipt attachment according to corporate policy.
         </div>
 
         <!-- Rejection Alert Banner -->
-        <div class="alert alert-danger mt-3" *ngIf="selectedExpense.rejectionReason">
-          ✕ <strong>Rejection Reason:</strong> {{ selectedExpense.rejectionReason }}
+        <div class="alert alert-danger mt-3" *ngIf="se.rejectionReason">
+          ✕ <strong>Rejection Reason:</strong> {{ se.rejectionReason }}
         </div>
 
         <!-- Line Items -->
@@ -475,7 +476,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let line of selectedExpense.lines; let i = index">
+            <tr *ngFor="let line of se.lines; let i = index">
               <td>{{ i + 1 }}</td>
               <td><span class="badge-cat">{{ line.categoryName || 'General' }}</span></td>
               <td>{{ line.description }}</td>
@@ -492,17 +493,17 @@
           <tfoot>
             <tr>
               <td colspan="5" class="text-right font-bold">Claim Total (AED):</td>
-              <td class="text-right font-bold">{{ selectedExpense.subtotal | number:'1.2-2' }}</td>
-              <td class="text-right font-bold">{{ selectedExpense.taxTotal | number:'1.2-2' }}</td>
-              <td class="text-right font-bold total-highlight">{{ selectedExpense.total | number:'1.2-2' }}</td>
+              <td class="text-right font-bold">{{ se.subtotal | number:'1.2-2' }}</td>
+              <td class="text-right font-bold">{{ se.taxTotal | number:'1.2-2' }}</td>
+              <td class="text-right font-bold total-highlight">{{ se.total | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>
 
         <!-- Attachments / Receipts Gallery -->
         <h4 class="section-heading mt-4">Attached Receipts & Invoices</h4>
-        <div class="attachments-list" *ngIf="selectedExpense.attachments && selectedExpense.attachments.length > 0; else noAttachments">
-          <div class="attachment-item" *ngFor="let att of selectedExpense.attachments">
+        <div class="attachments-list" *ngIf="se.attachments && se.attachments.length > 0; else noAttachments">
+          <div class="attachment-item" *ngFor="let att of se.attachments">
             <span class="att-icon">📄</span>
             <div class="att-info">
               <span class="att-name">{{ att.fileName }}</span>
@@ -518,10 +519,10 @@
         </ng-template>
 
         <!-- Approval History -->
-        <div *ngIf="selectedExpense.approvals && selectedExpense.approvals.length > 0" class="mt-4">
+        <div *ngIf="se.approvals && se.approvals.length > 0" class="mt-4">
           <h4 class="section-heading">Approval History</h4>
           <div class="approval-timeline mt-2">
-            <div class="timeline-step" *ngFor="let app of selectedExpense.approvals">
+            <div class="timeline-step" *ngFor="let app of se.approvals">
               <div class="step-marker" [ngClass]="app.decision === 'APPROVED' ? 'marker-success' : 'marker-danger'">
                 {{ app.decision === 'APPROVED' ? '✓' : '✕' }}
               </div>
@@ -538,18 +539,18 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" (click)="closeDetailModal()">Close</button>
         <button
-          *ngIf="selectedExpense.status === 'SUBMITTED'"
+          *ngIf="se.status === 'SUBMITTED'"
           type="button"
           class="btn btn-danger"
-          (click)="closeDetailModal(); promptReject(selectedExpense)"
+          (click)="closeDetailModal(); promptReject(se)"
         >
           Reject
         </button>
         <button
-          *ngIf="selectedExpense.status === 'SUBMITTED'"
+          *ngIf="se.status === 'SUBMITTED'"
           type="button"
           class="btn btn-success"
-          (click)="approveSingle(selectedExpense); closeDetailModal()"
+          (click)="approveSingle(se); closeDetailModal()"
         >
           Approve
         </button>

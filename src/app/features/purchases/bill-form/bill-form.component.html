@@ -26,7 +26,7 @@
             class="form-control"
           >
             <option [ngValue]="null">-- Select Vendor --</option>
-            <option *ngFor="let v of vendors" [value]="v.id">
+            <option *ngFor="let v of vendors()" [value]="v.id">
               {{ v.code }} - {{ v.name }}
             </option>
           </select>
@@ -35,20 +35,20 @@
           </span>
 
           <!-- Vendor Info Callout -->
-          <div *ngIf="selectedVendor" class="vendor-info-box mt-2">
+          <div *ngIf="selectedVendor() as sv" class="vendor-info-box mt-2">
             <div class="info-item">
               <span class="info-label">TRN:</span>
-              <span class="info-value font-mono">{{ selectedVendor.trn || 'Non-registered' }}</span>
+              <span class="info-value font-mono">{{ sv.trn || 'Non-registered' }}</span>
             </div>
-            <div class="info-item" *ngIf="selectedVendor.address">
+            <div class="info-item" *ngIf="sv.address">
               <span class="info-label">Address:</span>
-              <span class="info-value">{{ selectedVendor.address }}</span>
+              <span class="info-value">{{ sv.address }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Terms & Bank IBAN:</span>
               <span class="info-value">
-                {{ selectedVendor.paymentTermsDays }} Days
-                <span *ngIf="selectedVendor.bankIban" class="iban-text"> | IBAN: {{ selectedVendor.bankIban }}</span>
+                {{ sv.paymentTermsDays }} Days
+                <span *ngIf="sv.bankIban" class="iban-text"> | IBAN: {{ sv.bankIban }}</span>
               </span>
             </div>
           </div>
@@ -133,7 +133,7 @@
           <label for="warehouseId">Destination Warehouse</label>
           <select id="warehouseId" formControlName="warehouseId" class="form-control">
             <option [ngValue]="null">Default Company Warehouse</option>
-            <option *ngFor="let wh of warehouses" [ngValue]="wh.id">
+            <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
           </select>
@@ -175,7 +175,7 @@
                   class="form-control mb-1 text-sm"
                 >
                   <option [ngValue]="null">-- Select Catalog Item (Optional) --</option>
-                  <option *ngFor="let it of catalogItems" [ngValue]="it.id">
+                  <option *ngFor="let it of catalogItems()" [ngValue]="it.id">
                     {{ it.sku }} - {{ it.name }}
                   </option>
                 </select>
@@ -189,7 +189,7 @@
               <td>
                 <select formControlName="accountId" class="form-control form-control-sm">
                   <option [ngValue]="null">-- Select Expense Account --</option>
-                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                  <option *ngFor="let acc of accounts()" [value]="acc.id">
                     {{ acc.code }} - {{ acc.name }}
                   </option>
                 </select>
@@ -218,7 +218,7 @@
               <td>
                 <select formControlName="taxRateId" class="form-control form-control-sm">
                   <option [ngValue]="null">0% - None / Out of Scope</option>
-                  <option *ngFor="let tr of taxRates" [value]="tr.id">
+                  <option *ngFor="let tr of taxRates()" [value]="tr.id">
                     {{ tr.rate }}% - {{ tr.name }}
                   </option>
                 </select>
@@ -267,15 +267,15 @@
         <div class="summary-breakdown mt-2">
           <div class="summary-row">
             <span class="summary-label">Subtotal (Net):</span>
-            <span class="summary-val font-mono">{{ totals.subtotal | number:'1.2-2' }} AED</span>
+            <span class="summary-val font-mono">{{ totals().subtotal | number:'1.2-2' }} AED</span>
           </div>
           <div class="summary-row">
             <span class="summary-label">Input VAT (5%):</span>
-            <span class="summary-val font-mono">{{ totals.taxTotal | number:'1.2-2' }} AED</span>
+            <span class="summary-val font-mono">{{ totals().taxTotal | number:'1.2-2' }} AED</span>
           </div>
           <div class="summary-row summary-grand">
             <span class="summary-label">Total Payable:</span>
-            <span class="summary-val font-mono">{{ totals.total | number:'1.2-2' }} AED</span>
+            <span class="summary-val font-mono">{{ totals().total | number:'1.2-2' }} AED</span>
           </div>
         </div>
       </div>
@@ -290,21 +290,21 @@
         <button
           type="button"
           (click)="saveDraft()"
-          [disabled]="saving"
+          [disabled]="saving()"
           class="btn btn-secondary"
         >
-          <span *ngIf="saving">Saving...</span>
-          <span *ngIf="!saving">Save as Draft</span>
+          <span *ngIf="saving()">Saving...</span>
+          <span *ngIf="!saving()">Save as Draft</span>
         </button>
 
         <button
           type="button"
           (click)="approveBill()"
-          [disabled]="saving"
+          [disabled]="saving()"
           class="btn btn-primary"
         >
-          <span *ngIf="saving">Posting to GL...</span>
-          <span *ngIf="!saving">Approve & Post to GL</span>
+          <span *ngIf="saving()">Posting to GL...</span>
+          <span *ngIf="!saving()">Approve & Post to GL</span>
         </button>
       </div>
     </div>

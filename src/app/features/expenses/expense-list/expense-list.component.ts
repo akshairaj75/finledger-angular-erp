@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -37,19 +37,18 @@ export class ExpenseListComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  expensesPage: Page<Expense> = {
+  expensesPage = signal<Page<Expense>>({
     content: [],
     page: 0,
     size: 15,
     totalElements: 0,
     totalPages: 0
-  };
+  });
 
-  allLoadedExpenses: Expense[] = [];
-  categories: ExpenseCategory[] = [];
-  bankAccounts: BankAccount[] = [];
+  categories = signal<ExpenseCategory[]>([]);
+  bankAccounts = signal<BankAccount[]>([]);
 
-  summary: ExpenseSummaryCards = {
+  summary = signal<ExpenseSummaryCards>({
     postedSpend: 0,
     awaitingApprovalAmount: 0,
     awaitingApprovalCount: 0,
@@ -57,18 +56,18 @@ export class ExpenseListComponent implements OnInit {
     owedToEmployeesCount: 0,
     topCategoryName: 'None',
     topCategoryAmount: 0
-  };
+  });
 
-  loading = false;
-  activeTab: ExpenseTab = 'all';
-  currentPage = 0;
+  loading = signal(false);
+  activeTab = signal<ExpenseTab>('all');
+  currentPage = signal(0);
   pageSize = 15;
 
   // Filters
-  filterStatus: ExpenseStatus | '' = '';
-  searchQuery = '';
-  filterFrom = '';
-  filterTo = '';
+  filterStatus = signal<ExpenseStatus | ''>('');
+  searchQuery = signal('');
+  filterFrom = signal('');
+  filterTo = signal('');
 
   readonly tabs: { key: ExpenseTab; label: string; icon: string }[] = [
     { key: 'all', label: 'All Expenses', icon: '📋' },
@@ -88,27 +87,27 @@ export class ExpenseListComponent implements OnInit {
   ];
 
   // Selection
-  selectedIds = new Set<number>();
+  selectedIds = signal<Set<number>>(new Set());
 
   // Modals
-  selectedExpense: Expense | null = null;
-  showDetailModal = false;
+  selectedExpense = signal<Expense | null>(null);
+  showDetailModal = signal(false);
 
   // Single / Bulk Reject Modal
-  showRejectModal = false;
-  rejectTargetIds: number[] = [];
-  rejectReason = '';
-  rejecting = false;
+  showRejectModal = signal(false);
+  rejectTargetIds = signal<number[]>([]);
+  rejectReason = signal('');
+  rejecting = signal(false);
 
   // Reimburse Modal
-  showReimburseModal = false;
-  reimburseTargetIds: number[] = [];
-  selectedBankAccountId: number | null = null;
-  reimbursementDate: string = new Date().toISOString().substring(0, 10);
-  reimbursing = false;
+  showReimburseModal = signal(false);
+  reimburseTargetIds = signal<number[]>([]);
+  selectedBankAccountId = signal<number | null>(null);
+  reimbursementDate = signal<string>(new Date().toISOString().substring(0, 10));
+  reimbursing = signal(false);
 
   // Approve in progress
-  approvingIds = new Set<number>();
+  approvingIds = signal<Set<number>>(new Set());
 
   canApproveExpense(exp: Expense): boolean {
     const currentId = this.authService.currentUser()?.id;
@@ -125,69 +124,72 @@ export class ExpenseListComponent implements OnInit {
 
     this.route.queryParams.subscribe(params => {
       const routeDefaultTab = (this.route.snapshot.data['defaultTab'] as ExpenseTab) || 'all';
-      this.activeTab = (params['tab'] as ExpenseTab) || routeDefaultTab;
-      this.filterStatus = (params['status'] as ExpenseStatus) || '';
-      this.filterFrom = params['from'] || '';
-      this.filterTo = params['to'] || '';
-      this.currentPage = params['page'] ? Number(params['page']) : 0;
-      this.selectedIds.clear();
+      this.activeTab.set((params['tab'] as ExpenseTab) || routeDefaultTab);
+      this.filterStatus.set((params['status'] as ExpenseStatus) || '');
+      this.filterFrom.set(params['from'] || '');
+      this.filterTo.set(params['to'] || '');
+      this.currentPage.set(params['page'] ? Number(params['page']) : 0);
+      this.selectedIds.set(new Set());
       this.loadExpenses();
     });
   }
 
   loadCategories(): void {
     this.expenseService.getAllActiveCategories().subscribe({
-      next: cats => (this.categories = cats),
-      error: () => (this.categories = [])
+      next: cats => this.categories.set(cats),
+      error: () => this.categories.set([])
     });
   }
 
   loadBankAccounts(): void {
     this.bankAccountService.getBankAccounts().subscribe({
       next: accounts => {
-        this.bankAccounts = accounts;
-        if (accounts.length > 0 && !this.selectedBankAccountId) {
-          this.selectedBankAccountId = accounts[0].id;
+        this.bankAccounts.set(accounts);
+        if (accounts.length > 0 && !this.selectedBankAccountId()) {
+          this.selectedBankAccountId.set(accounts[0].id);
         }
       },
-      error: () => (this.bankAccounts = [])
+      error: () => this.bankAccounts.set([])
     });
   }
 
   switchTab(tab: ExpenseTab): void {
-    this.activeTab = tab;
-    this.currentPage = 0;
-    this.selectedIds.clear();
+    this.activeTab.set(tab);
+    this.currentPage.set(0);
+    this.selectedIds.set(new Set());
     this.updateUrlParams();
   }
 
   onFilterChange(): void {
-    this.currentPage = 0;
+    this.currentPage.set(0);
     this.updateUrlParams();
   }
 
   private updateUrlParams(): void {
+    const tab = this.activeTab();
+    const page = this.currentPage();
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
-        tab: this.activeTab === 'all' ? null : this.activeTab,
-        status: this.filterStatus || null,
-        from: this.filterFrom || null,
-        to: this.filterTo || null,
-        page: this.currentPage > 0 ? this.currentPage : null
+        tab: tab === 'all' ? null : tab,
+        status: this.filterStatus() || null,
+        from: this.filterFrom() || null,
+        to: this.filterTo() || null,
+        page: page > 0 ? page : null
       },
       queryParamsHandling: 'merge'
     });
   }
 
   loadExpenses(): void {
-    this.loading = true;
+    this.loading.set(true);
+    const tab = this.activeTab();
     const query: ExpenseQuery = {
-      tab: this.activeTab,
-      status: this.filterStatus || undefined,
-      from: this.filterFrom || undefined,
-      to: this.filterTo || undefined,
-      page: this.currentPage,
+      tab,
+      status: this.filterStatus() || undefined,
+      from: this.filterFrom() || undefined,
+      to: this.filterTo() || undefined,
+      page: this.currentPage(),
       size: this.pageSize
     };
 
@@ -196,8 +198,9 @@ export class ExpenseListComponent implements OnInit {
         let items = page.content || [];
 
         // Apply local text search if present
-        if (this.searchQuery.trim()) {
-          const q = this.searchQuery.toLowerCase();
+        const sq = this.searchQuery().trim();
+        if (sq) {
+          const q = sq.toLowerCase();
           items = items.filter(
             exp =>
               (exp.expenseNo && exp.expenseNo.toLowerCase().includes(q)) ||
@@ -208,68 +211,71 @@ export class ExpenseListComponent implements OnInit {
         }
 
         // Apply tab logic client-side as well for robust testing/mocking
-        if (this.activeTab === 'approvals') {
+        if (tab === 'approvals') {
           items = items.filter(exp => exp.status === 'SUBMITTED');
-        } else if (this.activeTab === 'reimburse') {
+        } else if (tab === 'reimburse') {
           items = items.filter(
             exp => exp.paidBy === 'EMPLOYEE' && (exp.status === 'POSTED' || exp.status === 'APPROVED')
           );
         }
 
-        this.expensesPage = {
+        this.expensesPage.set({
           ...page,
           content: items,
           totalElements: items.length
-        };
+        });
 
         // Compute summary KPIs
         this.updateKpiSummary();
-        this.loading = false;
+        this.loading.set(false);
       },
       error: () => {
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
 
   private updateKpiSummary(): void {
-    // If we have loaded expenses, recalculate KPIs
-    const items = this.expensesPage.content;
-    this.summary = this.expenseService.computeSummaryCards(items);
+    const items = this.expensesPage().content;
+    this.summary.set(this.expenseService.computeSummaryCards(items));
   }
 
   // Multi-selection
   isSelected(id: number): boolean {
-    return this.selectedIds.has(id);
+    return this.selectedIds().has(id);
   }
 
   toggleSelection(id: number, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    if (checked) {
-      this.selectedIds.add(id);
-    } else {
-      this.selectedIds.delete(id);
-    }
+    this.selectedIds.update(set => {
+      const next = new Set(set);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
   }
 
   toggleSelectAll(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     if (checked) {
-      this.expensesPage.content.forEach(e => this.selectedIds.add(e.id));
+      this.selectedIds.set(new Set(this.expensesPage().content.map(e => e.id)));
     } else {
-      this.selectedIds.clear();
+      this.selectedIds.set(new Set());
     }
   }
 
   isAllSelected(): boolean {
-    return (
-      this.expensesPage.content.length > 0 &&
-      this.expensesPage.content.every(e => this.selectedIds.has(e.id))
-    );
+    const content = this.expensesPage().content;
+    const selected = this.selectedIds();
+    return content.length > 0 && content.every(e => selected.has(e.id));
   }
 
   getSelectedExpenses(): Expense[] {
-    return this.expensesPage.content.filter(e => this.selectedIds.has(e.id));
+    const selected = this.selectedIds();
+    return this.expensesPage().content.filter(e => selected.has(e.id));
   }
 
   // Missing Receipt Indicator logic
@@ -277,11 +283,11 @@ export class ExpenseListComponent implements OnInit {
     const hasAttachments = !!(expense.attachments && expense.attachments.length > 0);
     if (hasAttachments) return false;
 
-    // Check if any line has category requiring receipt
     if (!expense.lines || expense.lines.length === 0) return false;
+    const cats = this.categories();
 
     return expense.lines.some(line => {
-      const cat = this.categories.find(c => c.id === line.categoryId);
+      const cat = cats.find(c => c.id === line.categoryId);
       return cat ? cat.receiptRequired : true; // FinLedger v2.0 defaults receiptRequired=1
     });
   }
@@ -292,17 +298,17 @@ export class ExpenseListComponent implements OnInit {
 
   // Inline Actions
   approveSingle(expense: Expense): void {
-    if (this.approvingIds.has(expense.id)) return;
-    this.approvingIds.add(expense.id);
+    if (this.approvingIds().has(expense.id)) return;
+    this.approvingIds.update(s => { const n = new Set(s); n.add(expense.id); return n; });
 
     this.expenseService.approveExpense(expense.id, 'Approved inline').subscribe({
       next: updated => {
-        this.approvingIds.delete(expense.id);
+        this.approvingIds.update(s => { const n = new Set(s); n.delete(expense.id); return n; });
         this.notificationService.success(`Expense ${expense.expenseNo} approved successfully.`);
         this.replaceExpenseInList(updated);
       },
       error: err => {
-        this.approvingIds.delete(expense.id);
+        this.approvingIds.update(s => { const n = new Set(s); n.delete(expense.id); return n; });
         const msg = err?.error?.message || `Failed to approve expense ${expense.expenseNo}`;
         this.notificationService.error(msg);
       }
@@ -310,9 +316,9 @@ export class ExpenseListComponent implements OnInit {
   }
 
   promptReject(expense: Expense): void {
-    this.rejectTargetIds = [expense.id];
-    this.rejectReason = '';
-    this.showRejectModal = true;
+    this.rejectTargetIds.set([expense.id]);
+    this.rejectReason.set('');
+    this.showRejectModal.set(true);
   }
 
   // Bulk Actions
@@ -324,22 +330,26 @@ export class ExpenseListComponent implements OnInit {
     }
 
     let completed = 0;
-    eligible.forEach(e => this.approvingIds.add(e.id));
+    this.approvingIds.update(s => {
+      const n = new Set(s);
+      eligible.forEach(e => n.add(e.id));
+      return n;
+    });
 
     eligible.forEach(exp => {
       this.expenseService.approveExpense(exp.id, 'Bulk approved').subscribe({
         next: updated => {
-          this.approvingIds.delete(exp.id);
+          this.approvingIds.update(s => { const n = new Set(s); n.delete(exp.id); return n; });
           this.replaceExpenseInList(updated);
           completed++;
           if (completed === eligible.length) {
             this.notificationService.success(`${completed} expense(s) approved.`);
-            this.selectedIds.clear();
+            this.selectedIds.set(new Set());
             this.updateKpiSummary();
           }
         },
         error: err => {
-          this.approvingIds.delete(exp.id);
+          this.approvingIds.update(s => { const n = new Set(s); n.delete(exp.id); return n; });
           const msg = err?.error?.message || `Failed to approve ${exp.expenseNo}`;
           this.notificationService.error(msg);
         }
@@ -353,34 +363,36 @@ export class ExpenseListComponent implements OnInit {
       this.notificationService.warning('No SUBMITTED expenses selected for rejection.');
       return;
     }
-    this.rejectTargetIds = eligible.map(e => e.id);
-    this.rejectReason = '';
-    this.showRejectModal = true;
+    this.rejectTargetIds.set(eligible.map(e => e.id));
+    this.rejectReason.set('');
+    this.showRejectModal.set(true);
   }
 
   confirmReject(): void {
-    if (!this.rejectReason.trim()) {
+    const reason = this.rejectReason().trim();
+    if (!reason) {
       this.notificationService.warning('Rejection reason is required.');
       return;
     }
-    this.rejecting = true;
+    const targetIds = this.rejectTargetIds();
+    this.rejecting.set(true);
     let completed = 0;
 
-    this.rejectTargetIds.forEach(id => {
-      this.expenseService.rejectExpense(id, this.rejectReason.trim()).subscribe({
+    targetIds.forEach(id => {
+      this.expenseService.rejectExpense(id, reason).subscribe({
         next: updated => {
           this.replaceExpenseInList(updated);
           completed++;
-          if (completed === this.rejectTargetIds.length) {
-            this.rejecting = false;
-            this.showRejectModal = false;
+          if (completed === targetIds.length) {
+            this.rejecting.set(false);
+            this.showRejectModal.set(false);
             this.notificationService.success(`${completed} expense(s) rejected.`);
-            this.selectedIds.clear();
+            this.selectedIds.set(new Set());
             this.updateKpiSummary();
           }
         },
         error: err => {
-          this.rejecting = false;
+          this.rejecting.set(false);
           const msg = err?.error?.message || `Failed to reject expense #${id}`;
           this.notificationService.error(msg);
         }
@@ -397,34 +409,35 @@ export class ExpenseListComponent implements OnInit {
       this.notificationService.warning('No approved employee claims selected for reimbursement.');
       return;
     }
-    this.reimburseTargetIds = eligible.map(e => e.id);
-    this.showReimburseModal = true;
+    this.reimburseTargetIds.set(eligible.map(e => e.id));
+    this.showReimburseModal.set(true);
   }
 
   confirmReimburse(): void {
-    if (!this.selectedBankAccountId) {
+    const bankId = this.selectedBankAccountId();
+    if (!bankId) {
       this.notificationService.warning('Please select a payment bank/cash account.');
       return;
     }
-    this.reimbursing = true;
+    this.reimbursing.set(true);
     const request: BatchReimburseRequest = {
-      expenseIds: this.reimburseTargetIds,
-      bankAccountId: this.selectedBankAccountId,
-      paymentDate: this.reimbursementDate
+      expenseIds: this.reimburseTargetIds(),
+      bankAccountId: bankId,
+      paymentDate: this.reimbursementDate()
     };
 
     this.expenseService.reimburseExpenses(request).subscribe({
       next: res => {
-        this.reimbursing = false;
-        this.showReimburseModal = false;
+        this.reimbursing.set(false);
+        this.showReimburseModal.set(false);
         this.notificationService.success(
           `Reimbursed ${res.processedCount} claims (Total: AED ${res.totalAmount.toFixed(2)}) via entry ${res.journalEntryNo || 'JV'}.`
         );
-        this.selectedIds.clear();
+        this.selectedIds.set(new Set());
         this.loadExpenses();
       },
       error: err => {
-        this.reimbursing = false;
+        this.reimbursing.set(false);
         const msg = err?.error?.message || 'Failed to process reimbursement.';
         this.notificationService.error(msg);
       }
@@ -433,21 +446,24 @@ export class ExpenseListComponent implements OnInit {
 
   // Details Modal
   viewDetails(expense: Expense): void {
-    this.selectedExpense = expense;
-    this.showDetailModal = true;
+    this.selectedExpense.set(expense);
+    this.showDetailModal.set(true);
   }
 
   closeDetailModal(): void {
-    this.showDetailModal = false;
-    this.selectedExpense = null;
+    this.showDetailModal.set(false);
+    this.selectedExpense.set(null);
   }
 
   private replaceExpenseInList(updated: Expense): void {
-    const idx = this.expensesPage.content.findIndex(e => e.id === updated.id);
-    if (idx !== -1) {
-      this.expensesPage.content[idx] = updated;
-      this.updateKpiSummary();
-    }
+    this.expensesPage.update(page => {
+      const idx = page.content.findIndex(e => e.id === updated.id);
+      if (idx === -1) return page;
+      const nextContent = [...page.content];
+      nextContent[idx] = updated;
+      return { ...page, content: nextContent };
+    });
+    this.updateKpiSummary();
   }
 
   getStatusClass(status: ExpenseStatus): string {

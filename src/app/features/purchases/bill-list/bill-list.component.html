@@ -19,7 +19,7 @@
       <div class="card-icon">📝</div>
       <div class="card-content">
         <span class="card-label">Draft Bills</span>
-        <span class="card-value">{{ summary.draftCount }}</span>
+        <span class="card-value">{{ summary().draftCount }}</span>
         <span class="card-subtext">Awaiting approval</span>
       </div>
     </div>
@@ -28,7 +28,7 @@
       <div class="card-icon">⏳</div>
       <div class="card-content">
         <span class="card-label">Unpaid Payables</span>
-        <span class="card-value">{{ summary.unpaidTotal | number:'1.2-2' }} AED</span>
+        <span class="card-value">{{ summary().unpaidTotal | number:'1.2-2' }} AED</span>
         <span class="card-subtext">Open vendor balances</span>
       </div>
     </div>
@@ -37,7 +37,7 @@
       <div class="card-icon">⚠️</div>
       <div class="card-content">
         <span class="card-label">Overdue Bills</span>
-        <span class="card-value">{{ summary.overdueTotal | number:'1.2-2' }} AED</span>
+        <span class="card-value">{{ summary().overdueTotal | number:'1.2-2' }} AED</span>
         <span class="card-subtext">Past due payment terms</span>
       </div>
     </div>
@@ -46,7 +46,7 @@
       <div class="card-icon">💳</div>
       <div class="card-content">
         <span class="card-label">Paid This Month</span>
-        <span class="card-value">{{ summary.paidThisMonthTotal | number:'1.2-2' }} AED</span>
+        <span class="card-value">{{ summary().paidThisMonthTotal | number:'1.2-2' }} AED</span>
         <span class="card-subtext">Monthly disbursements</span>
       </div>
     </div>
@@ -60,7 +60,8 @@
         <input
           type="text"
           id="searchQuery"
-          [(ngModel)]="searchQuery"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
           (keyup.enter)="applyFilters()"
           placeholder="Search by bill #, vendor invoice #, or vendor name..."
           class="form-control"
@@ -69,7 +70,7 @@
 
       <div class="form-group">
         <label for="filterStatus">Status</label>
-        <select id="filterStatus" [(ngModel)]="filterStatus" class="form-control">
+        <select id="filterStatus" [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)" class="form-control">
           <option value="">All Statuses</option>
           <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
         </select>
@@ -77,12 +78,12 @@
 
       <div class="form-group">
         <label for="filterFrom">From Date</label>
-        <input type="date" id="filterFrom" [(ngModel)]="filterFrom" class="form-control" />
+        <input type="date" id="filterFrom" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
         <label for="filterTo">To Date</label>
-        <input type="date" id="filterTo" [(ngModel)]="filterTo" class="form-control" />
+        <input type="date" id="filterTo" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" class="form-control" />
       </div>
 
       <div class="filter-buttons">
@@ -94,19 +95,19 @@
 
   <!-- Bills Table Card -->
   <div class="table-card">
-    <div *ngIf="loading" class="loading-state">
+    <div *ngIf="loading()" class="loading-state">
       <div class="spinner"></div>
       <p>Loading vendor bills...</p>
     </div>
 
-    <div *ngIf="!loading && billsPage.content.length === 0" class="empty-state">
+    <div *ngIf="!loading() && billsPage().content.length === 0" class="empty-state">
       <div class="empty-icon">📑</div>
       <h3>No Bills Found</h3>
       <p>Create your first vendor bill or adjust your search filters.</p>
       <a routerLink="/purchases/bills/new" class="btn btn-primary mt-3">Create Bill</a>
     </div>
 
-    <div *ngIf="!loading && billsPage.content.length > 0" class="table-responsive">
+    <div *ngIf="!loading() && billsPage().content.length > 0" class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
@@ -124,7 +125,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let b of billsPage.content" (click)="viewDetails(b)" class="clickable-row">
+          <tr *ngFor="let b of billsPage().content" (click)="viewDetails(b)" class="clickable-row">
             <td>
               <span class="bill-number">{{ b.billNo || 'DRAFT' }}</span>
             </td>
@@ -166,10 +167,10 @@
                 [hidden]="b.status !== 'DRAFT'"
                 (click)="approveBill(b, $event)"
                 class="btn btn-primary btn-xs"
-                [disabled]="approvingId === b.id"
+                [disabled]="approvingId() === b.id"
                 title="Approve & Post to GL"
               >
-                {{ approvingId === b.id ? 'Approving...' : 'Approve' }}
+                {{ approvingId() === b.id ? 'Approving...' : 'Approve' }}
               </button>
 
               <!-- Action: Void (for non-VOID) -->
@@ -190,23 +191,23 @@
       <!-- Pagination -->
       <div class="pagination-footer">
         <span class="pagination-info">
-          Showing {{ billsPage.page * billsPage.size + 1 }} to
-          {{ (billsPage.page + 1) * billsPage.size > billsPage.totalElements ? billsPage.totalElements : (billsPage.page + 1) * billsPage.size }}
-          of {{ billsPage.totalElements }} entries
+          Showing {{ billsPage().page * billsPage().size + 1 }} to
+          {{ (billsPage().page + 1) * billsPage().size > billsPage().totalElements ? billsPage().totalElements : (billsPage().page + 1) * billsPage().size }}
+          of {{ billsPage().totalElements }} entries
         </span>
         <div class="pagination-buttons">
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="billsPage.page === 0"
-            (click)="goToPage(billsPage.page - 1)"
+            [disabled]="billsPage().page === 0"
+            (click)="goToPage(billsPage().page - 1)"
           >
             Previous
           </button>
-          <span class="current-page-badge">Page {{ billsPage.page + 1 }} of {{ billsPage.totalPages || 1 }}</span>
+          <span class="current-page-badge">Page {{ billsPage().page + 1 }} of {{ billsPage().totalPages || 1 }}</span>
           <button
             class="btn btn-outline btn-sm"
-            [disabled]="billsPage.page >= billsPage.totalPages - 1"
-            (click)="goToPage(billsPage.page + 1)"
+            [disabled]="billsPage().page >= billsPage().totalPages - 1"
+            (click)="goToPage(billsPage().page + 1)"
           >
             Next
           </button>
@@ -216,19 +217,19 @@
   </div>
 
   <!-- Bill Detail Modal -->
-  <div *ngIf="showDetailModal && selectedBill" class="modal-backdrop">
+  <div *ngIf="showDetailModal() && selectedBill() as sb" class="modal-backdrop">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
           <div>
             <div class="detail-header-tags">
-              <span class="bill-number-lg">{{ selectedBill.billNo || 'DRAFT BILL' }}</span>
-              <span class="chip" [ngClass]="getStatusClass(selectedBill.status)">{{ selectedBill.status }}</span>
-              <span class="type-tag" [ngClass]="selectedBill.docType === 'DEBIT_NOTE' ? 'type-dn' : 'type-bill'">
-                {{ selectedBill.docType }}
+              <span class="bill-number-lg">{{ sb.billNo || 'DRAFT BILL' }}</span>
+              <span class="chip" [ngClass]="getStatusClass(sb.status)">{{ sb.status }}</span>
+              <span class="type-tag" [ngClass]="sb.docType === 'DEBIT_NOTE' ? 'type-dn' : 'type-bill'">
+                {{ sb.docType }}
               </span>
             </div>
-            <p class="text-muted text-sm mt-1">Vendor Invoice #: {{ selectedBill.vendorInvoiceNo || 'N/A' }} | Bill ID: #{{ selectedBill.id }}</p>
+            <p class="text-muted text-sm mt-1">Vendor Invoice #: {{ sb.vendorInvoiceNo || 'N/A' }} | Bill ID: #{{ sb.id }}</p>
           </div>
           <button (click)="closeDetailModal()" class="modal-close">&times;</button>
         </div>
@@ -237,22 +238,22 @@
           <div class="detail-grid">
             <div class="detail-card">
               <span class="detail-label">Vendor Profile</span>
-              <span class="detail-main-text">{{ selectedBill.vendorName }}</span>
-              <span class="detail-sub-text">Code: {{ selectedBill.vendorCode }}</span>
+              <span class="detail-main-text">{{ sb.vendorName }}</span>
+              <span class="detail-sub-text">Code: {{ sb.vendorCode }}</span>
             </div>
 
             <div class="detail-card">
               <span class="detail-label">Bill Dates</span>
-              <span class="detail-main-text">Issued: {{ selectedBill.billDate | date:'mediumDate' }}</span>
-              <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(selectedBill)}">
-                Due: {{ selectedBill.dueDate | date:'mediumDate' }}
+              <span class="detail-main-text">Issued: {{ sb.billDate | date:'mediumDate' }}</span>
+              <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(sb)}">
+                Due: {{ sb.dueDate | date:'mediumDate' }}
               </span>
             </div>
 
             <div class="detail-card">
               <span class="detail-label">Financial Overview</span>
-              <span class="detail-main-text">{{ selectedBill.total | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
-              <span class="detail-sub-text text-danger font-bold">Balance: {{ selectedBill.balanceDue | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span class="detail-main-text">{{ sb.total | number:'1.2-2' }} {{ sb.currencyCode }}</span>
+              <span class="detail-sub-text text-danger font-bold">Balance: {{ sb.balanceDue | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
           </div>
 
@@ -271,7 +272,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let line of selectedBill.lines; let i = index">
+                <tr *ngFor="let line of sb.lines; let i = index">
                   <td>{{ line.lineNo || (i + 1) }}</td>
                   <td>{{ line.description }}</td>
                   <td class="text-right">{{ line.quantity | number:'1.2-2' }}</td>
@@ -287,45 +288,45 @@
           <div class="totals-breakdown">
             <div class="totals-row">
               <span>Subtotal:</span>
-              <span>{{ selectedBill.subtotal | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span>{{ sb.subtotal | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row">
               <span>Input VAT Total:</span>
-              <span>{{ selectedBill.taxTotal | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span>{{ sb.taxTotal | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row totals-grand">
               <span>Grand Total:</span>
-              <span>{{ selectedBill.total | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span>{{ sb.total | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row text-success">
               <span>Amount Paid:</span>
-              <span>{{ selectedBill.amountPaid | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span>{{ sb.amountPaid | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row totals-balance text-danger font-bold">
               <span>Balance Due:</span>
-              <span>{{ selectedBill.balanceDue | number:'1.2-2' }} {{ selectedBill.currencyCode }}</span>
+              <span>{{ sb.balanceDue | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
           </div>
 
-          <div *ngIf="selectedBill.notes" class="bill-notes mt-3">
+          <div *ngIf="sb.notes" class="bill-notes mt-3">
             <strong>Notes / Terms:</strong>
-            <p>{{ selectedBill.notes }}</p>
+            <p>{{ sb.notes }}</p>
           </div>
         </div>
 
         <div class="modal-footer">
           <div class="footer-left">
             <button
-              *ngIf="selectedBill.status === 'DRAFT'"
-              (click)="approveBill(selectedBill)"
+              *ngIf="sb.status === 'DRAFT'"
+              (click)="approveBill(sb)"
               class="btn btn-primary"
-              [disabled]="approvingId === selectedBill.id"
+              [disabled]="approvingId() === sb.id"
             >
-              {{ approvingId === selectedBill.id ? 'Approving...' : 'Approve & Post to GL' }}
+              {{ approvingId() === sb.id ? 'Approving...' : 'Approve & Post to GL' }}
             </button>
             <button
-              *ngIf="selectedBill.status !== 'VOID'"
-              (click)="openVoidModal(selectedBill)"
+              *ngIf="sb.status !== 'VOID'"
+              (click)="openVoidModal(sb)"
               class="btn btn-outline btn-danger-hover ml-1"
             >
               Void Bill
@@ -338,11 +339,11 @@
   </div>
 
   <!-- Void Reason Confirmation Modal -->
-  <div *ngIf="showVoidModal && billToVoid" class="modal-backdrop">
+  <div *ngIf="showVoidModal() && billToVoid() as voidTarget" class="modal-backdrop">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title">Void Bill {{ billToVoid.billNo }}</h2>
+          <h2 class="modal-title">Void Bill {{ voidTarget.billNo }}</h2>
           <button (click)="closeVoidModal()" class="modal-close">&times;</button>
         </div>
 
@@ -355,7 +356,8 @@
             <label for="voidReason">Reason for Voiding</label>
             <textarea
               id="voidReason"
-              [(ngModel)]="voidReason"
+              [ngModel]="voidReason()"
+              (ngModelChange)="voidReason.set($event)"
               rows="3"
               class="form-control"
               placeholder="e.g. Duplicate supplier invoice, incorrect amounts entered..."
@@ -365,8 +367,8 @@
 
         <div class="modal-footer">
           <button (click)="closeVoidModal()" class="btn btn-outline">Cancel</button>
-          <button (click)="confirmVoid()" class="btn btn-danger" [disabled]="voiding">
-            {{ voiding ? 'Voiding...' : 'Confirm Void' }}
+          <button (click)="confirmVoid()" class="btn btn-danger" [disabled]="voiding()">
+            {{ voiding() ? 'Voiding...' : 'Confirm Void' }}
           </button>
         </div>
       </div>

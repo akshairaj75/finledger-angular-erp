@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -27,7 +27,7 @@ import { SettingsService } from '../services/settings.service';
       </div>
 
       <div class="roles-grid">
-        <div class="role-card" *ngFor="let role of roles">
+        <div class="role-card" *ngFor="let role of roles()">
           <div class="role-card-header">
             <div>
               <h3>{{ role.name }}</h3>
@@ -54,11 +54,11 @@ import { SettingsService } from '../services/settings.service';
       </div>
 
       <!-- Role Matrix Modal -->
-      <div class="modal-backdrop" *ngIf="showModal">
+      <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card modal-lg">
           <div class="modal-header">
-            <h3>{{ editingRole ? 'Edit Role: ' + editingRole.name : 'Create RBAC Role' }}</h3>
-            <button class="close-btn" (click)="showModal = false">&times;</button>
+            <h3>{{ editingRole() ? 'Edit Role: ' + editingRole()!.name : 'Create RBAC Role' }}</h3>
+            <button class="close-btn" (click)="showModal.set(false)">&times;</button>
           </div>
 
           <form [formGroup]="form" (ngSubmit)="saveRole()" class="modal-body">
@@ -74,14 +74,14 @@ import { SettingsService } from '../services/settings.service';
             </div>
 
             <div class="matrix-section">
-              <h4>Permissions by Module ({{ selectedPermissions.size }} selected)</h4>
+              <h4>Permissions by Module ({{ selectedPermissions().size }} selected)</h4>
               <div class="modules-grid">
-                <div class="module-box" *ngFor="let mod of moduleGroups">
+                <div class="module-box" *ngFor="let mod of moduleGroups()">
                   <div class="module-title">{{ mod.module }}</div>
                   <label class="perm-check" *ngFor="let p of mod.items">
                     <input
                       type="checkbox"
-                      [checked]="selectedPermissions.has(p.code)"
+                      [checked]="selectedPermissions().has(p.code)"
                       (change)="togglePerm(p.code)"
                     />
                     <div>
@@ -94,9 +94,9 @@ import { SettingsService } from '../services/settings.service';
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showModal = false">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving || form.invalid">
-                {{ saving ? 'Saving...' : 'Save Role & Permissions' }}
+              <button type="button" class="btn-outline" (click)="showModal.set(false)">Cancel</button>
+              <button type="submit" class="btn-primary" [disabled]="saving() || form.invalid">
+                {{ saving() ? 'Saving...' : 'Save Role & Permissions' }}
               </button>
             </div>
           </form>
@@ -227,13 +227,21 @@ export class RoleManagementComponent implements OnInit {
   private notification = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  roles: Role[] = [];
-  allPermissions: PermissionItem[] = [];
-  moduleGroups: { module: string; items: PermissionItem[] }[] = [];
-  selectedPermissions = new Set<string>();
-  showModal = false;
-  saving = false;
-  editingRole: Role | null = null;
+  roles = signal<Role[]>([]);
+  allPermissions = signal<PermissionItem[]>([]);
+  moduleGroups = computed<{ module: string; items: PermissionItem[] }[]>(() => {
+    const byMod = new Map<string, PermissionItem[]>();
+    this.allPermissions().forEach(p => {
+      const list = byMod.get(p.module) || [];
+      list.push(p);
+      byMod.set(p.module, list);
+    });
+    return Array.from(byMod.entries()).map(([module, items]) => ({ module, items }));
+  });
+  selectedPermissions = signal<Set<string>>(new Set<string>());
+  showModal = signal<boolean>(false);
+  saving = signal<boolean>(false);
+  editingRole = signal<Role | null>(null);
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -243,65 +251,63 @@ export class RoleManagementComponent implements OnInit {
   ngOnInit(): void {
     this.loadRoles();
     this.settingsService.getAllPermissions().subscribe(perms => {
-      this.allPermissions = perms;
-      const byMod = new Map<string, PermissionItem[]>();
-      perms.forEach(p => {
-        const list = byMod.get(p.module) || [];
-        list.push(p);
-        byMod.set(p.module, list);
-      });
-      this.moduleGroups = Array.from(byMod.entries()).map(([module, items]) => ({ module, items }));
+      this.allPermissions.set(perms || []);
     });
   }
 
   loadRoles(): void {
-    this.settingsService.getRoles().subscribe(res => (this.roles = res || []));
+    this.settingsService.getRoles().subscribe(res => this.roles.set(res || []));
   }
 
   openNewRole(): void {
-    this.editingRole = null;
-    this.selectedPermissions.clear();
+    this.editingRole.set(null);
+    this.selectedPermissions.set(new Set());
     this.form.reset({ name: '', description: '' });
-    this.showModal = true;
+    this.showModal.set(true);
   }
 
   openEditRole(role: Role): void {
-    this.editingRole = role;
-    this.selectedPermissions = new Set(role.permissions || []);
+    this.editingRole.set(role);
+    this.selectedPermissions.set(new Set(role.permissions || []));
     this.form.patchValue({ name: role.name, description: role.description || '' });
-    this.showModal = true;
+    this.showModal.set(true);
   }
 
   togglePerm(code: string): void {
-    if (this.selectedPermissions.has(code)) {
-      this.selectedPermissions.delete(code);
-    } else {
-      this.selectedPermissions.add(code);
-    }
+    this.selectedPermissions.update(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
   }
 
   saveRole(): void {
-    if (this.form.invalid || this.saving) return;
-    this.saving = true;
+    if (this.form.invalid || this.saving()) return;
+    this.saving.set(true);
     const val = this.form.getRawValue();
     const req = {
       name: val.name.trim(),
       description: val.description,
-      permissionCodes: Array.from(this.selectedPermissions)
+      permissionCodes: Array.from(this.selectedPermissions())
     };
 
-    const obs = this.editingRole
-      ? this.settingsService.updateRole(this.editingRole.id, req)
+    const editing = this.editingRole();
+    const obs = editing
+      ? this.settingsService.updateRole(editing.id, req)
       : this.settingsService.createRole(req);
 
     obs.subscribe({
       next: () => {
-        this.saving = false;
-        this.showModal = false;
+        this.saving.set(false);
+        this.showModal.set(false);
         this.notification.success('Role updated successfully');
         this.loadRoles();
       },
-      error: () => (this.saving = false)
+      error: () => this.saving.set(false)
     });
   }
 }

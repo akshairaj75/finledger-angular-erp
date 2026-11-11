@@ -20,9 +20,9 @@
     <div class="filter-grid">
       <div class="form-group flex-2">
         <label for="accountSelect">Target Account *</label>
-        <select id="accountSelect" [(ngModel)]="selectedAccountId" (change)="fetchReport()" class="form-control">
+        <select id="accountSelect" [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event); fetchReport()" class="form-control">
           <option [ngValue]="null" disabled>Select Account...</option>
-          <option *ngFor="let acc of accounts" [value]="acc.id">
+          <option *ngFor="let acc of accounts()" [ngValue]="acc.id">
             {{ acc.code }} - {{ acc.name }} ({{ acc.accountType }}, {{ acc.normalBalance }})
           </option>
         </select>
@@ -30,12 +30,12 @@
 
       <div class="form-group">
         <label for="fromDate">From Date</label>
-        <input type="date" id="fromDate" [(ngModel)]="fromDate" class="form-control" />
+        <input type="date" id="fromDate" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
         <label for="toDate">To Date</label>
-        <input type="date" id="toDate" [(ngModel)]="toDate" class="form-control" />
+        <input type="date" id="toDate" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" class="form-control" />
       </div>
 
       <div class="filter-buttons">
@@ -45,36 +45,36 @@
   </div>
 
   <!-- Report Body -->
-  <div *ngIf="loading" class="loading-state card">
+  <div *ngIf="loading()" class="loading-state card">
     <div class="spinner"></div>
     <p>Calculating general ledger balances...</p>
   </div>
 
-  <div *ngIf="!loading && report" class="report-content">
+  <div *ngIf="!loading() && report() as rep" class="report-content">
     <!-- Account Summary Metrics -->
     <div class="summary-cards-grid">
       <div class="stat-card">
         <span class="stat-label">Opening Balance</span>
-        <span class="stat-value font-mono">{{ report.openingBalance | number:'1.2-2' }}</span>
-        <span class="stat-sub">Before {{ report.fromDate }}</span>
+        <span class="stat-value font-mono">{{ rep.openingBalance | number:'1.2-2' }}</span>
+        <span class="stat-sub">Before {{ rep.fromDate }}</span>
       </div>
 
       <div class="stat-card">
         <span class="stat-label">Period Debits</span>
-        <span class="stat-value font-mono text-success">+{{ report.totalDebit | number:'1.2-2' }}</span>
+        <span class="stat-value font-mono text-success">+{{ rep.totalDebit | number:'1.2-2' }}</span>
         <span class="stat-sub">Sum of debits</span>
       </div>
 
       <div class="stat-card">
         <span class="stat-label">Period Credits</span>
-        <span class="stat-value font-mono text-danger">-{{ report.totalCredit | number:'1.2-2' }}</span>
+        <span class="stat-value font-mono text-danger">-{{ rep.totalCredit | number:'1.2-2' }}</span>
         <span class="stat-sub">Sum of credits</span>
       </div>
 
       <div class="stat-card highlight">
         <span class="stat-label">Closing Balance</span>
-        <span class="stat-value font-mono">{{ report.closingBalance | number:'1.2-2' }}</span>
-        <span class="stat-sub">As of {{ report.toDate }} ({{ report.normalBalance }})</span>
+        <span class="stat-value font-mono">{{ rep.closingBalance | number:'1.2-2' }}</span>
+        <span class="stat-sub">As of {{ rep.toDate }} ({{ rep.normalBalance }})</span>
       </div>
     </div>
 
@@ -83,10 +83,10 @@
       <div class="card-header-flex">
         <div>
           <h2 class="card-title">
-            {{ report.accountCode }} - {{ report.accountName }}
+            {{ rep.accountCode }} - {{ rep.accountName }}
           </h2>
           <span class="account-meta">
-            {{ report.accountType }} &bull; Normal Balance: {{ report.normalBalance }} &bull; Period: {{ report.fromDate }} to {{ report.toDate }}
+            {{ rep.accountType }} &bull; Normal Balance: {{ rep.normalBalance }} &bull; Period: {{ rep.fromDate }} to {{ rep.toDate }}
           </span>
         </div>
       </div>
@@ -107,15 +107,15 @@
           <tbody>
             <!-- Opening Balance Row -->
             <tr class="row-opening">
-              <td>{{ report.fromDate }}</td>
+              <td>{{ rep.fromDate }}</td>
               <td colspan="3"><strong>Opening Balance Brought Forward</strong></td>
               <td class="text-right">—</td>
               <td class="text-right">—</td>
-              <td class="text-right font-mono font-bold">{{ report.openingBalance | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold">{{ rep.openingBalance | number:'1.2-2' }}</td>
             </tr>
 
             <!-- Line Items -->
-            <tr *ngFor="let line of report.lines">
+            <tr *ngFor="let line of rep.lines">
               <td>{{ line.date }}</td>
               <td>
                 <span class="font-mono text-primary font-bold">{{ line.entryNo }}</span>
@@ -128,7 +128,7 @@
             </tr>
 
             <!-- Empty Lines State -->
-            <tr *ngIf="report.lines.length === 0">
+            <tr *ngIf="rep.lines.length === 0">
               <td colspan="7" class="text-center py-4 text-muted">
                 No transaction movements posted during this period.
               </td>
@@ -137,9 +137,9 @@
           <tfoot>
             <tr class="row-footer">
               <td colspan="4" class="text-right font-bold">Period Totals & Closing Balance:</td>
-              <td class="text-right font-mono font-bold">{{ report.totalDebit | number:'1.2-2' }}</td>
-              <td class="text-right font-mono font-bold">{{ report.totalCredit | number:'1.2-2' }}</td>
-              <td class="text-right font-mono font-bold text-highlight">{{ report.closingBalance | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold">{{ rep.totalDebit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold">{{ rep.totalCredit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono font-bold text-highlight">{{ rep.closingBalance | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>

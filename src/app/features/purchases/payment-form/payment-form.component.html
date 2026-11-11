@@ -26,7 +26,7 @@
             class="form-control"
           >
             <option [ngValue]="null">-- Select Vendor --</option>
-            <option *ngFor="let v of vendors" [value]="v.id">
+            <option *ngFor="let v of vendors()" [value]="v.id">
               {{ v.code }} - {{ v.name }}
             </option>
           </select>
@@ -35,18 +35,18 @@
           </span>
 
           <!-- Vendor Info Callout -->
-          <div *ngIf="selectedVendor" class="vendor-info-box mt-2">
+          <div *ngIf="selectedVendor() as sv" class="vendor-info-box mt-2">
             <div class="info-item">
               <span class="info-label">TRN:</span>
-              <span class="info-value font-mono">{{ selectedVendor.trn || 'Non-registered' }}</span>
+              <span class="info-value font-mono">{{ sv.trn || 'Non-registered' }}</span>
             </div>
-            <div class="info-item" *ngIf="selectedVendor.bankIban">
+            <div class="info-item" *ngIf="sv.bankIban">
               <span class="info-label">Bank IBAN:</span>
-              <span class="info-value font-mono text-primary">{{ selectedVendor.bankIban }}</span>
+              <span class="info-value font-mono text-primary">{{ sv.bankIban }}</span>
             </div>
-            <div class="info-item" *ngIf="selectedVendor.address">
+            <div class="info-item" *ngIf="sv.address">
               <span class="info-label">Address:</span>
-              <span class="info-value">{{ selectedVendor.address }}</span>
+              <span class="info-value">{{ sv.address }}</span>
             </div>
           </div>
         </div>
@@ -81,7 +81,7 @@
           <label for="bankAccountId" class="required">Disbursing Bank / Cash Account</label>
           <select id="bankAccountId" formControlName="bankAccountId" class="form-control">
             <option [ngValue]="null">-- Select Bank Account --</option>
-            <option *ngFor="let b of bankAccounts" [value]="b.id">
+            <option *ngFor="let b of bankAccounts()" [value]="b.id">
               {{ b.name }} ({{ b.accountNumber }}) - {{ b.currencyCode }}
             </option>
           </select>
@@ -140,7 +140,7 @@
           <h3 class="card-title">Open Vendor Bills & Settlement Allocation</h3>
           <p class="card-subtitle">Oldest-first auto-allocation enabled. You can manually adjust allocation amounts per bill.</p>
         </div>
-        <div class="alloc-buttons" *ngIf="openBills.length > 0">
+        <div class="alloc-buttons" *ngIf="openBills().length > 0">
           <button type="button" (click)="autoAllocateOldestFirst()" class="btn btn-outline btn-sm">
             ⚡ Auto Allocate (Oldest First)
           </button>
@@ -151,24 +151,24 @@
       </div>
 
       <!-- State: No Vendor Selected -->
-      <div *ngIf="!selectedVendor" class="empty-state">
+      <div *ngIf="!selectedVendor()" class="empty-state">
         <p>Please select a vendor above to load open bills and payables.</p>
       </div>
 
       <!-- State: Loading Bills -->
-      <div *ngIf="selectedVendor && loadingBills" class="loading-state">
+      <div *ngIf="selectedVendor() && loadingBills()" class="loading-state">
         <div class="spinner"></div>
         <p>Loading open vendor bills...</p>
       </div>
 
       <!-- State: No Open Bills -->
-      <div *ngIf="selectedVendor && !loadingBills && openBills.length === 0" class="empty-state">
+      <div *ngIf="selectedVendor() && !loadingBills() && openBills().length === 0" class="empty-state">
         <p class="text-success font-medium">✓ No open bills found for this vendor. All bills are fully settled!</p>
         <p class="text-muted text-sm mt-1">Any payment recorded now will be treated as an unapplied vendor advance.</p>
       </div>
 
       <!-- Open Bills Table -->
-      <div class="table-responsive mt-3" *ngIf="selectedVendor && !loadingBills && openBills.length > 0">
+      <div class="table-responsive mt-3" *ngIf="selectedVendor() && !loadingBills() && openBills().length > 0">
         <table class="data-table">
           <thead>
             <tr>
@@ -183,7 +183,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let bill of openBills">
+            <tr *ngFor="let bill of openBills()">
               <td>
                 <span class="bill-number font-mono">{{ bill.billNo }}</span>
               </td>
@@ -224,8 +224,8 @@
       </div>
 
       <!-- Allocation Warning -->
-      <div *ngIf="isOverAllocated" class="alert-box alert-danger mt-3">
-        ⚠️ Total allocated amount ({{ totalAllocated | number:'1.2-2' }} AED) exceeds total disbursement amount ({{ paymentAmount | number:'1.2-2' }} AED). Please adjust line allocations.
+      <div *ngIf="isOverAllocated()" class="alert-box alert-danger mt-3">
+        ⚠️ Total allocated amount ({{ totalAllocated() | number:'1.2-2' }} AED) exceeds total disbursement amount ({{ paymentAmount() | number:'1.2-2' }} AED). Please adjust line allocations.
       </div>
 
       <!-- Summary & Auto Journal Preview Grid -->
@@ -240,20 +240,20 @@
             <div class="journal-line-preview">
               <div class="account-side">
                 <span class="dr-tag">Dr</span>
-                <span class="account-name">2000 Accounts Payable - {{ selectedVendor?.name || 'Vendor' }}</span>
+                <span class="account-name">2000 Accounts Payable - {{ selectedVendor()?.name || 'Vendor' }}</span>
               </div>
               <div class="amount-side font-mono font-bold">
-                {{ paymentAmount | number:'1.2-2' }} AED
+                {{ paymentAmount() | number:'1.2-2' }} AED
               </div>
             </div>
 
             <div class="journal-line-preview">
               <div class="account-side">
                 <span class="cr-tag">Cr</span>
-                <span class="account-name">{{ selectedBankAccount?.name || 'Selected Bank Account' }}</span>
+                <span class="account-name">{{ selectedBankAccount()?.name || 'Selected Bank Account' }}</span>
               </div>
               <div class="amount-side font-mono font-bold">
-                {{ paymentAmount | number:'1.2-2' }} AED
+                {{ paymentAmount() | number:'1.2-2' }} AED
               </div>
             </div>
 
@@ -267,19 +267,19 @@
         <div class="totals-panel">
           <div class="totals-row">
             <span class="totals-label">Total Disbursed:</span>
-            <span class="totals-amount font-bold">{{ paymentAmount | number:'1.2-2' }} AED</span>
+            <span class="totals-amount font-bold">{{ paymentAmount() | number:'1.2-2' }} AED</span>
           </div>
 
           <div class="totals-row">
             <span class="totals-label">Applied to Bills:</span>
-            <span class="totals-amount text-success font-medium">{{ totalAllocated | number:'1.2-2' }} AED</span>
+            <span class="totals-amount text-success font-medium">{{ totalAllocated() | number:'1.2-2' }} AED</span>
           </div>
 
-          <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount > 0}">
+          <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount() > 0}">
             <span class="totals-label">Unapplied (Advance):</span>
-            <span class="totals-amount font-bold">{{ unappliedAmount | number:'1.2-2' }} AED</span>
+            <span class="totals-amount font-bold">{{ unappliedAmount() | number:'1.2-2' }} AED</span>
           </div>
-          <p *ngIf="unappliedAmount > 0" class="advance-subtext">
+          <p *ngIf="unappliedAmount() > 0" class="advance-subtext">
             * Recorded as unapplied vendor advance debit balance for future bill settlements.
           </p>
         </div>
@@ -293,9 +293,9 @@
       <button
         type="submit"
         class="btn btn-primary"
-        [disabled]="submitting || paymentForm.invalid || isOverAllocated"
+        [disabled]="submitting() || paymentForm.invalid || isOverAllocated()"
       >
-        {{ submitting ? 'Posting Payment...' : 'Post Vendor Payment' }}
+        {{ submitting() ? 'Posting Payment...' : 'Post Vendor Payment' }}
       </button>
     </div>
   </form>

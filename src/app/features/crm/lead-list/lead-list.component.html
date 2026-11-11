@@ -6,7 +6,7 @@
       <p class="page-subtitle">Capture, qualify, and convert sales prospects into opportunities and customer accounts</p>
     </div>
     <div class="header-actions">
-      <button type="button" class="btn btn-outline" (click)="showImportModal = true">
+      <button type="button" class="btn btn-outline" (click)="showImportModal.set(true)">
         <span>📥 Import CSV</span>
       </button>
       <button type="button" class="btn btn-primary" (click)="openNewLeadModal()">
@@ -23,7 +23,8 @@
         <input
           type="text"
           placeholder="Search by contact name, company, email..."
-          [(ngModel)]="searchQuery"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
           (keyup.enter)="loadLeads()"
           class="form-control"
         />
@@ -31,7 +32,7 @@
 
       <div class="filter-item">
         <label class="filter-label">Status</label>
-        <select [(ngModel)]="selectedStatus" (change)="loadLeads()" class="form-control">
+        <select [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event); loadLeads()" class="form-control">
           <option value="">All Statuses</option>
           <option value="NEW">New</option>
           <option value="CONTACTED">Contacted</option>
@@ -43,7 +44,7 @@
 
       <div class="filter-item">
         <label class="filter-label">Source</label>
-        <select [(ngModel)]="selectedSource" (change)="loadLeads()" class="form-control">
+        <select [ngModel]="selectedSource()" (ngModelChange)="selectedSource.set($event); loadLeads()" class="form-control">
           <option value="">All Sources</option>
           <option value="WEBSITE">Website</option>
           <option value="REFERRAL">Referral</option>
@@ -79,8 +80,8 @@
       </thead>
       <tbody>
         <tr
-          *ngFor="let lead of leadsPage.content"
-          [class.selected-row]="selectedLead?.id === lead.id"
+          *ngFor="let lead of leadsPage().content"
+          [class.selected-row]="selectedLead()?.id === lead.id"
           (click)="selectLead(lead)"
           class="cursor-pointer"
         >
@@ -106,7 +107,7 @@
             </button>
           </td>
         </tr>
-        <tr *ngIf="leadsPage.content.length === 0 && !loading">
+        <tr *ngIf="leadsPage().content.length === 0 && !loading()">
           <td colspan="9" class="text-center py-4 text-muted">No leads found.</td>
         </tr>
       </tbody>
@@ -114,25 +115,25 @@
   </div>
 
   <!-- SELECTED LEAD DETAIL LAYOUT (Section 4.4: Same layout with QUALIFY action) -->
-  <div class="lead-detail-section" *ngIf="selectedLead">
+  <div class="lead-detail-section" *ngIf="selectedLead() as currentLead">
     <!-- Top Action Bar with Qualify Action (Section 4.4) -->
     <div class="lead-header-banner">
       <div class="lead-header-left">
         <div class="lead-title-row">
-          <h2 class="lead-name">{{ selectedLead.contactName }}</h2>
-          <span class="lead-company-badge" *ngIf="selectedLead.companyName">
-            {{ selectedLead.companyName }}
+          <h2 class="lead-name">{{ currentLead.contactName }}</h2>
+          <span class="lead-company-badge" *ngIf="currentLead.companyName">
+            {{ currentLead.companyName }}
           </span>
-          <span class="status-chip" [ngClass]="'status-' + selectedLead.status.toLowerCase()">
-            {{ selectedLead.status }}
+          <span class="status-chip" [ngClass]="'status-' + currentLead.status.toLowerCase()">
+            {{ currentLead.status }}
           </span>
         </div>
         <div class="lead-meta-row">
-          <span>Lead No: <strong>{{ selectedLead.leadNo }}</strong></span>
+          <span>Lead No: <strong>{{ currentLead.leadNo }}</strong></span>
           <span>•</span>
-          <span>Source: <strong>{{ selectedLead.source }}</strong></span>
-          <span *ngIf="selectedLead.city">•</span>
-          <span *ngIf="selectedLead.city">Location: {{ selectedLead.city }}, {{ selectedLead.countryCode || 'AE' }}</span>
+          <span>Source: <strong>{{ currentLead.source }}</strong></span>
+          <span *ngIf="currentLead.city">•</span>
+          <span *ngIf="currentLead.city">Location: {{ currentLead.city }}, {{ currentLead.countryCode || 'AE' }}</span>
         </div>
       </div>
 
@@ -143,7 +144,7 @@
           <button
             type="button"
             class="status-btn"
-            [class.active]="selectedLead.status === 'CONTACTED'"
+            [class.active]="currentLead.status === 'CONTACTED'"
             (click)="updateStatus('CONTACTED')"
           >
             Mark Contacted
@@ -151,7 +152,7 @@
           <button
             type="button"
             class="status-btn"
-            [class.active]="selectedLead.status === 'DISQUALIFIED'"
+            [class.active]="currentLead.status === 'DISQUALIFIED'"
             (click)="updateStatus('DISQUALIFIED')"
           >
             Disqualify
@@ -162,19 +163,19 @@
         <button
           type="button"
           class="btn btn-success"
-          [disabled]="qualifying || selectedLead.status === 'QUALIFIED' || selectedLead.status === 'CONVERTED'"
+          [disabled]="qualifying() || currentLead.status === 'QUALIFIED' || currentLead.status === 'CONVERTED'"
           (click)="qualifyLead()"
           title="Qualify into an Opportunity deal"
         >
-          <span *ngIf="!qualifying">⚡ Qualify (Create Opportunity)</span>
-          <span *ngIf="qualifying">Qualifying...</span>
+          <span *ngIf="!qualifying()">⚡ Qualify (Create Opportunity)</span>
+          <span *ngIf="qualifying()">Qualifying...</span>
         </button>
 
         <!-- Convert to Customer -->
         <button
           type="button"
           class="btn btn-primary"
-          *ngIf="selectedLead.status !== 'CONVERTED'"
+          *ngIf="currentLead.status !== 'CONVERTED'"
           (click)="openConvertModal()"
         >
           <span>👥 Convert to Customer</span>
@@ -191,51 +192,51 @@
           <div class="info-list">
             <div class="info-row">
               <span class="info-label">Contact Name:</span>
-              <span class="info-val font-bold">{{ selectedLead.contactName }}</span>
+              <span class="info-val font-bold">{{ currentLead.contactName }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Company:</span>
-              <span class="info-val">{{ selectedLead.companyName || '—' }}</span>
+              <span class="info-val">{{ currentLead.companyName || '—' }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Email:</span>
               <span class="info-val">
-                <a *ngIf="selectedLead.email" [href]="'mailto:' + selectedLead.email" class="text-link">
-                  {{ selectedLead.email }}
+                <a *ngIf="currentLead.email" [href]="'mailto:' + currentLead.email" class="text-link">
+                  {{ currentLead.email }}
                 </a>
-                <span *ngIf="!selectedLead.email">—</span>
+                <span *ngIf="!currentLead.email">—</span>
               </span>
             </div>
             <div class="info-row">
               <span class="info-label">Phone:</span>
               <span class="info-val">
-                <a *ngIf="selectedLead.phone" [href]="'tel:' + selectedLead.phone" class="text-link">
-                  {{ selectedLead.phone }}
+                <a *ngIf="currentLead.phone" [href]="'tel:' + currentLead.phone" class="text-link">
+                  {{ currentLead.phone }}
                 </a>
-                <span *ngIf="!selectedLead.phone">—</span>
+                <span *ngIf="!currentLead.phone">—</span>
               </span>
             </div>
             <div class="info-row">
               <span class="info-label">Industry:</span>
-              <span class="info-val">{{ selectedLead.industry || '—' }}</span>
+              <span class="info-val">{{ currentLead.industry || '—' }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">City / Country:</span>
-              <span class="info-val">{{ selectedLead.city || 'Dubai' }}, {{ selectedLead.countryCode || 'AE' }}</span>
+              <span class="info-val">{{ currentLead.city || 'Dubai' }}, {{ currentLead.countryCode || 'AE' }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Owner:</span>
-              <span class="info-val">{{ selectedLead.ownerUserName || 'Unassigned' }}</span>
+              <span class="info-val">{{ currentLead.ownerUserName || 'Unassigned' }}</span>
             </div>
-            <div class="info-row" *ngIf="selectedLead.convertedCustomerName">
+            <div class="info-row" *ngIf="currentLead.convertedCustomerName">
               <span class="info-label text-success">Customer:</span>
-              <span class="info-val text-success font-bold">{{ selectedLead.convertedCustomerName }}</span>
+              <span class="info-val text-success font-bold">{{ currentLead.convertedCustomerName }}</span>
             </div>
           </div>
 
-          <div class="lead-notes-box mt-3" *ngIf="selectedLead.notes">
+          <div class="lead-notes-box mt-3" *ngIf="currentLead.notes">
             <span class="info-label">Prospect Notes:</span>
-            <p class="notes-content">{{ selectedLead.notes }}</p>
+            <p class="notes-content">{{ currentLead.notes }}</p>
           </div>
         </div>
       </div>
@@ -267,8 +268,8 @@
         <!-- Activity Timeline -->
         <div class="timeline-card">
           <h3 class="card-title">Activity Timeline</h3>
-          <div class="timeline-stream" *ngIf="timelineActivities.length > 0">
-            <div class="timeline-entry" *ngFor="let act of timelineActivities">
+          <div class="timeline-stream" *ngIf="timelineActivities().length > 0">
+            <div class="timeline-entry" *ngFor="let act of timelineActivities()">
               <div class="timeline-icon" [ngClass]="'icon-' + act.activityType.toLowerCase()">
                 <span *ngIf="act.activityType === 'CALL'">📞</span>
                 <span *ngIf="act.activityType === 'MEETING'">👥</span>
@@ -287,7 +288,7 @@
               </div>
             </div>
           </div>
-          <div class="empty-notice py-4" *ngIf="timelineActivities.length === 0">
+          <div class="empty-notice py-4" *ngIf="timelineActivities().length === 0">
             <span>No logged calls or meetings yet.</span>
           </div>
         </div>
@@ -297,14 +298,14 @@
       <div class="panel-right">
         <div class="panel-card">
           <div class="card-title-row">
-            <h3 class="card-title">Follow-up Tasks ({{ openTasks.length }})</h3>
+            <h3 class="card-title">Follow-up Tasks ({{ openTasks().length }})</h3>
             <button type="button" class="btn btn-xs btn-outline" (click)="openQuickLog('TASK')">
               ➕ Task
             </button>
           </div>
 
-          <div class="tasks-list" *ngIf="openTasks.length > 0">
-            <div class="task-item" *ngFor="let task of openTasks">
+          <div class="tasks-list" *ngIf="openTasks().length > 0">
+            <div class="task-item" *ngFor="let task of openTasks()">
               <input
                 type="checkbox"
                 class="task-check"
@@ -320,7 +321,7 @@
             </div>
           </div>
 
-          <div class="empty-notice" *ngIf="openTasks.length === 0">
+          <div class="empty-notice" *ngIf="openTasks().length === 0">
             <span>No pending follow-up tasks for this lead.</span>
           </div>
         </div>
@@ -329,11 +330,11 @@
   </div>
 
   <!-- QUICK LOG MODAL -->
-  <div class="modal-backdrop" *ngIf="showActivityModal">
+  <div class="modal-backdrop" *ngIf="showActivityModal()">
     <div class="modal-box">
       <div class="modal-header">
-        <h3 class="modal-title">Log {{ activeLogType }}</h3>
-        <button type="button" class="close-btn" (click)="showActivityModal = false">&times;</button>
+        <h3 class="modal-title">Log {{ activeLogType() }}</h3>
+        <button type="button" class="close-btn" (click)="showActivityModal.set(false)">&times;</button>
       </div>
       <form [formGroup]="activityForm" (ngSubmit)="saveActivity()">
         <div class="modal-body">
@@ -345,14 +346,14 @@
             <label class="form-label">Notes</label>
             <textarea class="form-control" rows="3" formControlName="details" placeholder="Details and next steps..."></textarea>
           </div>
-          <div class="form-group mb-3" *ngIf="activeLogType === 'TASK' || activeLogType === 'CALL'">
+          <div class="form-group mb-3" *ngIf="activeLogType() === 'TASK' || activeLogType() === 'CALL'">
             <label class="form-label">Date & Time</label>
             <input type="datetime-local" class="form-control" formControlName="dueAt" />
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline" (click)="showActivityModal = false">Cancel</button>
-          <button type="submit" class="btn btn-primary" [disabled]="savingActivity || activityForm.invalid">
+          <button type="button" class="btn btn-outline" (click)="showActivityModal.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingActivity() || activityForm.invalid">
             Save
           </button>
         </div>
@@ -361,11 +362,11 @@
   </div>
 
   <!-- CONVERT TO CUSTOMER MODAL -->
-  <div class="modal-backdrop" *ngIf="showConvertModal">
+  <div class="modal-backdrop" *ngIf="showConvertModal()">
     <div class="modal-box">
       <div class="modal-header">
         <h3 class="modal-title">Convert Lead to Customer</h3>
-        <button type="button" class="close-btn" (click)="showConvertModal = false">&times;</button>
+        <button type="button" class="close-btn" (click)="showConvertModal.set(false)">&times;</button>
       </div>
       <form [formGroup]="convertForm" (ngSubmit)="confirmConvertToCustomer()">
         <div class="modal-body">
@@ -383,8 +384,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline" (click)="showConvertModal = false">Cancel</button>
-          <button type="submit" class="btn btn-primary" [disabled]="convertingCustomer || convertForm.invalid">
+          <button type="button" class="btn btn-outline" (click)="showConvertModal.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="convertingCustomer() || convertForm.invalid">
             Convert
           </button>
         </div>
@@ -393,11 +394,11 @@
   </div>
 
   <!-- NEW LEAD MODAL -->
-  <div class="modal-backdrop" *ngIf="showNewLeadModal">
+  <div class="modal-backdrop" *ngIf="showNewLeadModal()">
     <div class="modal-box modal-lg">
       <div class="modal-header">
         <h3 class="modal-title">➕ Create New Lead</h3>
-        <button type="button" class="close-btn" (click)="showNewLeadModal = false">&times;</button>
+        <button type="button" class="close-btn" (click)="showNewLeadModal.set(false)">&times;</button>
       </div>
       <form [formGroup]="leadForm" (ngSubmit)="saveNewLead()">
         <div class="modal-body">
@@ -448,8 +449,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline" (click)="showNewLeadModal = false">Cancel</button>
-          <button type="submit" class="btn btn-primary" [disabled]="savingLead || leadForm.invalid">
+          <button type="button" class="btn btn-outline" (click)="showNewLeadModal.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingLead() || leadForm.invalid">
             Save Lead
           </button>
         </div>
@@ -458,21 +459,21 @@
   </div>
 
   <!-- IMPORT MODAL -->
-  <div class="modal-backdrop" *ngIf="showImportModal">
+  <div class="modal-backdrop" *ngIf="showImportModal()">
     <div class="modal-box">
       <div class="modal-header">
         <h3 class="modal-title">Import Leads from CSV</h3>
-        <button type="button" class="close-btn" (click)="showImportModal = false">&times;</button>
+        <button type="button" class="close-btn" (click)="showImportModal.set(false)">&times;</button>
       </div>
       <div class="modal-body">
         <input type="file" accept=".csv" (change)="onFileSelected($event)" class="form-control mb-3" />
-        <div *ngIf="importResult" class="result-box p-3 bg-light rounded">
-          <p>Imported: <strong>{{ importResult.importedCount }}</strong>, Skipped: <strong>{{ importResult.skippedCount }}</strong></p>
+        <div *ngIf="importResult() as impRes" class="result-box p-3 bg-light rounded">
+          <p>Imported: <strong>{{ impRes.importedCount }}</strong>, Skipped: <strong>{{ impRes.skippedCount }}</strong></p>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" (click)="showImportModal = false">Close</button>
-        <button type="button" class="btn btn-primary" [disabled]="!importFile || importing" (click)="uploadCsv()">
+        <button type="button" class="btn btn-outline" (click)="showImportModal.set(false)">Close</button>
+        <button type="button" class="btn btn-primary" [disabled]="!importFile() || importing()" (click)="uploadCsv()">
           Upload
         </button>
       </div>

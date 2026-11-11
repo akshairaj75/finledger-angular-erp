@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
@@ -70,11 +70,11 @@ import { NotificationService } from '../../../core/services/notification.service
             <p>Enter your company email and password to continue</p>
           </div>
 
-          <div *ngIf="errorBanner" class="error-alert" [class.locked-alert]="isLocked">
-            <span class="alert-icon">{{ isLocked ? '🔒' : '⚠️' }}</span>
+          <div *ngIf="errorBanner()" class="error-alert" [class.locked-alert]="isLocked()">
+            <span class="alert-icon">{{ isLocked() ? '🔒' : '⚠️' }}</span>
             <div class="alert-body">
-              <strong>{{ isLocked ? 'Account Locked (5 Failed Attempts)' : 'Authentication Failed' }}</strong>
-              <p>{{ errorBanner }}</p>
+              <strong>{{ isLocked() ? 'Account Locked (5 Failed Attempts)' : 'Authentication Failed' }}</strong>
+              <p>{{ errorBanner() }}</p>
             </div>
           </div>
 
@@ -99,7 +99,7 @@ import { NotificationService } from '../../../core/services/notification.service
               <div class="password-wrapper">
                 <input
                   id="password"
-                  [type]="showPassword ? 'text' : 'password'"
+                  [type]="showPassword() ? 'text' : 'password'"
                   formControlName="password"
                   placeholder="Enter your password"
                   autocomplete="current-password"
@@ -108,11 +108,11 @@ import { NotificationService } from '../../../core/services/notification.service
                 <button
                   type="button"
                   class="toggle-pw"
-                  (click)="showPassword = !showPassword"
+                  (click)="showPassword.set(!showPassword())"
                   tabindex="-1"
-                  [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+                  [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
                 >
-                  {{ showPassword ? 'Hide' : 'Show' }}
+                  {{ showPassword() ? 'Hide' : 'Show' }}
                 </button>
               </div>
               <span class="field-error" *ngIf="isInvalid('password')">
@@ -120,9 +120,9 @@ import { NotificationService } from '../../../core/services/notification.service
               </span>
             </div>
 
-            <button type="submit" class="btn-submit" [disabled]="loading || loginForm.invalid">
-              <span *ngIf="loading" class="spinner-sm"></span>
-              {{ loading ? 'Authenticating...' : 'Sign In' }}
+            <button type="submit" class="btn-submit" [disabled]="loading() || loginForm.invalid">
+              <span *ngIf="loading()" class="spinner-sm"></span>
+              {{ loading() ? 'Authenticating...' : 'Sign In' }}
             </button>
           </form>
 
@@ -446,10 +446,10 @@ export class LoginComponent {
   private route = inject(ActivatedRoute);
 
   public readonly isProduction = environment.production;
-  public loading = false;
-  public showPassword = false;
-  public errorBanner: string | null = null;
-  public isLocked = false;
+  public loading = signal(false);
+  public showPassword = signal(false);
+  public errorBanner = signal<string | null>(null);
+  public isLocked = signal(false);
 
   public loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -462,32 +462,33 @@ export class LoginComponent {
   }
 
   onSubmit(): void {
-    if (this.loginForm.invalid || this.loading) {
+    if (this.loginForm.invalid || this.loading()) {
       this.loginForm.markAllAsTouched();
       return;
     }
 
-    this.loading = true;
-    this.errorBanner = null;
-    this.isLocked = false;
+    this.loading.set(true);
+    this.errorBanner.set(null);
+    this.isLocked.set(false);
 
     const { email, password } = this.loginForm.getRawValue();
     this.authService.login({ email: email.trim(), password }).subscribe({
       next: (me) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.success(`Welcome back, ${me.user.fullName}`);
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
         this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         const code = err?.error?.code;
-        this.isLocked = code === 'ACCOUNT_LOCKED';
-        this.errorBanner =
+        this.isLocked.set(code === 'ACCOUNT_LOCKED');
+        this.errorBanner.set(
           err?.error?.message ||
           (err?.status === 0
             ? 'Unable to connect to the FinLedger server.'
-            : 'Invalid email or password.');
+            : 'Invalid email or password.')
+        );
       }
     });
   }

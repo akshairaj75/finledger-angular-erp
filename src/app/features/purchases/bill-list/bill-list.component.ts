@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
@@ -28,80 +28,84 @@ export class BillListComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  billsPage: Page<Bill> = {
+  billsPage = signal<Page<Bill>>({
     content: [],
     page: 0,
     size: 15,
     totalElements: 0,
     totalPages: 0
-  };
+  });
 
-  summary: SummaryCards = {
+  summary = signal<SummaryCards>({
     draftCount: 0,
     unpaidTotal: 0,
     overdueTotal: 0,
     paidThisMonthTotal: 0
-  };
+  });
 
-  loading = false;
-  currentPage = 0;
+  loading = signal(false);
+  currentPage = signal(0);
   pageSize = 15;
 
   // Filter state
-  searchQuery = '';
-  filterStatus: BillStatus | '' = '';
-  filterFrom = '';
-  filterTo = '';
+  searchQuery = signal('');
+  filterStatus = signal<BillStatus | ''>('');
+  filterFrom = signal('');
+  filterTo = signal('');
 
   readonly statuses: BillStatus[] = ['DRAFT', 'APPROVED', 'PARTIAL', 'PAID', 'OVERDUE', 'VOID'];
 
   // Detail Modal
-  selectedBill: Bill | null = null;
-  showDetailModal = false;
+  selectedBill = signal<Bill | null>(null);
+  showDetailModal = signal(false);
 
   // Void Modal
-  showVoidModal = false;
-  billToVoid: Bill | null = null;
-  voidReason = '';
-  voiding = false;
+  showVoidModal = signal(false);
+  billToVoid = signal<Bill | null>(null);
+  voidReason = signal('');
+  voiding = signal(false);
 
   // Approving
-  approvingId: number | null = null;
+  approvingId = signal<number | null>(null);
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
-      this.searchQuery = params['q'] || '';
-      this.filterStatus = (params['status'] as BillStatus) || '';
-      this.filterFrom = params['from'] || '';
-      this.filterTo = params['to'] || '';
-      this.currentPage = params['page'] ? Number(params['page']) : 0;
+      this.searchQuery.set(params['q'] || '');
+      this.filterStatus.set((params['status'] as BillStatus) || '');
+      this.filterFrom.set(params['from'] || '');
+      this.filterTo.set(params['to'] || '');
+      this.currentPage.set(params['page'] ? Number(params['page']) : 0);
       this.loadBills();
     });
   }
 
   loadBills(): void {
-    this.loading = true;
+    this.loading.set(true);
     const query: BillQuery = {
-      page: this.currentPage,
+      page: this.currentPage(),
       size: this.pageSize
     };
 
     this.billService.getBills(query).subscribe({
       next: page => {
         let items = page.content;
+        const st = this.filterStatus();
+        const fFrom = this.filterFrom();
+        const fTo = this.filterTo();
+        const sq = this.searchQuery().trim();
 
         // In-memory filter for status, dates, and search query
-        if (this.filterStatus) {
-          items = items.filter(b => b.status === this.filterStatus);
+        if (st) {
+          items = items.filter(b => b.status === st);
         }
-        if (this.filterFrom) {
-          items = items.filter(b => b.billDate >= this.filterFrom);
+        if (fFrom) {
+          items = items.filter(b => b.billDate >= fFrom);
         }
-        if (this.filterTo) {
-          items = items.filter(b => b.billDate <= this.filterTo);
+        if (fTo) {
+          items = items.filter(b => b.billDate <= fTo);
         }
-        if (this.searchQuery.trim()) {
-          const q = this.searchQuery.toLowerCase().trim();
+        if (sq) {
+          const q = sq.toLowerCase();
           items = items.filter(
             b =>
               (b.billNo && b.billNo.toLowerCase().includes(q)) ||
@@ -111,15 +115,15 @@ export class BillListComponent implements OnInit {
           );
         }
 
-        this.billsPage = {
+        this.billsPage.set({
           ...page,
           content: items
-        };
-        this.loading = false;
+        });
+        this.loading.set(false);
         this.calculateSummary(page.content);
       },
       error: err => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load bills');
       }
     });
@@ -150,25 +154,25 @@ export class BillListComponent implements OnInit {
       }
     }
 
-    this.summary = {
+    this.summary.set({
       draftCount,
       unpaidTotal,
       overdueTotal,
       paidThisMonthTotal
-    };
+    });
   }
 
   applyFilters(): void {
-    this.currentPage = 0;
+    this.currentPage.set(0);
     this.syncQueryParams();
   }
 
   resetFilters(): void {
-    this.searchQuery = '';
-    this.filterStatus = '';
-    this.filterFrom = '';
-    this.filterTo = '';
-    this.currentPage = 0;
+    this.searchQuery.set('');
+    this.filterStatus.set('');
+    this.filterFrom.set('');
+    this.filterTo.set('');
+    this.currentPage.set(0);
     this.syncQueryParams();
   }
 
@@ -176,19 +180,19 @@ export class BillListComponent implements OnInit {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
-        q: this.searchQuery.trim() || null,
-        status: this.filterStatus || null,
-        from: this.filterFrom || null,
-        to: this.filterTo || null,
-        page: this.currentPage > 0 ? this.currentPage : null
+        q: this.searchQuery().trim() || null,
+        status: this.filterStatus() || null,
+        from: this.filterFrom() || null,
+        to: this.filterTo() || null,
+        page: this.currentPage() > 0 ? this.currentPage() : null
       },
       queryParamsHandling: 'merge'
     });
   }
 
   goToPage(p: number): void {
-    if (p >= 0 && p < this.billsPage.totalPages) {
-      this.currentPage = p;
+    if (p >= 0 && p < this.billsPage().totalPages) {
+      this.currentPage.set(p);
       this.syncQueryParams();
     }
   }
@@ -197,18 +201,19 @@ export class BillListComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.approvingId = bill.id;
+    this.approvingId.set(bill.id);
     this.billService.approveBill(bill.id).subscribe({
       next: updated => {
-        this.approvingId = null;
+        this.approvingId.set(null);
         this.notificationService.success(`Bill ${updated.billNo} approved and posted to General Ledger!`);
         this.loadBills();
-        if (this.selectedBill && this.selectedBill.id === bill.id) {
-          this.selectedBill = updated;
+        const sel = this.selectedBill();
+        if (sel && sel.id === bill.id) {
+          this.selectedBill.set(updated);
         }
       },
       error: err => {
-        this.approvingId = null;
+        this.approvingId.set(null);
         this.notificationService.error(err?.error?.message || 'Failed to approve bill');
       }
     });
@@ -218,45 +223,47 @@ export class BillListComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.billToVoid = bill;
-    this.voidReason = '';
-    this.showVoidModal = true;
+    this.billToVoid.set(bill);
+    this.voidReason.set('');
+    this.showVoidModal.set(true);
   }
 
   closeVoidModal(): void {
-    this.showVoidModal = false;
-    this.billToVoid = null;
-    this.voidReason = '';
+    this.showVoidModal.set(false);
+    this.billToVoid.set(null);
+    this.voidReason.set('');
   }
 
   confirmVoid(): void {
-    if (!this.billToVoid) return;
-    this.voiding = true;
-    this.billService.voidBill(this.billToVoid.id, this.voidReason).subscribe({
+    const target = this.billToVoid();
+    if (!target) return;
+    this.voiding.set(true);
+    this.billService.voidBill(target.id, this.voidReason()).subscribe({
       next: () => {
-        this.voiding = false;
-        this.notificationService.success(`Bill ${this.billToVoid?.billNo} voided and reversing entry created.`);
+        this.voiding.set(false);
+        this.notificationService.success(`Bill ${target.billNo} voided and reversing entry created.`);
         this.closeVoidModal();
         this.loadBills();
-        if (this.selectedBill && this.selectedBill.id === this.billToVoid?.id) {
+        const sel = this.selectedBill();
+        if (sel && sel.id === target.id) {
           this.closeDetailModal();
         }
       },
       error: err => {
-        this.voiding = false;
+        this.voiding.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to void bill');
       }
     });
   }
 
   viewDetails(bill: Bill): void {
-    this.selectedBill = bill;
-    this.showDetailModal = true;
+    this.selectedBill.set(bill);
+    this.showDetailModal.set(true);
   }
 
   closeDetailModal(): void {
-    this.showDetailModal = false;
-    this.selectedBill = null;
+    this.showDetailModal.set(false);
+    this.selectedBill.set(null);
   }
 
   getStatusClass(status: BillStatus): string {

@@ -20,8 +20,8 @@
           <span *ngIf="journalForm.get('entryDate')?.touched && journalForm.get('entryDate')?.invalid" class="field-error">
             Date is required
           </span>
-          <span *ngIf="backendFieldErrors['entryDate']" class="field-error">
-            {{ backendFieldErrors['entryDate'] }}
+          <span *ngIf="backendFieldErrors()['entryDate']" class="field-error">
+            {{ backendFieldErrors()['entryDate'] }}
           </span>
         </div>
 
@@ -76,7 +76,7 @@
               <td>
                 <select formControlName="accountId" class="form-control">
                   <option [ngValue]="null" disabled>Select Account...</option>
-                  <option *ngFor="let acc of accounts" [value]="acc.id">
+                  <option *ngFor="let acc of accounts()" [value]="acc.id">
                     {{ acc.code }} - {{ acc.name }} ({{ acc.accountType }})
                   </option>
                 </select>
@@ -87,7 +87,7 @@
               <td>
                 <select formControlName="costCenterId" class="form-control">
                   <option [ngValue]="null">None</option>
-                  <option *ngFor="let cc of costCenters" [value]="cc.id">
+                  <option *ngFor="let cc of costCenters()" [value]="cc.id">
                     {{ cc.code }} - {{ cc.name }}
                   </option>
                 </select>
@@ -133,16 +133,16 @@
       <!-- Balance Status Bar -->
       <div class="balance-summary-bar">
         <div class="status-indicator">
-          <div *ngIf="isBalanced" class="indicator-badge badge-balanced">
-            ✓ Balanced (Total: {{ totalDebit | number:'1.2-2' }})
+          <div *ngIf="isBalanced()" class="indicator-badge badge-balanced">
+            ✓ Balanced (Total: {{ totalDebit() | number:'1.2-2' }})
           </div>
-          <div *ngIf="!isBalanced && lines.length < 2" class="indicator-badge badge-unbalanced">
+          <div *ngIf="!isBalanced() && lines.length < 2" class="indicator-badge badge-unbalanced">
             ⚠ Minimum 2 lines required
           </div>
-          <div *ngIf="!isBalanced && lines.length >= 2 && difference > 0" class="indicator-badge badge-unbalanced">
-            ⚠ Out of balance by {{ difference | number:'1.2-2' }}
+          <div *ngIf="!isBalanced() && lines.length >= 2 && difference() > 0" class="indicator-badge badge-unbalanced">
+            ⚠ Out of balance by {{ difference() | number:'1.2-2' }}
           </div>
-          <div *ngIf="!isBalanced && lines.length >= 2 && totalDebit === 0 && totalCredit === 0" class="indicator-badge badge-unbalanced">
+          <div *ngIf="!isBalanced() && lines.length >= 2 && totalDebit() === 0 && totalCredit() === 0" class="indicator-badge badge-unbalanced">
             ⚠ Enter debit and credit amounts
           </div>
         </div>
@@ -150,16 +150,16 @@
         <div class="totals-display">
           <div class="total-item">
             <span class="total-label">Total Debit:</span>
-            <span class="total-val font-mono">{{ totalDebit | number:'1.2-2' }}</span>
+            <span class="total-val font-mono">{{ totalDebit() | number:'1.2-2' }}</span>
           </div>
           <div class="total-item">
             <span class="total-label">Total Credit:</span>
-            <span class="total-val font-mono">{{ totalCredit | number:'1.2-2' }}</span>
+            <span class="total-val font-mono">{{ totalCredit() | number:'1.2-2' }}</span>
           </div>
           <div class="total-item">
             <span class="total-label">Difference:</span>
-            <span class="total-val font-mono" [class.text-danger]="difference > 0">
-              {{ difference | number:'1.2-2' }}
+            <span class="total-val font-mono" [class.text-danger]="difference() > 0">
+              {{ difference() | number:'1.2-2' }}
             </span>
           </div>
         </div>
@@ -171,7 +171,7 @@
       <button
         type="button"
         (click)="submit(false)"
-        [disabled]="!canSubmit"
+        [disabled]="!canSubmit()"
         class="btn btn-secondary"
       >
         Save as Draft
@@ -180,10 +180,10 @@
       <button
         type="button"
         (click)="submit(true)"
-        [disabled]="!canSubmit"
+        [disabled]="!canSubmit()"
         class="btn btn-primary"
       >
-        <span *ngIf="submitting" class="spinner-sm"></span>
+        <span *ngIf="submitting()" class="spinner-sm"></span>
         Post Entry
       </button>
     </div>

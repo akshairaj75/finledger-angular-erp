@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
@@ -60,42 +60,74 @@ export class PipelineBoardComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   // Board Data
-  board: OpportunityBoard = {
+  board = signal<OpportunityBoard>({
     columns: [],
     grandTotalValue: 0,
     totalOpportunities: 0
-  };
-  stages: CrmPipelineStage[] = [];
-  customers: Customer[] = [];
-  loading = false;
+  });
+  stages = signal<CrmPipelineStage[]>([]);
+  customers = signal<Customer[]>([]);
+  loading = signal<boolean>(false);
 
   // View state: 'kanban' or 'list'
-  viewMode: 'kanban' | 'list' = 'kanban';
-  searchQuery = '';
-  selectedStageFilter: number | null = null;
+  viewMode = signal<'kanban' | 'list'>('kanban');
+  searchQuery = signal<string>('');
+  selectedStageFilter = signal<number | null>(null);
 
-  // KPI Metrics
-  openPipelineValue = 0;
-  weightedForecastValue = 0;
-  wonThisQuarterValue = 0;
-  winRatePct = 0;
+  // KPI Metrics (computed from board signal)
+  private readonly boardKpis = computed(() => {
+    let openTotal = 0;
+    let weightedTotal = 0;
+    let wonTotal = 0;
+    let wonCount = 0;
+    let lostCount = 0;
+
+    for (const col of this.board().columns) {
+      if (col.stageType === 'OPEN') {
+        openTotal += Number(col.totalValue || 0);
+        for (const opp of col.opportunities) {
+          const val = Number(opp.expectedValue || 0);
+          const prob = Number(opp.probabilityPct || col.probabilityPct || 0);
+          weightedTotal += (val * prob) / 100;
+        }
+      } else if (col.stageType === 'WON') {
+        wonTotal += Number(col.totalValue || 0);
+        wonCount += col.count;
+      } else if (col.stageType === 'LOST') {
+        lostCount += col.count;
+      }
+    }
+
+    const totalClosed = wonCount + lostCount;
+    return {
+      openPipelineValue: openTotal,
+      weightedForecastValue: Math.round(weightedTotal * 100) / 100,
+      wonThisQuarterValue: wonTotal,
+      winRatePct: totalClosed > 0 ? Math.round((wonCount / totalClosed) * 100) : 0
+    };
+  });
+
+  openPipelineValue = computed<number>(() => this.boardKpis().openPipelineValue);
+  weightedForecastValue = computed<number>(() => this.boardKpis().weightedForecastValue);
+  wonThisQuarterValue = computed<number>(() => this.boardKpis().wonThisQuarterValue);
+  winRatePct = computed<number>(() => this.boardKpis().winRatePct);
 
   // Confirmation Modals for Drag & Drop
-  showWonConfirmModal = false;
-  showLostConfirmModal = false;
-  lostReasonInput = '';
-  pendingMove: PendingDragMove | null = null;
+  showWonConfirmModal = signal<boolean>(false);
+  showLostConfirmModal = signal<boolean>(false);
+  lostReasonInput = signal<string>('');
+  pendingMove = signal<PendingDragMove | null>(null);
 
   // Lead Import Modal
-  showImportModal = false;
-  importFile: File | null = null;
-  importing = false;
-  importResult: LeadImportResult | null = null;
+  showImportModal = signal<boolean>(false);
+  importFile = signal<File | null>(null);
+  importing = signal<boolean>(false);
+  importResult = signal<LeadImportResult | null>(null);
 
   // New Deal Modal
-  showNewDealModal = false;
+  showNewDealModal = signal<boolean>(false);
   newDealForm!: FormGroup;
-  savingDeal = false;
+  savingDeal = signal<boolean>(false);
 
   ngOnInit(): void {
     this.initForm();
@@ -120,26 +152,26 @@ export class PipelineBoardComponent implements OnInit {
   }
 
   loadBoard(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.opportunityService.getOpportunityBoard().subscribe({
       next: board => {
-        this.board = board;
-        this.computeKpis();
-        this.loading = false;
+        this.board.set(board);
+        this.loading.set(false);
       },
       error: () => {
         this.notificationService.error('Failed to load sales pipeline board');
-        this.loading = false;
+        this.loading.set(false);
       }
     });
 
     this.opportunityService.getStages().subscribe({
       next: stages => {
-        this.stages = stages.sort((a, b) => a.sortOrder - b.sortOrder);
-        if (stages.length > 0 && !this.newDealForm.get('stageId')?.value) {
+        const sorted = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
+        this.stages.set(sorted);
+        if (sorted.length > 0 && !this.newDealForm.get('stageId')?.value) {
           this.newDealForm.patchValue({
-            stageId: stages[0].id,
-            probabilityPct: stages[0].probabilityPct
+            stageId: sorted[0].id,
+            probabilityPct: sorted[0].probabilityPct
           });
         }
       }
@@ -149,46 +181,16 @@ export class PipelineBoardComponent implements OnInit {
   loadCustomers(): void {
     this.customerService.getCustomers({ page: 0, size: 100, isActive: true }).subscribe({
       next: page => {
-        this.customers = page.content;
+        this.customers.set(page.content);
       }
     });
-  }
-
-  computeKpis(): void {
-    let openTotal = 0;
-    let weightedTotal = 0;
-    let wonTotal = 0;
-    let wonCount = 0;
-    let lostCount = 0;
-
-    for (const col of this.board.columns) {
-      if (col.stageType === 'OPEN') {
-        openTotal += Number(col.totalValue || 0);
-        for (const opp of col.opportunities) {
-          const val = Number(opp.expectedValue || 0);
-          const prob = Number(opp.probabilityPct || col.probabilityPct || 0);
-          weightedTotal += (val * prob) / 100;
-        }
-      } else if (col.stageType === 'WON') {
-        wonTotal += Number(col.totalValue || 0);
-        wonCount += col.count;
-      } else if (col.stageType === 'LOST') {
-        lostCount += col.count;
-      }
-    }
-
-    this.openPipelineValue = openTotal;
-    this.weightedForecastValue = Math.round(weightedTotal * 100) / 100;
-    this.wonThisQuarterValue = wonTotal;
-
-    const totalClosed = wonCount + lostCount;
-    this.winRatePct = totalClosed > 0 ? Math.round((wonCount / totalClosed) * 100) : 0;
   }
 
   // Angular CDK Drag-and-Drop Handler
   onDrop(event: CdkDragDrop<Opportunity[]>, targetColumn: OpportunityStageColumn): void {
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+      this.board.update(curr => ({ ...curr, columns: curr.columns.map(c => ({ ...c })) }));
       return;
     }
 
@@ -211,16 +213,16 @@ export class PipelineBoardComponent implements OnInit {
 
     // If moving to WON stage: prompt confirmation
     if (targetColumn.stageType === 'WON') {
-      this.pendingMove = moveContext;
-      this.showWonConfirmModal = true;
+      this.pendingMove.set(moveContext);
+      this.showWonConfirmModal.set(true);
       return;
     }
 
     // If moving to LOST stage: prompt confirmation with lost reason
     if (targetColumn.stageType === 'LOST') {
-      this.pendingMove = moveContext;
-      this.lostReasonInput = '';
-      this.showLostConfirmModal = true;
+      this.pendingMove.set(moveContext);
+      this.lostReasonInput.set('');
+      this.showLostConfirmModal.set(true);
       return;
     }
 
@@ -229,31 +231,31 @@ export class PipelineBoardComponent implements OnInit {
   }
 
   confirmWonMove(): void {
-    if (!this.pendingMove) return;
-    const move = this.pendingMove;
-    this.showWonConfirmModal = false;
-    this.pendingMove = null;
+    const move = this.pendingMove();
+    if (!move) return;
+    this.showWonConfirmModal.set(false);
+    this.pendingMove.set(null);
     this.executeMove(move, undefined);
   }
 
   cancelWonMove(): void {
-    this.showWonConfirmModal = false;
-    this.pendingMove = null;
+    this.showWonConfirmModal.set(false);
+    this.pendingMove.set(null);
   }
 
   confirmLostMove(): void {
-    if (!this.pendingMove) return;
-    const move = this.pendingMove;
-    const reason = this.lostReasonInput.trim();
-    this.showLostConfirmModal = false;
-    this.pendingMove = null;
+    const move = this.pendingMove();
+    if (!move) return;
+    const reason = this.lostReasonInput().trim();
+    this.showLostConfirmModal.set(false);
+    this.pendingMove.set(null);
     this.executeMove(move, reason || 'Deal Lost');
   }
 
   cancelLostMove(): void {
-    this.showLostConfirmModal = false;
-    this.pendingMove = null;
-    this.lostReasonInput = '';
+    this.showLostConfirmModal.set(false);
+    this.pendingMove.set(null);
+    this.lostReasonInput.set('');
   }
 
   private executeMove(move: PendingDragMove, lostReason?: string): void {
@@ -270,7 +272,6 @@ export class PipelineBoardComponent implements OnInit {
       move.opportunity.lostReason = lostReason;
     }
     this.recalculateColumnTotals();
-    this.computeKpis();
 
     // 2. Call Backend API
     this.opportunityService
@@ -283,6 +284,7 @@ export class PipelineBoardComponent implements OnInit {
           move.opportunity.stageId = updated.stageId;
           move.opportunity.stageName = updated.stageName;
           move.opportunity.closedAt = updated.closedAt;
+          this.recalculateColumnTotals();
           this.notificationService.success(
             `Deal "${move.opportunity.title}" moved to ${move.targetColumn.stageName}`
           );
@@ -299,7 +301,6 @@ export class PipelineBoardComponent implements OnInit {
           move.opportunity.stageId = move.originalStageId;
           move.opportunity.stageName = move.originalStageName;
           this.recalculateColumnTotals();
-          this.computeKpis();
           const msg = err.error?.message || 'Failed to update deal stage. Card rolled back.';
           this.notificationService.error(msg);
         }
@@ -307,57 +308,62 @@ export class PipelineBoardComponent implements OnInit {
   }
 
   private recalculateColumnTotals(): void {
-    for (const col of this.board.columns) {
-      col.count = col.opportunities.length;
-      col.totalValue = col.opportunities.reduce(
-        (sum, o) => sum + Number(o.expectedValue || 0),
-        0
-      );
-    }
+    this.board.update(curr => ({
+      ...curr,
+      columns: curr.columns.map(col => ({
+        ...col,
+        count: col.opportunities.length,
+        totalValue: col.opportunities.reduce(
+          (sum, o) => sum + Number(o.expectedValue || 0),
+          0
+        )
+      }))
+    }));
   }
 
   // Filtered Opportunities for List View
-  get allOpportunities(): Opportunity[] {
+  allOpportunities = computed<Opportunity[]>(() => {
+    const stageFilter = this.selectedStageFilter();
+    const query = this.searchQuery().trim().toLowerCase();
     const list: Opportunity[] = [];
-    for (const col of this.board.columns) {
+    for (const col of this.board().columns) {
       list.push(...col.opportunities);
     }
     return list.filter(opp => {
-      const matchStage =
-        !this.selectedStageFilter || opp.stageId === this.selectedStageFilter;
+      const matchStage = !stageFilter || opp.stageId === stageFilter;
       const matchSearch =
-        !this.searchQuery.trim() ||
-        opp.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        opp.opportunityNo.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        (opp.customerName &&
-          opp.customerName.toLowerCase().includes(this.searchQuery.toLowerCase()));
+        !query ||
+        opp.title.toLowerCase().includes(query) ||
+        opp.opportunityNo.toLowerCase().includes(query) ||
+        (opp.customerName && opp.customerName.toLowerCase().includes(query));
       return matchStage && matchSearch;
     });
-  }
+  });
 
   // Lead Import Methods
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.importFile = input.files[0];
+      this.importFile.set(input.files[0]);
     }
   }
 
   uploadCsv(): void {
-    if (!this.importFile) return;
-    this.importing = true;
-    this.importResult = null;
+    const file = this.importFile();
+    if (!file) return;
+    this.importing.set(true);
+    this.importResult.set(null);
 
-    this.leadService.importLeadsFromCsv(this.importFile).subscribe({
+    this.leadService.importLeadsFromCsv(file).subscribe({
       next: res => {
-        this.importResult = res;
-        this.importing = false;
+        this.importResult.set(res);
+        this.importing.set(false);
         this.notificationService.success(
           `Successfully imported ${res.importedCount} leads!`
         );
       },
       error: err => {
-        this.importing = false;
+        this.importing.set(false);
         const msg = err.error?.message || 'Failed to import CSV';
         this.notificationService.error(msg);
       }
@@ -381,11 +387,18 @@ export class PipelineBoardComponent implements OnInit {
   // New Deal Creation
   openNewDealModal(): void {
     this.initForm();
-    this.showNewDealModal = true;
+    const currentStages = this.stages();
+    if (currentStages.length > 0 && !this.newDealForm.get('stageId')?.value) {
+      this.newDealForm.patchValue({
+        stageId: currentStages[0].id,
+        probabilityPct: currentStages[0].probabilityPct
+      });
+    }
+    this.showNewDealModal.set(true);
   }
 
   onStageSelectChange(stageId: number): void {
-    const stage = this.stages.find(s => s.id === stageId);
+    const stage = this.stages().find(s => s.id === stageId);
     if (stage) {
       this.newDealForm.patchValue({ probabilityPct: stage.probabilityPct });
     }
@@ -397,18 +410,18 @@ export class PipelineBoardComponent implements OnInit {
       return;
     }
 
-    this.savingDeal = true;
+    this.savingDeal.set(true);
     const req: OpportunityRequest = this.newDealForm.value;
 
     this.opportunityService.createOpportunity(req).subscribe({
       next: opp => {
-        this.savingDeal = false;
-        this.showNewDealModal = false;
+        this.savingDeal.set(false);
+        this.showNewDealModal.set(false);
         this.notificationService.success(`Deal "${opp.title}" created successfully!`);
         this.loadBoard();
       },
       error: err => {
-        this.savingDeal = false;
+        this.savingDeal.set(false);
         const msg = err.error?.message || 'Failed to create opportunity';
         this.notificationService.error(msg);
       }

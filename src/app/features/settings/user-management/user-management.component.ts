@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { User } from '../../../core/models/user.model';
@@ -39,7 +39,7 @@ import { SettingsService } from '../services/settings.service';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let u of users">
+            <tr *ngFor="let u of users()">
               <td class="font-medium">{{ u.fullName }}</td>
               <td>{{ u.email }}</td>
               <td>
@@ -74,10 +74,10 @@ import { SettingsService } from '../services/settings.service';
       </div>
 
       <!-- Create / Edit User Modal -->
-      <div class="modal-backdrop" *ngIf="showModal">
+      <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>{{ editingUser ? 'Edit User: ' + editingUser.fullName : 'Create New User' }}</h3>
+            <h3>{{ editingUser() ? 'Edit User: ' + editingUser()!.fullName : 'Create New User' }}</h3>
             <button class="close-btn" (click)="closeModal()">&times;</button>
           </div>
           <form [formGroup]="userForm" (ngSubmit)="submitUser()" class="modal-body">
@@ -86,17 +86,17 @@ import { SettingsService } from '../services/settings.service';
               <input type="text" formControlName="fullName" />
             </div>
 
-            <div class="form-group" *ngIf="!editingUser">
+            <div class="form-group" *ngIf="!editingUser()">
               <label>Work Email *</label>
               <input type="email" formControlName="email" />
             </div>
 
-            <div class="form-group" *ngIf="!editingUser">
+            <div class="form-group" *ngIf="!editingUser()">
               <label>Temporary Password * (min 6 chars)</label>
               <input type="password" formControlName="password" />
             </div>
 
-            <div class="form-group" *ngIf="editingUser">
+            <div class="form-group" *ngIf="editingUser()">
               <label>Account Status</label>
               <select formControlName="status">
                 <option value="ACTIVE">ACTIVE</option>
@@ -108,10 +108,10 @@ import { SettingsService } from '../services/settings.service';
             <div class="form-group">
               <label>Assigned Roles</label>
               <div class="role-checkboxes">
-                <label class="checkbox-item" *ngFor="let role of roles">
+                <label class="checkbox-item" *ngFor="let role of roles()">
                   <input
                     type="checkbox"
-                    [checked]="selectedRoleIds.has(role.id)"
+                    [checked]="selectedRoleIds().has(role.id)"
                     (change)="toggleRole(role.id)"
                   />
                   <div>
@@ -124,8 +124,8 @@ import { SettingsService } from '../services/settings.service';
 
             <div class="modal-footer">
               <button type="button" class="btn-outline" (click)="closeModal()">Cancel</button>
-              <button type="submit" class="btn-primary" [disabled]="saving">
-                {{ saving ? 'Saving...' : 'Save User' }}
+              <button type="submit" class="btn-primary" [disabled]="saving()">
+                {{ saving() ? 'Saving...' : 'Save User' }}
               </button>
             </div>
           </form>
@@ -259,12 +259,12 @@ export class UserManagementComponent implements OnInit {
   private notification = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  users: User[] = [];
-  roles: Role[] = [];
-  showModal = false;
-  saving = false;
-  editingUser: User | null = null;
-  selectedRoleIds = new Set<number>();
+  users = signal<User[]>([]);
+  roles = signal<Role[]>([]);
+  showModal = signal<boolean>(false);
+  saving = signal<boolean>(false);
+  editingUser = signal<User | null>(null);
+  selectedRoleIds = signal<Set<number>>(new Set<number>());
 
   userForm = this.fb.nonNullable.group({
     fullName: ['', Validators.required],
@@ -278,49 +278,54 @@ export class UserManagementComponent implements OnInit {
   }
 
   loadAll(): void {
-    this.settingsService.getUsers().subscribe(res => (this.users = res.content || []));
-    this.settingsService.getRoles().subscribe(res => (this.roles = res || []));
+    this.settingsService.getUsers().subscribe(res => this.users.set(res.content || []));
+    this.settingsService.getRoles().subscribe(res => this.roles.set(res || []));
   }
 
   openCreateModal(): void {
-    this.editingUser = null;
-    this.selectedRoleIds.clear();
+    this.editingUser.set(null);
+    this.selectedRoleIds.set(new Set());
     this.userForm.reset({ fullName: '', email: '', password: '', status: 'ACTIVE' });
-    this.showModal = true;
+    this.showModal.set(true);
   }
 
   openEditModal(user: User): void {
-    this.editingUser = user;
-    this.selectedRoleIds.clear();
+    this.editingUser.set(user);
+    const next = new Set<number>();
     const roleNames = new Set(user.roles || []);
-    this.roles.forEach(r => {
+    this.roles().forEach(r => {
       if (roleNames.has(r.name)) {
-        this.selectedRoleIds.add(r.id);
+        next.add(r.id);
       }
     });
+    this.selectedRoleIds.set(next);
     this.userForm.patchValue({
       fullName: user.fullName,
       email: user.email,
       password: '',
       status: (user.status as 'ACTIVE' | 'LOCKED' | 'DISABLED') || 'ACTIVE'
     });
-    this.showModal = true;
+    this.showModal.set(true);
   }
 
   closeModal(): void {
-    this.showModal = false;
+    this.showModal.set(false);
   }
 
   toggleRole(roleId: number): void {
-    if (this.selectedRoleIds.has(roleId)) {
-      this.selectedRoleIds.delete(roleId);
-    } else {
-      this.selectedRoleIds.add(roleId);
-    }
+    this.selectedRoleIds.update(prev => {
+      const next = new Set(prev);
+      if (next.has(roleId)) {
+        next.delete(roleId);
+      } else {
+        next.add(roleId);
+      }
+      return next;
+    });
   }
 
   unlockUser(user: User): void {
-    const roleIds = this.roles
+    const roleIds = this.roles()
       .filter(r => (user.roles || []).includes(r.name))
       .map(r => r.id);
 
@@ -336,28 +341,29 @@ export class UserManagementComponent implements OnInit {
     const val = this.userForm.getRawValue();
     if (!val.fullName.trim()) return;
 
-    this.saving = true;
-    const roleIds = Array.from(this.selectedRoleIds);
+    this.saving.set(true);
+    const roleIds = Array.from(this.selectedRoleIds());
+    const editing = this.editingUser();
 
-    if (this.editingUser) {
+    if (editing) {
       this.settingsService
-        .updateUser(this.editingUser.id, {
+        .updateUser(editing.id, {
           fullName: val.fullName.trim(),
           status: val.status,
           roleIds
         })
         .subscribe({
           next: () => {
-            this.saving = false;
-            this.showModal = false;
+            this.saving.set(false);
+            this.showModal.set(false);
             this.notification.success('User updated successfully');
             this.loadAll();
           },
-          error: () => (this.saving = false)
+          error: () => this.saving.set(false)
         });
     } else {
       if (!val.email || !val.password || val.password.length < 6) {
-        this.saving = false;
+        this.saving.set(false);
         this.notification.error('Email and password (min 6 characters) are required');
         return;
       }
@@ -370,12 +376,12 @@ export class UserManagementComponent implements OnInit {
         })
         .subscribe({
           next: () => {
-            this.saving = false;
-            this.showModal = false;
+            this.saving.set(false);
+            this.showModal.set(false);
             this.notification.success('User created successfully');
             this.loadAll();
           },
-          error: () => (this.saving = false)
+          error: () => this.saving.set(false)
         });
     }
   }

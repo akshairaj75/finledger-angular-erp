@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -34,24 +34,24 @@ export class InvoiceFormComponent implements OnInit {
 
   invoiceForm!: FormGroup;
 
-  customers: Customer[] = [];
-  selectedCustomer: Customer | null = null;
-  taxRates: TaxRate[] = [];
-  accounts: Account[] = [];
-  warehouses: Warehouse[] = [];
-  catalogItems: Item[] = [];
-  stockBalances: Map<string, number> = new Map();
+  customers = signal<Customer[]>([]);
+  selectedCustomer = signal<Customer | null>(null);
+  taxRates = signal<TaxRate[]>([]);
+  accounts = signal<Account[]>([]);
+  warehouses = signal<Warehouse[]>([]);
+  catalogItems = signal<Item[]>([]);
+  stockBalances = signal<Map<string, number>>(new Map());
 
-  loadingData = true;
-  saving = false;
-  previewingPdf = false;
+  loadingData = signal(true);
+  saving = signal(false);
+  previewingPdf = signal(false);
 
-  totals: InvoiceCalculationSummary = {
+  totals = signal<InvoiceCalculationSummary>({
     subtotal: 0,
     discountTotal: 0,
     taxTotal: 0,
     total: 0
-  };
+  });
 
   ngOnInit(): void {
     this.initForm();
@@ -93,33 +93,34 @@ export class InvoiceFormComponent implements OnInit {
   }
 
   private loadDependencies(): void {
-    this.loadingData = true;
+    this.loadingData.set(true);
 
     // Load customers
     this.customerService.getCustomers({ page: 0, size: 200, isActive: true }).subscribe({
       next: page => {
-        this.customers = page.content;
+        this.customers.set(page.content);
       }
     });
 
     // Load tax rates
     this.taxRateService.getTaxRates().subscribe({
       next: rates => {
-        this.taxRates = rates;
+        this.taxRates.set(rates);
+        this.recalculateAllTotals();
       }
     });
 
     // Load revenue accounts
     this.accountService.getAccounts(0, 200).subscribe({
       next: page => {
-        this.accounts = page.content;
+        this.accounts.set(page.content);
       }
     });
 
     // Load warehouses
     this.inventoryService.getWarehouses().subscribe({
       next: whs => {
-        this.warehouses = whs;
+        this.warehouses.set(whs);
         const defaultWh = whs.find(w => w.isDefault) || (whs.length > 0 ? whs[0] : null);
         if (defaultWh) {
           this.invoiceForm.patchValue({ warehouseId: defaultWh.id });
@@ -130,25 +131,27 @@ export class InvoiceFormComponent implements OnInit {
     // Load inventory catalog items
     this.inventoryService.getItems({ active: true, size: 500 }).subscribe({
       next: page => {
-        this.catalogItems = page.content;
-        this.loadingData = false;
+        this.catalogItems.set(page.content);
+        this.loadingData.set(false);
       },
       error: () => {
-        this.loadingData = false;
+        this.loadingData.set(false);
       }
     });
   }
 
   createLineGroup(): FormGroup {
+    const accList = this.accounts();
+    const rateList = this.taxRates();
     // Look for default revenue account (code 4000 or type INCOME)
-    const revAcc = this.accounts.find(a => a.code === '4000' || a.accountType === 'INCOME');
+    const revAcc = accList.find(a => a.code === '4000' || a.accountType === 'INCOME');
     // Look for standard 5% tax rate
-    const standardTax = this.taxRates.find(t => t.rate === 5.0 || t.code.includes('STANDARD'));
+    const standardTax = rateList.find(t => t.rate === 5.0 || t.code.includes('STANDARD'));
 
     return this.fb.group({
       itemId: [null],
       description: ['', [Validators.required]],
-      accountId: [revAcc ? revAcc.id : (this.accounts.length > 0 ? this.accounts[0].id : null), [Validators.required]],
+      accountId: [revAcc ? revAcc.id : (accList.length > 0 ? accList[0].id : null), [Validators.required]],
       quantity: [1, [Validators.required, Validators.min(0.0001)]],
       unitPrice: [0, [Validators.required, Validators.min(0)]],
       discountPct: [0, [Validators.min(0), Validators.max(100)]],
@@ -159,7 +162,7 @@ export class InvoiceFormComponent implements OnInit {
   onItemSelect(index: number, event: Event): void {
     const target = event.target as HTMLSelectElement;
     const itemId = Number(target.value);
-    const item = this.catalogItems.find(i => i.id === itemId);
+    const item = this.catalogItems().find(i => i.id === itemId);
     const lineGroup = this.linesArray.at(index) as FormGroup;
 
     if (item) {
@@ -179,10 +182,18 @@ export class InvoiceFormComponent implements OnInit {
     if (whId) {
       this.inventoryService.getStockBalance(itemId, whId).subscribe({
         next: bal => {
-          this.stockBalances.set(`${itemId}_${whId}`, bal.qtyOnHand);
+          this.stockBalances.update(prev => {
+            const next = new Map(prev);
+            next.set(`${itemId}_${whId}`, bal.qtyOnHand);
+            return next;
+          });
         },
         error: () => {
-          this.stockBalances.set(`${itemId}_${whId}`, 0);
+          this.stockBalances.update(prev => {
+            const next = new Map(prev);
+            next.set(`${itemId}_${whId}`, 0);
+            return next;
+          });
         }
       });
     }
@@ -202,13 +213,13 @@ export class InvoiceFormComponent implements OnInit {
     const itemId = line.get('itemId')?.value;
     if (!itemId) return null;
 
-    const item = this.catalogItems.find(i => i.id === itemId);
+    const item = this.catalogItems().find(i => i.id === itemId);
     if (!item || item.itemType !== 'INVENTORY') return null;
 
     const whId = this.invoiceForm.get('warehouseId')?.value;
-    const wh = this.warehouses.find(w => w.id === whId);
+    const wh = this.warehouses().find(w => w.id === whId);
     const key = `${itemId}_${whId}`;
-    const avail = this.stockBalances.get(key) ?? 0;
+    const avail = this.stockBalances().get(key) ?? 0;
 
     return `Available: ${avail} ${item.unit} in ${wh ? wh.code : 'Warehouse'}`;
   }
@@ -218,12 +229,12 @@ export class InvoiceFormComponent implements OnInit {
     const itemId = line.get('itemId')?.value;
     if (!itemId) return null;
 
-    const item = this.catalogItems.find(i => i.id === itemId);
+    const item = this.catalogItems().find(i => i.id === itemId);
     if (!item || item.itemType !== 'INVENTORY') return null;
 
     const whId = this.invoiceForm.get('warehouseId')?.value;
     const key = `${itemId}_${whId}`;
-    const avail = this.stockBalances.get(key) ?? 0;
+    const avail = this.stockBalances().get(key) ?? 0;
     const requested = Number(line.get('quantity')?.value || 0);
 
     if (requested > avail) {
@@ -249,8 +260,8 @@ export class InvoiceFormComponent implements OnInit {
   onCustomerSelect(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const custId = Number(target.value);
-    const customer = this.customers.find(c => c.id === custId) || null;
-    this.selectedCustomer = customer;
+    const customer = this.customers().find(c => c.id === custId) || null;
+    this.selectedCustomer.set(customer);
 
     if (customer) {
       const terms = customer.paymentTermsDays ?? 30;
@@ -293,7 +304,7 @@ export class InvoiceFormComponent implements OnInit {
 
     let taxPct = 0;
     if (taxRateId) {
-      const rate = this.taxRates.find(r => r.id === Number(taxRateId));
+      const rate = this.taxRates().find(r => r.id === Number(taxRateId));
       if (rate) taxPct = rate.rate;
     }
 
@@ -301,11 +312,12 @@ export class InvoiceFormComponent implements OnInit {
   }
 
   private recalculateAllTotals(): void {
+    const rates = this.taxRates();
     const linesData = this.linesArray.controls.map(control => {
       const taxRateId = control.get('taxRateId')?.value;
       let taxRatePct = 0;
       if (taxRateId) {
-        const rate = this.taxRates.find(r => r.id === Number(taxRateId));
+        const rate = rates.find(r => r.id === Number(taxRateId));
         if (rate) taxRatePct = rate.rate;
       }
       return {
@@ -316,7 +328,7 @@ export class InvoiceFormComponent implements OnInit {
       };
     });
 
-    this.totals = LineTotalsCalculator.calculateInvoiceTotals(linesData);
+    this.totals.set(LineTotalsCalculator.calculateInvoiceTotals(linesData));
   }
 
   private preparePayload(): InvoiceRequest | null {
@@ -355,15 +367,15 @@ export class InvoiceFormComponent implements OnInit {
     const payload = this.preparePayload();
     if (!payload) return;
 
-    this.saving = true;
+    this.saving.set(true);
     this.invoiceService.createInvoice(payload).subscribe({
       next: created => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.success(`Draft Invoice ${created.invoiceNo || '#' + created.id} saved successfully!`);
         this.router.navigate(['/sales/invoices']);
       },
       error: err => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to save draft invoice');
       }
     });
@@ -373,25 +385,25 @@ export class InvoiceFormComponent implements OnInit {
     const payload = this.preparePayload();
     if (!payload) return;
 
-    this.saving = true;
+    this.saving.set(true);
     this.invoiceService.createInvoice(payload).subscribe({
       next: created => {
         // Send invoice to trigger GL posting and formal number generation
         this.invoiceService.sendInvoice(created.id).subscribe({
           next: sent => {
-            this.saving = false;
+            this.saving.set(false);
             this.notificationService.success(`Invoice ${sent.invoiceNo} successfully generated, posted to GL, and marked SENT!`);
             this.router.navigate(['/sales/invoices']);
           },
           error: err => {
-            this.saving = false;
+            this.saving.set(false);
             this.notificationService.warning(`Invoice saved as Draft (#${created.id}), but failed to post to GL: ` + (err?.error?.message || 'Unknown error'));
             this.router.navigate(['/sales/invoices']);
           }
         });
       },
       error: err => {
-        this.saving = false;
+        this.saving.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to create invoice');
       }
     });
@@ -401,25 +413,25 @@ export class InvoiceFormComponent implements OnInit {
     const payload = this.preparePayload();
     if (!payload) return;
 
-    this.previewingPdf = true;
+    this.previewingPdf.set(true);
     // Save as draft first, then fetch PDF
     this.invoiceService.createInvoice(payload).subscribe({
       next: created => {
         this.invoiceService.getInvoicePdf(created.id).subscribe({
           next: blob => {
-            this.previewingPdf = false;
+            this.previewingPdf.set(false);
             const fileURL = URL.createObjectURL(blob);
             window.open(fileURL, '_blank');
             this.notificationService.success(`Invoice PDF generated successfully!`);
           },
           error: err => {
-            this.previewingPdf = false;
+            this.previewingPdf.set(false);
             this.notificationService.error(err?.error?.message || 'Failed to render PDF preview');
           }
         });
       },
       error: err => {
-        this.previewingPdf = false;
+        this.previewingPdf.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to prepare invoice for PDF preview');
       }
     });

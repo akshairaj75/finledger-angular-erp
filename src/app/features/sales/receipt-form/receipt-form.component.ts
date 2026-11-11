@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { BankAccount } from '../../../core/models/bank-account.model';
@@ -32,14 +32,15 @@ export class ReceiptFormComponent implements OnInit {
 
   receiptForm!: FormGroup;
 
-  customers: Customer[] = [];
-  selectedCustomer: Customer | null = null;
-  bankAccounts: BankAccount[] = [];
-  selectedBankAccount: BankAccount | null = null;
+  customers = signal<Customer[]>([]);
+  selectedCustomer = signal<Customer | null>(null);
+  bankAccounts = signal<BankAccount[]>([]);
+  selectedBankAccount = signal<BankAccount | null>(null);
 
-  openInvoices: EditableOpenInvoice[] = [];
-  loadingInvoices = false;
-  submitting = false;
+  openInvoices = signal<EditableOpenInvoice[]>([]);
+  loadingInvoices = signal(false);
+  submitting = signal(false);
+  private formAmount = signal(0);
 
   readonly paymentMethods: PaymentMethod[] = ['BANK_TRANSFER', 'CHEQUE', 'CASH', 'CARD'];
 
@@ -63,29 +64,32 @@ export class ReceiptFormComponent implements OnInit {
 
     // Re-run auto allocation on amount change
     this.receiptForm.get('amount')?.valueChanges.subscribe(val => {
-      if (this.openInvoices.length > 0) {
-        this.autoAllocateOldestFirst(Number(val) || 0);
+      const numeric = Number(val) || 0;
+      this.formAmount.set(numeric);
+      if (this.openInvoices().length > 0) {
+        this.autoAllocateOldestFirst(numeric);
       }
     });
 
     this.receiptForm.get('bankAccountId')?.valueChanges.subscribe(accId => {
-      this.selectedBankAccount = this.bankAccounts.find(b => b.id === Number(accId)) || null;
+      this.selectedBankAccount.set(this.bankAccounts().find(b => b.id === Number(accId)) || null);
     });
   }
 
   private loadDependencies(): void {
     this.customerService.getCustomers({ page: 0, size: 200, isActive: true }).subscribe({
       next: page => {
-        this.customers = page.content;
+        this.customers.set(page.content);
       }
     });
 
     this.bankAccountService.getBankAccounts().subscribe({
       next: accounts => {
-        this.bankAccounts = accounts.filter(a => a.isActive);
-        if (this.bankAccounts.length > 0) {
-          this.receiptForm.patchValue({ bankAccountId: this.bankAccounts[0].id });
-          this.selectedBankAccount = this.bankAccounts[0];
+        const active = accounts.filter(a => a.isActive);
+        this.bankAccounts.set(active);
+        if (active.length > 0) {
+          this.receiptForm.patchValue({ bankAccountId: active[0].id });
+          this.selectedBankAccount.set(active[0]);
         }
       }
     });
@@ -94,9 +98,9 @@ export class ReceiptFormComponent implements OnInit {
   onCustomerChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const custId = Number(target.value);
-    const customer = this.customers.find(c => c.id === custId) || null;
-    this.selectedCustomer = customer;
-    this.openInvoices = [];
+    const customer = this.customers().find(c => c.id === custId) || null;
+    this.selectedCustomer.set(customer);
+    this.openInvoices.set([]);
 
     if (customer) {
       this.receiptForm.patchValue({ currencyCode: customer.currencyCode || 'AED' });
@@ -105,16 +109,16 @@ export class ReceiptFormComponent implements OnInit {
   }
 
   private loadOpenInvoices(customerId: number): void {
-    this.loadingInvoices = true;
+    this.loadingInvoices.set(true);
     this.customerService.getOpenInvoices(customerId).subscribe({
       next: invoices => {
         // Sort oldest due date first (Section 4.7 FinLedger v2.0)
         const sorted = [...invoices].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-        this.openInvoices = sorted.map(inv => ({
+        this.openInvoices.set(sorted.map(inv => ({
           ...inv,
           allocatedAmount: 0
-        }));
-        this.loadingInvoices = false;
+        })));
+        this.loadingInvoices.set(false);
 
         const currentAmt = Number(this.receiptForm.get('amount')?.value) || 0;
         if (currentAmt > 0) {
@@ -122,7 +126,7 @@ export class ReceiptFormComponent implements OnInit {
         }
       },
       error: err => {
-        this.loadingInvoices = false;
+        this.loadingInvoices.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load open invoices');
       }
     });
@@ -132,29 +136,28 @@ export class ReceiptFormComponent implements OnInit {
     const available = totalToAllocate !== undefined ? totalToAllocate : (Number(this.receiptForm.get('amount')?.value) || 0);
     let remaining = available;
 
-    for (const inv of this.openInvoices) {
-      if (remaining <= 0) {
-        inv.allocatedAmount = 0;
-      } else {
+    this.openInvoices.update(list =>
+      list.map(inv => {
+        if (remaining <= 0) {
+          return { ...inv, allocatedAmount: 0 };
+        }
         const canPay = Math.min(inv.balanceDue, remaining);
-        inv.allocatedAmount = Math.round(canPay * 100) / 100;
-        remaining = Math.round((remaining - inv.allocatedAmount) * 100) / 100;
-      }
-    }
+        const allocatedAmount = Math.round(canPay * 100) / 100;
+        remaining = Math.round((remaining - allocatedAmount) * 100) / 100;
+        return { ...inv, allocatedAmount };
+      })
+    );
   }
 
   clearAllocations(): void {
-    for (const inv of this.openInvoices) {
-      inv.allocatedAmount = 0;
-    }
+    this.openInvoices.update(list => list.map(inv => ({ ...inv, allocatedAmount: 0 })));
   }
 
   togglePayFull(inv: EditableOpenInvoice): void {
-    if (inv.allocatedAmount === inv.balanceDue) {
-      inv.allocatedAmount = 0;
-    } else {
-      inv.allocatedAmount = inv.balanceDue;
-    }
+    const targetVal = inv.allocatedAmount === inv.balanceDue ? 0 : inv.balanceDue;
+    this.openInvoices.update(list =>
+      list.map(item => (item.id === inv.id ? { ...item, allocatedAmount: targetVal } : item))
+    );
   }
 
   onManualAllocationChange(inv: EditableOpenInvoice, event: Event): void {
@@ -166,25 +169,24 @@ export class ReceiptFormComponent implements OnInit {
       input.value = val.toString();
       this.notificationService.warning(`Cannot allocate more than invoice balance due (${inv.balanceDue} AED)`);
     }
-    inv.allocatedAmount = Math.round(val * 100) / 100;
+    const rounded = Math.round(val * 100) / 100;
+    this.openInvoices.update(list =>
+      list.map(item => (item.id === inv.id ? { ...item, allocatedAmount: rounded } : item))
+    );
   }
 
-  get totalAllocated(): number {
-    return Math.round(this.openInvoices.reduce((sum, inv) => sum + (inv.allocatedAmount || 0), 0) * 100) / 100;
-  }
+  readonly totalAllocated = computed(() =>
+    Math.round(this.openInvoices().reduce((sum, inv) => sum + (inv.allocatedAmount || 0), 0) * 100) / 100
+  );
 
-  get receivedAmount(): number {
-    return Number(this.receiptForm.get('amount')?.value) || 0;
-  }
+  readonly receivedAmount = computed(() => this.formAmount());
 
-  get unappliedAmount(): number {
-    const diff = this.receivedAmount - this.totalAllocated;
+  readonly unappliedAmount = computed(() => {
+    const diff = this.receivedAmount() - this.totalAllocated();
     return diff > 0 ? Math.round(diff * 100) / 100 : 0;
-  }
+  });
 
-  get isOverAllocated(): boolean {
-    return this.totalAllocated > this.receivedAmount;
-  }
+  readonly isOverAllocated = computed(() => this.totalAllocated() > this.receivedAmount());
 
   submitReceipt(): void {
     if (this.receiptForm.invalid) {
@@ -193,15 +195,15 @@ export class ReceiptFormComponent implements OnInit {
       return;
     }
 
-    if (this.isOverAllocated) {
+    if (this.isOverAllocated()) {
       this.notificationService.error(
-        `Total allocated (${this.totalAllocated} AED) cannot exceed the received amount (${this.receivedAmount} AED).`
+        `Total allocated (${this.totalAllocated()} AED) cannot exceed the received amount (${this.receivedAmount()} AED).`
       );
       return;
     }
 
     const formVal = this.receiptForm.value;
-    const allocations: ReceiptAllocationRequest[] = this.openInvoices
+    const allocations: ReceiptAllocationRequest[] = this.openInvoices()
       .filter(inv => inv.allocatedAmount > 0)
       .map(inv => ({
         invoiceId: inv.id,
@@ -219,17 +221,17 @@ export class ReceiptFormComponent implements OnInit {
       allocations
     };
 
-    this.submitting = true;
+    this.submitting.set(true);
     this.receiptService.createReceipt(payload).subscribe({
       next: receipt => {
-        this.submitting = false;
+        this.submitting.set(false);
         this.notificationService.success(
           `Customer Receipt ${receipt.receiptNo} posted successfully! GL voucher created.`
         );
         this.router.navigate(['/sales/invoices']);
       },
       error: err => {
-        this.submitting = false;
+        this.submitting.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to record and post receipt');
       }
     });

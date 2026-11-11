@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -20,44 +20,45 @@ export class LedgerComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  accounts: Account[] = [];
-  selectedAccountId: number | null = null;
-  fromDate: string = '';
-  toDate: string = '';
+  accounts = signal<Account[]>([]);
+  selectedAccountId = signal<number | null>(null);
+  fromDate = signal<string>('');
+  toDate = signal<string>('');
 
-  report: GeneralLedgerReport | null = null;
-  loading = false;
-  hasSearched = false;
+  report = signal<GeneralLedgerReport | null>(null);
+  loading = signal<boolean>(false);
+  hasSearched = signal<boolean>(false);
 
   ngOnInit(): void {
     // Load accounts
     this.accountService.getAccounts(0, 500).subscribe({
       next: (page) => {
-        this.accounts = page.content.filter(a => !a.isGroup && a.isActive);
+        const activeAccounts = page.content.filter(a => !a.isGroup && a.isActive);
+        this.accounts.set(activeAccounts);
 
         // Check query params
         this.route.queryParams.subscribe(params => {
           if (params['accountId']) {
-            this.selectedAccountId = Number(params['accountId']);
-          } else if (this.accounts.length > 0 && !this.selectedAccountId) {
+            this.selectedAccountId.set(Number(params['accountId']));
+          } else if (activeAccounts.length > 0 && !this.selectedAccountId()) {
             // Default to first account (e.g. Cash or Bank)
-            this.selectedAccountId = this.accounts[0].id;
+            this.selectedAccountId.set(activeAccounts[0].id);
           }
 
           if (params['from']) {
-            this.fromDate = params['from'];
-          } else if (!this.fromDate) {
+            this.fromDate.set(params['from']);
+          } else if (!this.fromDate()) {
             const now = new Date();
-            this.fromDate = new Date(now.getFullYear(), 0, 1).toISOString().substring(0, 10);
+            this.fromDate.set(new Date(now.getFullYear(), 0, 1).toISOString().substring(0, 10));
           }
 
           if (params['to']) {
-            this.toDate = params['to'];
-          } else if (!this.toDate) {
-            this.toDate = new Date().toISOString().substring(0, 10);
+            this.toDate.set(params['to']);
+          } else if (!this.toDate()) {
+            this.toDate.set(new Date().toISOString().substring(0, 10));
           }
 
-          if (this.selectedAccountId) {
+          if (this.selectedAccountId()) {
             this.fetchReport();
           }
         });
@@ -66,35 +67,36 @@ export class LedgerComponent implements OnInit {
   }
 
   fetchReport(): void {
-    if (!this.selectedAccountId) return;
+    const accountId = this.selectedAccountId();
+    if (!accountId) return;
 
-    this.loading = true;
-    this.hasSearched = true;
+    this.loading.set(true);
+    this.hasSearched.set(true);
 
     // Update query params for bookmarking
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
-        accountId: this.selectedAccountId,
-        from: this.fromDate || null,
-        to: this.toDate || null
+        accountId,
+        from: this.fromDate() || null,
+        to: this.toDate() || null
       },
       queryParamsHandling: 'merge'
     });
 
-    this.ledgerService.getGeneralLedgerReport(this.selectedAccountId, this.fromDate, this.toDate).subscribe({
+    this.ledgerService.getGeneralLedgerReport(accountId, this.fromDate(), this.toDate()).subscribe({
       next: (data) => {
-        this.report = data;
-        this.loading = false;
+        this.report.set(data);
+        this.loading.set(false);
       },
       error: () => {
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
 
-  get selectedAccount(): Account | undefined {
-    return this.accounts.find(a => a.id === this.selectedAccountId);
-  }
+  selectedAccount = computed<Account | undefined>(() =>
+    this.accounts().find(a => a.id === this.selectedAccountId())
+  );
 }
 

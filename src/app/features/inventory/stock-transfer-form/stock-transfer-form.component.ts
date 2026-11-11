@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import {
@@ -38,19 +38,19 @@ export class StockTransferFormComponent implements OnInit {
 
   transferForm!: FormGroup;
 
-  warehouses: Warehouse[] = [];
-  catalogItems: Item[] = [];
-  sourceBalances: Map<number, StockBalance> = new Map();
+  warehouses = signal<Warehouse[]>([]);
+  catalogItems = signal<Item[]>([]);
+  sourceBalances = signal<Map<number, StockBalance>>(new Map());
 
-  loading = true;
-  saving = false;
-  dispatching = false;
+  loading = signal(true);
+  saving = signal(false);
+  dispatching = signal(false);
 
   // Live Summary
-  lineSummaries: TransferLineSummary[] = [];
-  totalTransferValue = 0;
-  totalItemsCount = 0;
-  hasInsufficientStock = false;
+  lineSummaries = signal<TransferLineSummary[]>([]);
+  totalTransferValue = signal(0);
+  totalItemsCount = signal(0);
+  hasInsufficientStock = signal(false);
 
   ngOnInit(): void {
     this.initForm();
@@ -83,12 +83,12 @@ export class StockTransferFormComponent implements OnInit {
   }
 
   private loadDependencies(): void {
-    this.loading = true;
+    this.loading.set(true);
 
     // 1. Warehouses
     this.inventoryService.getWarehouses().subscribe({
       next: whs => {
-        this.warehouses = whs;
+        this.warehouses.set(whs);
         if (whs.length >= 2) {
           this.transferForm.patchValue({
             fromWarehouseId: whs[0].id,
@@ -101,12 +101,12 @@ export class StockTransferFormComponent implements OnInit {
     // 2. Catalog Items
     this.inventoryService.getItems({ itemType: 'INVENTORY', active: true, size: 500 }).subscribe({
       next: page => {
-        this.catalogItems = page.content;
-        this.loading = false;
+        this.catalogItems.set(page.content);
+        this.loading.set(false);
         // Start with one empty line
         this.addLine();
       },
-      error: () => (this.loading = false)
+      error: () => this.loading.set(false)
     });
   }
 
@@ -115,7 +115,7 @@ export class StockTransferFormComponent implements OnInit {
 
     this.inventoryService.getStockBalances(whId).subscribe({
       next: bals => {
-        this.sourceBalances = new Map(bals.map(b => [b.itemId, b]));
+        this.sourceBalances.set(new Map(bals.map(b => [b.itemId, b])));
         this.updateLineSourceQuantities();
         this.recalculateAll();
       }
@@ -123,11 +123,12 @@ export class StockTransferFormComponent implements OnInit {
   }
 
   private updateLineSourceQuantities(): void {
+    const balances = this.sourceBalances();
     for (let i = 0; i < this.linesArray.length; i++) {
       const g = this.linesArray.at(i) as FormGroup;
       const itemId = g.get('itemId')?.value;
       if (itemId) {
-        const bal = this.sourceBalances.get(itemId);
+        const bal = balances.get(itemId);
         g.patchValue({
           availableQty: bal ? bal.qtyOnHand : 0,
           unitCost: bal && bal.avgCost > 0 ? bal.avgCost : (this.findCatalogItem(itemId)?.purchasePrice || 0)
@@ -166,7 +167,7 @@ export class StockTransferFormComponent implements OnInit {
     const group = this.linesArray.at(index) as FormGroup;
 
     if (item) {
-      const bal = this.sourceBalances.get(itemId);
+      const bal = this.sourceBalances().get(itemId);
       const avail = bal ? bal.qtyOnHand : 0;
       const cost = bal && bal.avgCost > 0 ? bal.avgCost : item.purchasePrice;
 
@@ -180,10 +181,10 @@ export class StockTransferFormComponent implements OnInit {
   }
 
   recalculateAll(): void {
-    this.lineSummaries = [];
-    this.totalTransferValue = 0;
-    this.totalItemsCount = 0;
-    this.hasInsufficientStock = false;
+    const summaries: TransferLineSummary[] = [];
+    let totalVal = 0;
+    let totalCount = 0;
+    let overStock = false;
 
     for (let i = 0; i < this.linesArray.length; i++) {
       const g = this.linesArray.at(i).value;
@@ -197,13 +198,13 @@ export class StockTransferFormComponent implements OnInit {
 
       const isOver = qty > avail;
       if (isOver) {
-        this.hasInsufficientStock = true;
+        overStock = true;
       }
 
-      this.totalTransferValue += lineCost;
-      this.totalItemsCount += qty;
+      totalVal += lineCost;
+      totalCount += qty;
 
-      this.lineSummaries.push({
+      summaries.push({
         itemId,
         sku: item ? item.sku : '',
         name: item ? item.name : '',
@@ -214,55 +215,60 @@ export class StockTransferFormComponent implements OnInit {
         isOverAvailable: isOver
       });
     }
+
+    this.lineSummaries.set(summaries);
+    this.totalTransferValue.set(totalVal);
+    this.totalItemsCount.set(totalCount);
+    this.hasInsufficientStock.set(overStock);
   }
 
   isLineOverAvailable(index: number): boolean {
-    return !!this.lineSummaries[index]?.isOverAvailable;
+    return !!this.lineSummaries()[index]?.isOverAvailable;
   }
 
   getLineAvailableQty(index: number): number {
-    return this.lineSummaries[index]?.availableQty ?? 0;
+    return this.lineSummaries()[index]?.availableQty ?? 0;
   }
 
   getLineTotalCost(index: number): number {
-    return this.lineSummaries[index]?.totalCost ?? 0;
+    return this.lineSummaries()[index]?.totalCost ?? 0;
   }
 
   saveDraft(): void {
     if (this.validateTransfer()) {
-      this.saving = true;
+      this.saving.set(true);
       const req = this.buildRequest();
 
       this.inventoryService.createTransfer(req).subscribe({
         next: res => {
-          this.saving = false;
+          this.saving.set(false);
           this.notificationService.success(`Draft stock transfer ${res.transferNo} created successfully.`);
           this.router.navigate(['/inventory/items']);
         },
-        error: () => (this.saving = false)
+        error: () => this.saving.set(false)
       });
     }
   }
 
   saveAndDispatch(): void {
     if (this.validateTransfer()) {
-      this.dispatching = true;
+      this.dispatching.set(true);
       const req = this.buildRequest();
 
       this.inventoryService.createTransfer(req).subscribe({
         next: draft => {
           this.inventoryService.dispatchTransfer(draft.id).subscribe({
             next: dispatched => {
-              this.dispatching = false;
+              this.dispatching.set(false);
               this.notificationService.success(
                 `Stock transfer ${dispatched.transferNo} dispatched successfully. Stock moved to in-transit.`
               );
               this.router.navigate(['/inventory/items']);
             },
-            error: () => (this.dispatching = false)
+            error: () => this.dispatching.set(false)
           });
         },
-        error: () => (this.dispatching = false)
+        error: () => this.dispatching.set(false)
       });
     }
   }
@@ -287,7 +293,7 @@ export class StockTransferFormComponent implements OnInit {
       return false;
     }
 
-    if (this.hasInsufficientStock) {
+    if (this.hasInsufficientStock()) {
       this.notificationService.error('One or more items exceed available quantity in the source warehouse.');
       return false;
     }
@@ -310,6 +316,6 @@ export class StockTransferFormComponent implements OnInit {
   }
 
   private findCatalogItem(itemId: number): Item | undefined {
-    return this.catalogItems.find(i => i.id === itemId);
+    return this.catalogItems().find(i => i.id === itemId);
   }
 }

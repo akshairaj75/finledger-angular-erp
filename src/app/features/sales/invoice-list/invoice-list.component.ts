@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
@@ -28,75 +28,74 @@ export class InvoiceListComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  invoicesPage: Page<Invoice> = {
+  invoicesPage = signal<Page<Invoice>>({
     content: [],
     page: 0,
     size: 15,
     totalElements: 0,
     totalPages: 0
-  };
+  });
 
-  allInvoicesForSummary: Invoice[] = [];
-  summary: SummaryCards = {
+  summary = signal<SummaryCards>({
     draftCount: 0,
     unpaidTotal: 0,
     overdueTotal: 0,
     paidThisMonthTotal: 0
-  };
+  });
 
-  loading = false;
-  currentPage = 0;
+  loading = signal(false);
+  currentPage = signal(0);
   pageSize = 15;
 
   // Filter state
-  searchQuery = '';
-  filterStatus: InvoiceStatus | '' = '';
-  filterFrom = '';
-  filterTo = '';
+  searchQuery = signal('');
+  filterStatus = signal<InvoiceStatus | ''>('');
+  filterFrom = signal('');
+  filterTo = signal('');
 
   readonly statuses: InvoiceStatus[] = ['DRAFT', 'SENT', 'PARTIAL', 'PAID', 'OVERDUE', 'VOID'];
 
   // Detail Modal
-  selectedInvoice: Invoice | null = null;
-  showDetailModal = false;
+  selectedInvoice = signal<Invoice | null>(null);
+  showDetailModal = signal(false);
 
   // Void Modal
-  showVoidModal = false;
-  invoiceToVoid: Invoice | null = null;
-  voidReason = '';
-  voiding = false;
+  showVoidModal = signal(false);
+  invoiceToVoid = signal<Invoice | null>(null);
+  voidReason = signal('');
+  voiding = signal(false);
 
   // Action in progress
-  sendingId: number | null = null;
-  pdfLoadingId: number | null = null;
+  sendingId = signal<number | null>(null);
+  pdfLoadingId = signal<number | null>(null);
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
-      this.searchQuery = params['q'] || '';
-      this.filterStatus = (params['status'] as InvoiceStatus) || '';
-      this.filterFrom = params['from'] || '';
-      this.filterTo = params['to'] || '';
-      this.currentPage = params['page'] ? Number(params['page']) : 0;
+      this.searchQuery.set(params['q'] || '');
+      this.filterStatus.set((params['status'] as InvoiceStatus) || '');
+      this.filterFrom.set(params['from'] || '');
+      this.filterTo.set(params['to'] || '');
+      this.currentPage.set(params['page'] ? Number(params['page']) : 0);
       this.loadInvoices();
     });
   }
 
   loadInvoices(): void {
-    this.loading = true;
+    this.loading.set(true);
     const query: InvoiceQuery = {
-      page: this.currentPage,
+      page: this.currentPage(),
       size: this.pageSize,
-      from: this.filterFrom || undefined,
-      to: this.filterTo || undefined,
-      status: this.filterStatus || undefined
+      from: this.filterFrom() || undefined,
+      to: this.filterTo() || undefined,
+      status: this.filterStatus() || undefined
     };
 
     this.invoiceService.getInvoices(query).subscribe({
       next: page => {
         let items = page.content;
-        // In-memory filter for search query across invoiceNo and customerName
-        if (this.searchQuery.trim()) {
-          const q = this.searchQuery.toLowerCase().trim();
+        const sq = this.searchQuery().trim();
+        if (sq) {
+          const q = sq.toLowerCase();
           items = items.filter(
             inv =>
               (inv.invoiceNo && inv.invoiceNo.toLowerCase().includes(q)) ||
@@ -104,15 +103,15 @@ export class InvoiceListComponent implements OnInit {
               (inv.customerCode && inv.customerCode.toLowerCase().includes(q))
           );
         }
-        this.invoicesPage = {
+        this.invoicesPage.set({
           ...page,
           content: items
-        };
-        this.loading = false;
+        });
+        this.loading.set(false);
         this.calculateSummary(page.content);
       },
       error: err => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load invoices');
       }
     });
@@ -143,25 +142,25 @@ export class InvoiceListComponent implements OnInit {
       }
     }
 
-    this.summary = {
+    this.summary.set({
       draftCount,
       unpaidTotal,
       overdueTotal,
       paidThisMonthTotal
-    };
+    });
   }
 
   applyFilters(): void {
-    this.currentPage = 0;
+    this.currentPage.set(0);
     this.syncQueryParams();
   }
 
   resetFilters(): void {
-    this.searchQuery = '';
-    this.filterStatus = '';
-    this.filterFrom = '';
-    this.filterTo = '';
-    this.currentPage = 0;
+    this.searchQuery.set('');
+    this.filterStatus.set('');
+    this.filterFrom.set('');
+    this.filterTo.set('');
+    this.currentPage.set(0);
     this.syncQueryParams();
   }
 
@@ -169,19 +168,19 @@ export class InvoiceListComponent implements OnInit {
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
-        q: this.searchQuery.trim() || null,
-        status: this.filterStatus || null,
-        from: this.filterFrom || null,
-        to: this.filterTo || null,
-        page: this.currentPage > 0 ? this.currentPage : null
+        q: this.searchQuery().trim() || null,
+        status: this.filterStatus() || null,
+        from: this.filterFrom() || null,
+        to: this.filterTo() || null,
+        page: this.currentPage() > 0 ? this.currentPage() : null
       },
       queryParamsHandling: 'merge'
     });
   }
 
   goToPage(p: number): void {
-    if (p >= 0 && p < this.invoicesPage.totalPages) {
-      this.currentPage = p;
+    if (p >= 0 && p < this.invoicesPage().totalPages) {
+      this.currentPage.set(p);
       this.syncQueryParams();
     }
   }
@@ -190,18 +189,19 @@ export class InvoiceListComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.sendingId = invoice.id;
+    this.sendingId.set(invoice.id);
     this.invoiceService.sendInvoice(invoice.id).subscribe({
       next: updated => {
-        this.sendingId = null;
+        this.sendingId.set(null);
         this.notificationService.success(`Invoice ${updated.invoiceNo} posted to GL and marked SENT!`);
         this.loadInvoices();
-        if (this.selectedInvoice && this.selectedInvoice.id === invoice.id) {
-          this.selectedInvoice = updated;
+        const sel = this.selectedInvoice();
+        if (sel && sel.id === invoice.id) {
+          this.selectedInvoice.set(updated);
         }
       },
       error: err => {
-        this.sendingId = null;
+        this.sendingId.set(null);
         this.notificationService.error(err?.error?.message || 'Failed to send and post invoice');
       }
     });
@@ -211,10 +211,10 @@ export class InvoiceListComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.pdfLoadingId = invoice.id;
+    this.pdfLoadingId.set(invoice.id);
     this.invoiceService.getInvoicePdf(invoice.id).subscribe({
       next: blob => {
-        this.pdfLoadingId = null;
+        this.pdfLoadingId.set(null);
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
@@ -223,7 +223,7 @@ export class InvoiceListComponent implements OnInit {
         URL.revokeObjectURL(blobUrl);
       },
       error: err => {
-        this.pdfLoadingId = null;
+        this.pdfLoadingId.set(null);
         this.notificationService.error(err?.error?.message || 'Failed to download invoice PDF');
       }
     });
@@ -233,45 +233,47 @@ export class InvoiceListComponent implements OnInit {
     if (event) {
       event.stopPropagation();
     }
-    this.invoiceToVoid = invoice;
-    this.voidReason = '';
-    this.showVoidModal = true;
+    this.invoiceToVoid.set(invoice);
+    this.voidReason.set('');
+    this.showVoidModal.set(true);
   }
 
   closeVoidModal(): void {
-    this.showVoidModal = false;
-    this.invoiceToVoid = null;
-    this.voidReason = '';
+    this.showVoidModal.set(false);
+    this.invoiceToVoid.set(null);
+    this.voidReason.set('');
   }
 
   confirmVoid(): void {
-    if (!this.invoiceToVoid) return;
-    this.voiding = true;
-    this.invoiceService.voidInvoice(this.invoiceToVoid.id, this.voidReason).subscribe({
+    const target = this.invoiceToVoid();
+    if (!target) return;
+    this.voiding.set(true);
+    this.invoiceService.voidInvoice(target.id, this.voidReason()).subscribe({
       next: () => {
-        this.voiding = false;
-        this.notificationService.success(`Invoice ${this.invoiceToVoid?.invoiceNo} voided and reversing entry created.`);
+        this.voiding.set(false);
+        this.notificationService.success(`Invoice ${target.invoiceNo} voided and reversing entry created.`);
         this.closeVoidModal();
         this.loadInvoices();
-        if (this.selectedInvoice && this.selectedInvoice.id === this.invoiceToVoid?.id) {
+        const sel = this.selectedInvoice();
+        if (sel && sel.id === target.id) {
           this.closeDetailModal();
         }
       },
       error: err => {
-        this.voiding = false;
+        this.voiding.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to void invoice');
       }
     });
   }
 
   viewDetails(invoice: Invoice): void {
-    this.selectedInvoice = invoice;
-    this.showDetailModal = true;
+    this.selectedInvoice.set(invoice);
+    this.showDetailModal.set(true);
   }
 
   closeDetailModal(): void {
-    this.showDetailModal = false;
-    this.selectedInvoice = null;
+    this.showDetailModal.set(false);
+    this.selectedInvoice.set(null);
   }
 
   getStatusClass(status: InvoiceStatus): string {

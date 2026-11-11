@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -23,31 +23,31 @@ export class VendorListComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private fb = inject(FormBuilder);
 
-  vendorsPage: Page<Vendor> = {
+  vendorsPage = signal<Page<Vendor>>({
     content: [],
     page: 0,
     size: 10,
     totalElements: 0,
     totalPages: 0
-  };
+  });
 
-  accounts: Account[] = [];
-  loading = false;
-  searchQuery = '';
-  currentPage = 0;
+  accounts = signal<Account[]>([]);
+  loading = signal(false);
+  searchQuery = signal('');
+  currentPage = signal(0);
   pageSize = 10;
 
   // Modals state
-  showVendorModal = false;
-  isEditMode = false;
-  selectedVendorId: number | null = null;
+  showVendorModal = signal(false);
+  isEditMode = signal(false);
+  selectedVendorId = signal<number | null>(null);
   vendorForm!: FormGroup;
 
   // Open bills modal
-  showOpenBillsModal = false;
-  selectedVendorForBills: Vendor | null = null;
-  openBills: OpenBill[] = [];
-  loadingOpenBills = false;
+  showOpenBillsModal = signal(false);
+  selectedVendorForBills = signal<Vendor | null>(null);
+  openBills = signal<OpenBill[]>([]);
+  loadingOpenBills = signal(false);
 
   ngOnInit(): void {
     this.initForm();
@@ -74,8 +74,8 @@ export class VendorListComponent implements OnInit {
   loadAccounts(): void {
     this.accountService.getAccounts(0, 200).subscribe({
       next: page => {
-        this.accounts = page.content;
-        const apAcc = this.accounts.find(a => a.code === '2100' || a.name.toLowerCase().includes('payable'));
+        this.accounts.set(page.content);
+        const apAcc = page.content.find(a => a.code === '2100' || a.name.toLowerCase().includes('payable'));
         if (apAcc && !this.vendorForm.get('apAccountId')?.value) {
           this.vendorForm.patchValue({ apAccountId: apAcc.id });
         }
@@ -85,40 +85,40 @@ export class VendorListComponent implements OnInit {
   }
 
   loadVendors(): void {
-    this.loading = true;
+    this.loading.set(true);
     const query: VendorQuery = {
-      page: this.currentPage,
+      page: this.currentPage(),
       size: this.pageSize,
-      search: this.searchQuery.trim() || undefined
+      search: this.searchQuery().trim() || undefined
     };
 
     this.vendorService.getVendors(query).subscribe({
       next: page => {
-        this.vendorsPage = page;
-        this.loading = false;
+        this.vendorsPage.set(page);
+        this.loading.set(false);
       },
       error: err => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load vendors');
       }
     });
   }
 
   onSearch(): void {
-    this.currentPage = 0;
+    this.currentPage.set(0);
     this.loadVendors();
   }
 
   resetSearch(): void {
-    this.searchQuery = '';
-    this.currentPage = 0;
+    this.searchQuery.set('');
+    this.currentPage.set(0);
     this.loadVendors();
   }
 
   openCreateModal(): void {
-    this.isEditMode = false;
-    this.selectedVendorId = null;
-    const apAcc = this.accounts.find(a => a.code === '2100' || a.name.toLowerCase().includes('payable'));
+    this.isEditMode.set(false);
+    this.selectedVendorId.set(null);
+    const apAcc = this.accounts().find(a => a.code === '2100' || a.name.toLowerCase().includes('payable'));
     this.vendorForm.reset({
       code: '',
       name: '',
@@ -132,12 +132,12 @@ export class VendorListComponent implements OnInit {
       apAccountId: apAcc ? apAcc.id : null,
       isActive: true
     });
-    this.showVendorModal = true;
+    this.showVendorModal.set(true);
   }
 
   openEditModal(vendor: Vendor): void {
-    this.isEditMode = true;
-    this.selectedVendorId = vendor.id;
+    this.isEditMode.set(true);
+    this.selectedVendorId.set(vendor.id);
     this.vendorForm.patchValue({
       code: vendor.code,
       name: vendor.name,
@@ -151,12 +151,12 @@ export class VendorListComponent implements OnInit {
       apAccountId: vendor.apAccountId,
       isActive: vendor.isActive
     });
-    this.showVendorModal = true;
+    this.showVendorModal.set(true);
   }
 
   closeVendorModal(): void {
-    this.showVendorModal = false;
-    this.selectedVendorId = null;
+    this.showVendorModal.set(false);
+    this.selectedVendorId.set(null);
   }
 
   saveVendor(): void {
@@ -170,8 +170,9 @@ export class VendorListComponent implements OnInit {
       code: this.vendorForm.value.code.toUpperCase().trim()
     };
 
-    if (this.isEditMode && this.selectedVendorId) {
-      this.vendorService.updateVendor(this.selectedVendorId, payload).subscribe({
+    const editId = this.selectedVendorId();
+    if (this.isEditMode() && editId) {
+      this.vendorService.updateVendor(editId, payload).subscribe({
         next: () => {
           this.notificationService.success('Vendor updated successfully');
           this.closeVendorModal();
@@ -196,36 +197,36 @@ export class VendorListComponent implements OnInit {
   }
 
   viewOpenBills(vendor: Vendor): void {
-    this.selectedVendorForBills = vendor;
-    this.showOpenBillsModal = true;
-    this.loadingOpenBills = true;
+    this.selectedVendorForBills.set(vendor);
+    this.showOpenBillsModal.set(true);
+    this.loadingOpenBills.set(true);
     this.vendorService.getOpenBills(vendor.id).subscribe({
       next: bills => {
-        this.openBills = bills;
-        this.loadingOpenBills = false;
+        this.openBills.set(bills);
+        this.loadingOpenBills.set(false);
       },
       error: err => {
-        this.loadingOpenBills = false;
+        this.loadingOpenBills.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load open bills');
       }
     });
   }
 
   closeOpenBillsModal(): void {
-    this.showOpenBillsModal = false;
-    this.selectedVendorForBills = null;
-    this.openBills = [];
+    this.showOpenBillsModal.set(false);
+    this.selectedVendorForBills.set(null);
+    this.openBills.set([]);
   }
 
   goToPage(p: number): void {
-    if (p >= 0 && p < this.vendorsPage.totalPages) {
-      this.currentPage = p;
+    if (p >= 0 && p < this.vendorsPage().totalPages) {
+      this.currentPage.set(p);
       this.loadVendors();
     }
   }
 
   getAccountLabel(accId: number): string {
-    const acc = this.accounts.find(a => a.id === accId);
+    const acc = this.accounts().find(a => a.id === accId);
     return acc ? `${acc.code} - ${acc.name}` : `ID: ${accId}`;
   }
 }

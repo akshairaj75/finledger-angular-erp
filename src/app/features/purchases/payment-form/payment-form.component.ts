@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { BankAccount } from '../../../core/models/bank-account.model';
@@ -33,14 +33,15 @@ export class PaymentFormComponent implements OnInit {
 
   paymentForm!: FormGroup;
 
-  vendors: Vendor[] = [];
-  selectedVendor: Vendor | null = null;
-  bankAccounts: BankAccount[] = [];
-  selectedBankAccount: BankAccount | null = null;
+  vendors = signal<Vendor[]>([]);
+  selectedVendor = signal<Vendor | null>(null);
+  bankAccounts = signal<BankAccount[]>([]);
+  selectedBankAccount = signal<BankAccount | null>(null);
 
-  openBills: EditableOpenBill[] = [];
-  loadingBills = false;
-  submitting = false;
+  openBills = signal<EditableOpenBill[]>([]);
+  loadingBills = signal(false);
+  submitting = signal(false);
+  private formAmount = signal(0);
 
   readonly paymentMethods: PaymentMethod[] = ['BANK_TRANSFER', 'CHEQUE', 'CASH', 'CARD'];
 
@@ -64,29 +65,32 @@ export class PaymentFormComponent implements OnInit {
 
     // Re-run auto allocation on amount change
     this.paymentForm.get('amount')?.valueChanges.subscribe(val => {
-      if (this.openBills.length > 0) {
-        this.autoAllocateOldestFirst(Number(val) || 0);
+      const numeric = Number(val) || 0;
+      this.formAmount.set(numeric);
+      if (this.openBills().length > 0) {
+        this.autoAllocateOldestFirst(numeric);
       }
     });
 
     this.paymentForm.get('bankAccountId')?.valueChanges.subscribe(accId => {
-      this.selectedBankAccount = this.bankAccounts.find(b => b.id === Number(accId)) || null;
+      this.selectedBankAccount.set(this.bankAccounts().find(b => b.id === Number(accId)) || null);
     });
   }
 
   private loadDependencies(): void {
     this.vendorService.getVendors({ page: 0, size: 200, isActive: true }).subscribe({
       next: page => {
-        this.vendors = page.content;
+        this.vendors.set(page.content);
       }
     });
 
     this.bankAccountService.getBankAccounts().subscribe({
       next: accounts => {
-        this.bankAccounts = accounts.filter(a => a.isActive);
-        if (this.bankAccounts.length > 0) {
-          this.paymentForm.patchValue({ bankAccountId: this.bankAccounts[0].id });
-          this.selectedBankAccount = this.bankAccounts[0];
+        const active = accounts.filter(a => a.isActive);
+        this.bankAccounts.set(active);
+        if (active.length > 0) {
+          this.paymentForm.patchValue({ bankAccountId: active[0].id });
+          this.selectedBankAccount.set(active[0]);
         }
       }
     });
@@ -95,9 +99,9 @@ export class PaymentFormComponent implements OnInit {
   onVendorChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const vendorId = Number(target.value);
-    const vendor = this.vendors.find(v => v.id === vendorId) || null;
-    this.selectedVendor = vendor;
-    this.openBills = [];
+    const vendor = this.vendors().find(v => v.id === vendorId) || null;
+    this.selectedVendor.set(vendor);
+    this.openBills.set([]);
 
     if (vendor) {
       this.paymentForm.patchValue({ currencyCode: vendor.currencyCode || 'AED' });
@@ -106,16 +110,16 @@ export class PaymentFormComponent implements OnInit {
   }
 
   private loadOpenBills(vendorId: number): void {
-    this.loadingBills = true;
+    this.loadingBills.set(true);
     this.vendorService.getOpenBills(vendorId).subscribe({
       next: bills => {
         // Sort oldest due date first (FinLedger v2.0 Section 4.7 & 5.3)
         const sorted = [...bills].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-        this.openBills = sorted.map(bill => ({
+        this.openBills.set(sorted.map(bill => ({
           ...bill,
           allocatedAmount: 0
-        }));
-        this.loadingBills = false;
+        })));
+        this.loadingBills.set(false);
 
         const currentAmt = Number(this.paymentForm.get('amount')?.value) || 0;
         if (currentAmt > 0) {
@@ -123,7 +127,7 @@ export class PaymentFormComponent implements OnInit {
         }
       },
       error: err => {
-        this.loadingBills = false;
+        this.loadingBills.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to load open vendor bills');
       }
     });
@@ -133,29 +137,28 @@ export class PaymentFormComponent implements OnInit {
     const available = totalToAllocate !== undefined ? totalToAllocate : (Number(this.paymentForm.get('amount')?.value) || 0);
     let remaining = available;
 
-    for (const bill of this.openBills) {
-      if (remaining <= 0) {
-        bill.allocatedAmount = 0;
-      } else {
+    this.openBills.update(list =>
+      list.map(bill => {
+        if (remaining <= 0) {
+          return { ...bill, allocatedAmount: 0 };
+        }
         const canPay = Math.min(bill.balanceDue, remaining);
-        bill.allocatedAmount = Math.round(canPay * 100) / 100;
-        remaining = Math.round((remaining - bill.allocatedAmount) * 100) / 100;
-      }
-    }
+        const allocatedAmount = Math.round(canPay * 100) / 100;
+        remaining = Math.round((remaining - allocatedAmount) * 100) / 100;
+        return { ...bill, allocatedAmount };
+      })
+    );
   }
 
   clearAllocations(): void {
-    for (const bill of this.openBills) {
-      bill.allocatedAmount = 0;
-    }
+    this.openBills.update(list => list.map(bill => ({ ...bill, allocatedAmount: 0 })));
   }
 
   togglePayFull(bill: EditableOpenBill): void {
-    if (bill.allocatedAmount === bill.balanceDue) {
-      bill.allocatedAmount = 0;
-    } else {
-      bill.allocatedAmount = bill.balanceDue;
-    }
+    const targetVal = bill.allocatedAmount === bill.balanceDue ? 0 : bill.balanceDue;
+    this.openBills.update(list =>
+      list.map(item => (item.id === bill.id ? { ...item, allocatedAmount: targetVal } : item))
+    );
   }
 
   onManualAllocationChange(bill: EditableOpenBill, event: Event): void {
@@ -167,25 +170,24 @@ export class PaymentFormComponent implements OnInit {
       input.value = val.toString();
       this.notificationService.warning(`Cannot allocate more than bill balance due (${bill.balanceDue} AED)`);
     }
-    bill.allocatedAmount = Math.round(val * 100) / 100;
+    const rounded = Math.round(val * 100) / 100;
+    this.openBills.update(list =>
+      list.map(item => (item.id === bill.id ? { ...item, allocatedAmount: rounded } : item))
+    );
   }
 
-  get totalAllocated(): number {
-    return Math.round(this.openBills.reduce((sum, bill) => sum + (bill.allocatedAmount || 0), 0) * 100) / 100;
-  }
+  readonly totalAllocated = computed(() =>
+    Math.round(this.openBills().reduce((sum, bill) => sum + (bill.allocatedAmount || 0), 0) * 100) / 100
+  );
 
-  get paymentAmount(): number {
-    return Number(this.paymentForm.get('amount')?.value) || 0;
-  }
+  readonly paymentAmount = computed(() => this.formAmount());
 
-  get unappliedAmount(): number {
-    const diff = this.paymentAmount - this.totalAllocated;
+  readonly unappliedAmount = computed(() => {
+    const diff = this.paymentAmount() - this.totalAllocated();
     return diff > 0 ? Math.round(diff * 100) / 100 : 0;
-  }
+  });
 
-  get isOverAllocated(): boolean {
-    return this.totalAllocated > this.paymentAmount;
-  }
+  readonly isOverAllocated = computed(() => this.totalAllocated() > this.paymentAmount());
 
   submitPayment(): void {
     if (this.paymentForm.invalid) {
@@ -194,15 +196,15 @@ export class PaymentFormComponent implements OnInit {
       return;
     }
 
-    if (this.isOverAllocated) {
+    if (this.isOverAllocated()) {
       this.notificationService.error(
-        `Total allocated (${this.totalAllocated} AED) cannot exceed the total payment amount (${this.paymentAmount} AED).`
+        `Total allocated (${this.totalAllocated()} AED) cannot exceed the total payment amount (${this.paymentAmount()} AED).`
       );
       return;
     }
 
     const formVal = this.paymentForm.value;
-    const allocations: PaymentAllocationRequest[] = this.openBills
+    const allocations: PaymentAllocationRequest[] = this.openBills()
       .filter(b => b.allocatedAmount > 0)
       .map(b => ({
         billId: b.id,
@@ -220,17 +222,17 @@ export class PaymentFormComponent implements OnInit {
       allocations
     };
 
-    this.submitting = true;
+    this.submitting.set(true);
     this.paymentService.createPayment(payload).subscribe({
       next: payment => {
-        this.submitting = false;
+        this.submitting.set(false);
         this.notificationService.success(
           `Vendor Payment ${payment.paymentNo} posted successfully! GL voucher created.`
         );
         this.router.navigate(['/purchases/bills']);
       },
       error: err => {
-        this.submitting = false;
+        this.submitting.set(false);
         this.notificationService.error(err?.error?.message || 'Failed to record and post vendor payment');
       }
     });

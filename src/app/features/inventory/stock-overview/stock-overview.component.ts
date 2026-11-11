@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ItemCategory, StockMovement, StockSummary, Warehouse } from '../../../core/models/inventory.model';
@@ -17,31 +17,34 @@ export class StockOverviewComponent implements OnInit {
   private inventoryService = inject(InventoryService);
   private notificationService = inject(NotificationService);
 
-  stockList: StockSummary[] = [];
-  filteredList: StockSummary[] = [];
-  warehouses: Warehouse[] = [];
-  categories: ItemCategory[] = [];
+  stockList = signal<StockSummary[]>([]);
+  filteredList = signal<StockSummary[]>([]);
+  warehouses = signal<Warehouse[]>([]);
+  categories = signal<ItemCategory[]>([]);
 
-  loading = true;
-  searchTerm = '';
-  selectedWarehouseId: number | null = null;
-  selectedCategoryId: number | null = null;
-  selectedStatus = 'ALL';
+  loading = signal(true);
+  searchTerm = signal('');
+  selectedWarehouseId = signal<number | null>(null);
+  selectedCategoryId = signal<number | null>(null);
+  selectedStatus = signal('ALL');
 
   // Item Movements Drawer / Modal State
-  selectedItem: StockSummary | null = null;
-  movements: StockMovement[] = [];
-  loadingMovements = false;
-  movementsFromDate = '';
-  movementsToDate = '';
+  selectedItem = signal<StockSummary | null>(null);
+  movements = signal<StockMovement[]>([]);
+  loadingMovements = signal(false);
+  movementsFromDate = signal('');
+  movementsToDate = signal('');
 
   // KPI Metrics
-  kpis = {
-    totalStockValue: 0,
-    activeSkus: 0,
-    lowStockCount: 0,
-    outOfStockCount: 0
-  };
+  kpis = computed(() => {
+    const items = this.stockList();
+    return {
+      totalStockValue: items.reduce((sum, item) => sum + (item.totalStockValue || 0), 0),
+      activeSkus: items.length,
+      lowStockCount: items.filter(i => i.status === 'LOW_STOCK').length,
+      outOfStockCount: items.filter(i => i.status === 'OUT_OF_STOCK').length
+    };
+  });
 
   ngOnInit(): void {
     this.loadDependencies();
@@ -50,58 +53,52 @@ export class StockOverviewComponent implements OnInit {
 
   loadDependencies(): void {
     this.inventoryService.getWarehouses().subscribe({
-      next: whs => (this.warehouses = whs),
+      next: whs => this.warehouses.set(whs),
       error: () => this.notificationService.error('Failed to load warehouses')
     });
 
     this.inventoryService.getCategories().subscribe({
-      next: cats => (this.categories = cats),
+      next: cats => this.categories.set(cats),
       error: () => this.notificationService.error('Failed to load item categories')
     });
   }
 
   loadStockSummary(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.inventoryService
       .getStockSummary(
-        this.selectedCategoryId ?? undefined,
-        this.selectedWarehouseId ?? undefined,
-        this.selectedStatus
+        this.selectedCategoryId() ?? undefined,
+        this.selectedWarehouseId() ?? undefined,
+        this.selectedStatus()
       )
       .subscribe({
         next: data => {
-          this.stockList = data;
-          this.calculateKpis(data);
+          this.stockList.set(data);
           this.applyClientFilters();
-          this.loading = false;
+          this.loading.set(false);
         },
         error: () => {
           this.notificationService.error('Failed to load stock summary');
-          this.loading = false;
+          this.loading.set(false);
         }
       });
   }
 
-  calculateKpis(items: StockSummary[]): void {
-    this.kpis.totalStockValue = items.reduce((sum, item) => sum + (item.totalStockValue || 0), 0);
-    this.kpis.activeSkus = items.length;
-    this.kpis.lowStockCount = items.filter(i => i.status === 'LOW_STOCK').length;
-    this.kpis.outOfStockCount = items.filter(i => i.status === 'OUT_OF_STOCK').length;
-  }
-
   applyClientFilters(): void {
-    if (!this.searchTerm.trim()) {
-      this.filteredList = [...this.stockList];
+    const list = this.stockList();
+    const rawTerm = this.searchTerm().trim();
+    if (!rawTerm) {
+      this.filteredList.set([...list]);
       return;
     }
 
-    const term = this.searchTerm.toLowerCase().trim();
-    this.filteredList = this.stockList.filter(
+    const term = rawTerm.toLowerCase();
+    this.filteredList.set(list.filter(
       item =>
         item.sku.toLowerCase().includes(term) ||
         item.name.toLowerCase().includes(term) ||
         (item.categoryName && item.categoryName.toLowerCase().includes(term))
-    );
+    ));
   }
 
   onFilterChange(): void {
@@ -109,7 +106,7 @@ export class StockOverviewComponent implements OnInit {
   }
 
   onStatusFilter(status: string): void {
-    this.selectedStatus = status;
+    this.selectedStatus.set(status);
     this.loadStockSummary();
   }
 
@@ -118,37 +115,38 @@ export class StockOverviewComponent implements OnInit {
   }
 
   openLedger(item: StockSummary): void {
-    this.selectedItem = item;
-    this.movements = [];
-    this.loadingMovements = true;
+    this.selectedItem.set(item);
+    this.movements.set([]);
+    this.loadingMovements.set(true);
 
     this.inventoryService
       .getItemMovements(
         item.itemId,
-        this.selectedWarehouseId ?? undefined,
-        this.movementsFromDate || undefined,
-        this.movementsToDate || undefined
+        this.selectedWarehouseId() ?? undefined,
+        this.movementsFromDate() || undefined,
+        this.movementsToDate() || undefined
       )
       .subscribe({
         next: movs => {
-          this.movements = movs;
-          this.loadingMovements = false;
+          this.movements.set(movs);
+          this.loadingMovements.set(false);
         },
         error: () => {
           this.notificationService.error(`Failed to load movements for ${item.sku}`);
-          this.loadingMovements = false;
+          this.loadingMovements.set(false);
         }
       });
   }
 
   closeLedger(): void {
-    this.selectedItem = null;
-    this.movements = [];
+    this.selectedItem.set(null);
+    this.movements.set([]);
   }
 
   filterLedgerDates(): void {
-    if (this.selectedItem) {
-      this.openLedger(this.selectedItem);
+    const current = this.selectedItem();
+    if (current) {
+      this.openLedger(current);
     }
   }
 

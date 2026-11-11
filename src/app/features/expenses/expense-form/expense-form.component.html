@@ -6,7 +6,7 @@
         <span>←</span> Back to Expenses
       </a>
       <h1 class="page-title">
-        {{ expenseId ? 'Edit Expense Claim #' + expenseId : 'New Expense Claim' }}
+        {{ expenseId() ? 'Edit Expense Claim #' + expenseId() : 'New Expense Claim' }}
       </h1>
       <p class="page-subtitle">Submit expenditures for company reimbursement or record direct company spending</p>
     </div>
@@ -16,9 +16,9 @@
         type="button"
         class="btn btn-outline"
         (click)="saveDraft()"
-        [disabled]="savingDraft || submitting"
+        [disabled]="savingDraft() || submitting()"
       >
-        <span *ngIf="savingDraft" class="spinner-sm"></span>
+        <span *ngIf="savingDraft()" class="spinner-sm"></span>
         <span>💾</span> Save Draft
       </button>
 
@@ -26,21 +26,21 @@
         type="button"
         class="btn btn-primary"
         (click)="submitForApproval()"
-        [disabled]="savingDraft || submitting"
+        [disabled]="savingDraft() || submitting()"
       >
-        <span *ngIf="submitting" class="spinner-sm"></span>
+        <span *ngIf="submitting()" class="spinner-sm"></span>
         <span>🚀</span> Submit for Approval
       </button>
     </div>
   </div>
 
   <!-- Real-Time Policy Alert Banner (FinLedger v2.0 Section 4.11) -->
-  <div class="policy-alert-banner" *ngIf="policyWarnings.length > 0">
+  <div class="policy-alert-banner" *ngIf="policyWarnings().length > 0">
     <div class="alert-icon">⚠️</div>
     <div class="alert-content">
       <h4 class="alert-title">Corporate Expense Policy Notice</h4>
       <ul class="alert-list">
-        <li *ngFor="let w of policyWarnings">
+        <li *ngFor="let w of policyWarnings()">
           <strong>{{ w.type === 'RECEIPT' ? 'Missing Receipt Requirement:' : 'Per-Claim Limit Warning:' }}</strong>
           {{ w.message }}
         </li>
@@ -92,7 +92,7 @@
             <label class="form-label">Employee (Claimant) <span class="required">*</span></label>
             <select formControlName="employeeUserId" class="form-control">
               <option [ngValue]="null" disabled>Select Employee</option>
-              <option *ngFor="let emp of employees" [ngValue]="emp.id">
+              <option *ngFor="let emp of employees()" [ngValue]="emp.id">
                 {{ emp.fullName }} ({{ emp.email }})
               </option>
             </select>
@@ -103,7 +103,7 @@
             <label class="form-label">Paid From Account <span class="required">*</span></label>
             <select formControlName="bankAccountId" class="form-control">
               <option [ngValue]="null" disabled>Select Bank / Cash / Card Account</option>
-              <option *ngFor="let b of bankAccounts" [ngValue]="b.id">
+              <option *ngFor="let b of bankAccounts()" [ngValue]="b.id">
                 {{ b.name }} ({{ b.currencyCode }}) [{{ b.accountKind }}]
               </option>
             </select>
@@ -173,7 +173,7 @@
                     (change)="onCategoryChange(i)"
                   >
                     <option [ngValue]="null" disabled>Select Category</option>
-                    <option *ngFor="let cat of categories" [ngValue]="cat.id">
+                    <option *ngFor="let cat of categories()" [ngValue]="cat.id">
                       {{ cat.name }} (Max: {{ cat.limitPerClaim ? 'AED ' + cat.limitPerClaim : 'No limit' }})
                     </option>
                   </select>
@@ -197,7 +197,7 @@
                 <td>
                   <select formControlName="costCenterId" class="form-control form-control-sm">
                     <option [ngValue]="null">None</option>
-                    <option *ngFor="let cc of costCenters" [ngValue]="cc.id">
+                    <option *ngFor="let cc of costCenters()" [ngValue]="cc.id">
                       {{ cc.name }}
                     </option>
                   </select>
@@ -208,7 +208,7 @@
                   <div class="customer-picker">
                     <select formControlName="customerId" class="form-control form-control-sm">
                       <option [ngValue]="null">Non-billable</option>
-                      <option *ngFor="let c of customers" [ngValue]="c.id">
+                      <option *ngFor="let c of customers()" [ngValue]="c.id">
                         {{ c.name }}
                       </option>
                     </select>
@@ -235,7 +235,7 @@
                 <td>
                   <select formControlName="taxRateId" class="form-control form-control-sm">
                     <option [ngValue]="null">0% None</option>
-                    <option *ngFor="let tr of taxRates" [ngValue]="tr.id">
+                    <option *ngFor="let tr of taxRates()" [ngValue]="tr.id">
                       {{ tr.code }} ({{ tr.rate }}%)
                     </option>
                   </select>
@@ -262,15 +262,15 @@
         <div class="totals-bar mt-4">
           <div class="totals-row">
             <span class="totals-label">Subtotal (Net):</span>
-            <span class="totals-value">AED {{ subtotal | number:'1.2-2' }}</span>
+            <span class="totals-value">AED {{ subtotal() | number:'1.2-2' }}</span>
           </div>
           <div class="totals-row">
             <span class="totals-label">Recoverable VAT Total:</span>
-            <span class="totals-value">AED {{ taxTotal | number:'1.2-2' }}</span>
+            <span class="totals-value">AED {{ taxTotal() | number:'1.2-2' }}</span>
           </div>
           <div class="totals-row grand-total-row">
             <span class="totals-label">Grand Total:</span>
-            <span class="totals-value">AED {{ grandTotal | number:'1.2-2' }}</span>
+            <span class="totals-value">AED {{ grandTotal() | number:'1.2-2' }}</span>
           </div>
         </div>
       </div>
@@ -288,7 +288,7 @@
         <!-- Drag & Drop Zone -->
         <div
           class="drop-zone"
-          [class.drag-active]="isDragging"
+          [class.drag-active]="isDragging()"
           (dragover)="onDragOver($event)"
           (dragleave)="onDragLeave($event)"
           (drop)="onDrop($event)"
@@ -324,9 +324,9 @@
         </div>
 
         <!-- Files Staged for Upload -->
-        <div class="file-list mt-3" *ngIf="pendingFiles.length > 0">
-          <h5 class="file-list-heading">Queued for Upload ({{ pendingFiles.length }})</h5>
-          <div class="file-item" *ngFor="let pf of pendingFiles; let i = index">
+        <div class="file-list mt-3" *ngIf="pendingFiles().length > 0">
+          <h5 class="file-list-heading">Queued for Upload ({{ pendingFiles().length }})</h5>
+          <div class="file-item" *ngFor="let pf of pendingFiles(); let i = index">
             <!-- Thumbnail if image -->
             <img *ngIf="pf.previewUrl" [src]="pf.previewUrl" class="file-thumb" alt="Receipt preview" />
             <span *ngIf="!pf.previewUrl" class="file-icon">📄</span>
@@ -341,9 +341,9 @@
         </div>
 
         <!-- Already Uploaded Attachments (if editing) -->
-        <div class="file-list mt-3" *ngIf="existingAttachments.length > 0">
-          <h5 class="file-list-heading">Attached Receipts ({{ existingAttachments.length }})</h5>
-          <div class="file-item" *ngFor="let att of existingAttachments">
+        <div class="file-list mt-3" *ngIf="existingAttachments().length > 0">
+          <h5 class="file-list-heading">Attached Receipts ({{ existingAttachments().length }})</h5>
+          <div class="file-item" *ngFor="let att of existingAttachments()">
             <span class="file-icon">📎</span>
             <div class="file-meta">
               <span class="file-name">{{ att.fileName }}</span>
@@ -378,20 +378,20 @@
             </div>
           </div>
 
-          <div class="stepper-connector" [class.active-connector]="grandTotal > financeThreshold"></div>
+          <div class="stepper-connector" [class.active-connector]="grandTotal() > financeThreshold"></div>
 
           <!-- Step 2: Finance Review (Triggered if > 2,000 AED) -->
           <div
             class="stepper-step"
-            [ngClass]="grandTotal > financeThreshold ? 'active-step' : 'bypassed-step'"
+            [ngClass]="grandTotal() > financeThreshold ? 'active-step' : 'bypassed-step'"
           >
-            <div class="step-circle">{{ grandTotal > financeThreshold ? '2' : '—' }}</div>
+            <div class="step-circle">{{ grandTotal() > financeThreshold ? '2' : '—' }}</div>
             <div class="step-details">
               <strong>Finance Review</strong>
-              <small *ngIf="grandTotal > financeThreshold" class="text-highlight">
+              <small *ngIf="grandTotal() > financeThreshold" class="text-highlight">
                 Required (Amount exceeds AED {{ financeThreshold | number:'1.2-2' }} threshold)
               </small>
-              <small *ngIf="grandTotal <= financeThreshold" class="text-muted">
+              <small *ngIf="grandTotal() <= financeThreshold" class="text-muted">
                 Not required for claims ≤ AED {{ financeThreshold | number:'1.2-2' }}
               </small>
             </div>
@@ -451,8 +451,8 @@
             <tfoot *ngIf="getJournalPreviewLines().length > 0">
               <tr class="preview-total-row">
                 <td class="font-bold">Total (AED):</td>
-                <td class="text-right font-bold">{{ grandTotal | number:'1.2-2' }}</td>
-                <td class="text-right font-bold">{{ grandTotal | number:'1.2-2' }}</td>
+                <td class="text-right font-bold">{{ grandTotal() | number:'1.2-2' }}</td>
+                <td class="text-right font-bold">{{ grandTotal() | number:'1.2-2' }}</td>
               </tr>
             </tfoot>
           </table>

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BankingService } from '../services/banking.service';
@@ -30,14 +30,14 @@ import {
           <button
             class="btn btn-primary"
             (click)="handleAutoMatch()"
-            [disabled]="!currentReconciliation || currentReconciliation.status === 'COMPLETED' || loading"
+            [disabled]="!currentReconciliation() || currentReconciliation()?.status === 'COMPLETED' || loading()"
           >
             <span class="icon">⚡</span> Auto-Match Pairs
           </button>
           <button
             class="btn btn-success"
             (click)="handleComplete()"
-            [disabled]="!canComplete || loading"
+            [disabled]="!canComplete() || loading()"
           >
             <span class="icon">✓</span> Finish Reconciliation
           </button>
@@ -49,9 +49,9 @@ import {
         <div class="setup-grid">
           <div class="form-group">
             <label>Bank Account</label>
-            <select [(ngModel)]="selectedAccountId" (change)="onAccountChange()" class="form-control">
+            <select [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event); onAccountChange()" class="form-control">
               <option [ngValue]="null" disabled>Select Bank Account...</option>
-              <option *ngFor="let acc of bankAccounts" [ngValue]="acc.id">
+              <option *ngFor="let acc of bankAccounts()" [ngValue]="acc.id">
                 {{ acc.name }} ({{ acc.currencyCode }})
               </option>
             </select>
@@ -59,7 +59,7 @@ import {
 
           <div class="form-group">
             <label>Statement Cut-Off Date</label>
-            <input type="date" [(ngModel)]="statementDate" class="form-control" />
+            <input type="date" [ngModel]="statementDate()" (ngModelChange)="statementDate.set($event)" class="form-control" />
           </div>
 
           <div class="form-group">
@@ -67,7 +67,8 @@ import {
             <input
               type="number"
               step="0.01"
-              [(ngModel)]="statementBalance"
+              [ngModel]="statementBalance()"
+              (ngModelChange)="statementBalance.set($event)"
               placeholder="0.00"
               class="form-control"
             />
@@ -77,70 +78,70 @@ import {
             <button
               class="btn btn-primary w-100"
               (click)="startOrLoadReconciliation()"
-              [disabled]="!selectedAccountId || !statementDate || loading"
+              [disabled]="!selectedAccountId() || !statementDate() || loading()"
             >
-              {{ currentReconciliation ? 'Refresh Reconciliation' : 'Start Reconciliation' }}
+              {{ currentReconciliation() ? 'Refresh Reconciliation' : 'Start Reconciliation' }}
             </button>
           </div>
         </div>
       </div>
 
       <!-- Reconciliation Live Balance Strip -->
-      <div class="kpi-strip" *ngIf="currentReconciliation">
+      <div class="kpi-strip" *ngIf="currentReconciliation() as recon">
         <div class="kpi-card">
           <span class="kpi-label">Statement Balance</span>
-          <span class="kpi-val">{{ currentReconciliation.statementBalance | number:'1.2-2' }}</span>
+          <span class="kpi-val">{{ recon.statementBalance | number:'1.2-2' }}</span>
           <span class="kpi-sub">Per imported bank statement</span>
         </div>
 
         <div class="kpi-card">
           <span class="kpi-label">Cleared Book Balance</span>
-          <span class="kpi-val">{{ currentReconciliation.bookBalance | number:'1.2-2' }}</span>
+          <span class="kpi-val">{{ recon.bookBalance | number:'1.2-2' }}</span>
           <span class="kpi-sub">Cleared ledger balance</span>
         </div>
 
         <div
           class="kpi-card"
           [ngClass]="{
-            'kpi-balanced': isBalanced,
-            'kpi-unbalanced': !isBalanced
+            'kpi-balanced': isBalanced(),
+            'kpi-unbalanced': !isBalanced()
           }"
         >
           <span class="kpi-label">Reconciliation Difference</span>
-          <span class="kpi-val difference-val">{{ currentReconciliation.difference | number:'1.2-2' }}</span>
-          <span class="kpi-sub badge" [ngClass]="isBalanced ? 'badge-success' : 'badge-danger'">
-            {{ isBalanced ? '✓ STRICTLY BALANCED (0.00)' : 'UNRECONCILED DIFFERENCE' }}
+          <span class="kpi-val difference-val">{{ recon.difference | number:'1.2-2' }}</span>
+          <span class="kpi-sub badge" [ngClass]="isBalanced() ? 'badge-success' : 'badge-danger'">
+            {{ isBalanced() ? '✓ STRICTLY BALANCED (0.00)' : 'UNRECONCILED DIFFERENCE' }}
           </span>
         </div>
 
         <div class="kpi-card">
           <span class="kpi-label">Reconciliation Status</span>
-          <span class="kpi-val status-val" [ngClass]="currentReconciliation.status === 'COMPLETED' ? 'text-success' : 'text-primary'">
-            {{ currentReconciliation.status }}
+          <span class="kpi-val status-val" [ngClass]="recon.status === 'COMPLETED' ? 'text-success' : 'text-primary'">
+            {{ recon.status }}
           </span>
           <span class="kpi-sub">
-            {{ currentReconciliation.matchedCount }} Matched |
-            {{ currentReconciliation.unmatchedStatementCount }} Stmt Unmatched |
-            {{ currentReconciliation.unmatchedBookCount }} Book Open
+            {{ recon.matchedCount }} Matched |
+            {{ recon.unmatchedStatementCount }} Stmt Unmatched |
+            {{ recon.unmatchedBookCount }} Book Open
           </span>
         </div>
       </div>
 
       <!-- Manual Match Selection Bar -->
-      <div class="manual-match-bar" *ngIf="selectedStmtLineId || selectedBookLineId">
+      <div class="manual-match-bar" *ngIf="selectedStmtLineId() || selectedBookLineId()">
         <div class="match-info">
-          <span *ngIf="selectedStmtLineId">
-            Statement Line #{{ selectedStmtLineId }} ({{ getSelectedStmtLine()?.amount | number:'1.2-2' }})
+          <span *ngIf="selectedStmtLineId()">
+            Statement Line #{{ selectedStmtLineId() }} ({{ getSelectedStmtLine()?.amount | number:'1.2-2' }})
           </span>
-          <span class="connector" *ngIf="selectedStmtLineId && selectedBookLineId"> ↔ </span>
-          <span *ngIf="selectedBookLineId">
-            Book Entry #{{ selectedBookLineId }} ({{ getSelectedBookLine()?.netAmount | number:'1.2-2' }})
+          <span class="connector" *ngIf="selectedStmtLineId() && selectedBookLineId()"> ↔ </span>
+          <span *ngIf="selectedBookLineId()">
+            Book Entry #{{ selectedBookLineId() }} ({{ getSelectedBookLine()?.netAmount | number:'1.2-2' }})
           </span>
         </div>
         <div class="match-actions">
           <button
             class="btn btn-sm btn-primary"
-            *ngIf="selectedStmtLineId && selectedBookLineId"
+            *ngIf="selectedStmtLineId() && selectedBookLineId()"
             (click)="handleManualMatch()"
           >
             Confirm Match
@@ -150,12 +151,12 @@ import {
       </div>
 
       <!-- Side-by-Side Reconciliation Split View -->
-      <div class="recon-split-container" *ngIf="currentReconciliation">
+      <div class="recon-split-container" *ngIf="currentReconciliation() as recon">
         <!-- Left Panel: Statement Lines (Imported CSV) -->
         <div class="recon-panel left-panel">
           <div class="panel-header">
             <h3>Bank Statement Transactions</h3>
-            <span class="count-badge">{{ currentReconciliation.statementLines.length }} lines</span>
+            <span class="count-badge">{{ recon.statementLines.length }} lines</span>
           </div>
 
           <div class="table-wrapper">
@@ -172,15 +173,15 @@ import {
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let line of currentReconciliation.statementLines"
-                  [class.row-selected]="selectedStmtLineId === line.id"
+                  *ngFor="let line of recon.statementLines"
+                  [class.row-selected]="selectedStmtLineId() === line.id"
                   [class.row-matched]="line.matchStatus === 'MATCHED'"
                 >
                   <td>
                     <input
                       type="radio"
                       name="selectedStmtLine"
-                      [checked]="selectedStmtLineId === line.id"
+                      [checked]="selectedStmtLineId() === line.id"
                       (change)="selectStmtLine(line.id)"
                       [disabled]="line.matchStatus === 'MATCHED'"
                     />
@@ -210,7 +211,7 @@ import {
                   </td>
                   <td>
                     <button
-                      *ngIf="line.matchStatus === 'MATCHED' && currentReconciliation.status === 'IN_PROGRESS'"
+                      *ngIf="line.matchStatus === 'MATCHED' && recon.status === 'IN_PROGRESS'"
                       class="btn btn-xs btn-outline-danger"
                       (click)="handleUnmatch(line.id)"
                       title="Unmatch this statement line"
@@ -218,7 +219,7 @@ import {
                       Unmatch
                     </button>
                     <button
-                      *ngIf="line.matchStatus !== 'MATCHED' && line.amount < 0 && currentReconciliation.status === 'IN_PROGRESS'"
+                      *ngIf="line.matchStatus !== 'MATCHED' && line.amount < 0 && recon.status === 'IN_PROGRESS'"
                       class="btn btn-xs btn-outline-warning"
                       (click)="openBankChargeModal(line)"
                       title="Convert fee directly to journal entry"
@@ -227,7 +228,7 @@ import {
                     </button>
                   </td>
                 </tr>
-                <tr *ngIf="currentReconciliation.statementLines.length === 0">
+                <tr *ngIf="recon.statementLines.length === 0">
                   <td colspan="6" class="text-center text-muted py-4">
                     No statement lines found. Click "Import Statement (CSV)" to upload bank statement.
                   </td>
@@ -241,7 +242,7 @@ import {
         <div class="recon-panel right-panel">
           <div class="panel-header">
             <h3>Book Transactions (General Ledger)</h3>
-            <span class="count-badge">{{ currentReconciliation.bookTransactions.length }} lines</span>
+            <span class="count-badge">{{ recon.bookTransactions.length }} lines</span>
           </div>
 
           <div class="table-wrapper">
@@ -258,15 +259,15 @@ import {
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let book of currentReconciliation.bookTransactions"
-                  [class.row-selected]="selectedBookLineId === book.journalLineId"
+                  *ngFor="let book of recon.bookTransactions"
+                  [class.row-selected]="selectedBookLineId() === book.journalLineId"
                   [class.row-matched]="book.isReconciled"
                 >
                   <td>
                     <input
                       type="radio"
                       name="selectedBookLine"
-                      [checked]="selectedBookLineId === book.journalLineId"
+                      [checked]="selectedBookLineId() === book.journalLineId"
                       (change)="selectBookLine(book.journalLineId)"
                       [disabled]="book.isReconciled"
                     />
@@ -291,7 +292,7 @@ import {
                     </span>
                   </td>
                 </tr>
-                <tr *ngIf="currentReconciliation.bookTransactions.length === 0">
+                <tr *ngIf="recon.bookTransactions.length === 0">
                   <td colspan="6" class="text-center text-muted py-4">
                     No unreconciled book transactions up to statement date.
                   </td>
@@ -303,7 +304,7 @@ import {
       </div>
 
       <!-- Bank Statement CSV Upload Modal -->
-      <div class="modal-backdrop" *ngIf="showUploadModal">
+      <div class="modal-backdrop" *ngIf="showUploadModal()">
         <div class="modal-box">
           <div class="modal-header">
             <h3>Upload Bank Statement (CSV)</h3>
@@ -312,15 +313,15 @@ import {
           <div class="modal-body">
             <div class="form-group">
               <label>Target Bank Account</label>
-              <select [(ngModel)]="uploadAccountId" class="form-control">
-                <option *ngFor="let acc of bankAccounts" [ngValue]="acc.id">
+              <select [ngModel]="uploadAccountId()" (ngModelChange)="uploadAccountId.set($event)" class="form-control">
+                <option *ngFor="let acc of bankAccounts()" [ngValue]="acc.id">
                   {{ acc.name }} ({{ acc.currencyCode }})
                 </option>
               </select>
             </div>
             <div class="form-group">
               <label>Statement Cut-Off Date (optional)</label>
-              <input type="date" [(ngModel)]="uploadDate" class="form-control" />
+              <input type="date" [ngModel]="uploadDate()" (ngModelChange)="uploadDate.set($event)" class="form-control" />
             </div>
             <div class="form-group">
               <label>Select CSV Statement File</label>
@@ -334,7 +335,7 @@ import {
             <button class="btn btn-light" (click)="closeUploadModal()">Cancel</button>
             <button
               class="btn btn-primary"
-              [disabled]="!selectedFile || !uploadAccountId || loading"
+              [disabled]="!selectedFile() || !uploadAccountId() || loading()"
               (click)="handleUploadStatement()"
             >
               Upload & Process
@@ -344,29 +345,29 @@ import {
       </div>
 
       <!-- Quick Bank Fee Modal -->
-      <div class="modal-backdrop" *ngIf="showChargeModal">
+      <div class="modal-backdrop" *ngIf="showChargeModal()">
         <div class="modal-box">
           <div class="modal-header">
             <h3>Quick Bank Fee / Charge Entry</h3>
             <button class="close-btn" (click)="closeChargeModal()">&times;</button>
           </div>
-          <div class="modal-body" *ngIf="activeChargeLine">
+          <div class="modal-body" *ngIf="activeChargeLine() as chargeLine">
             <p>
               Instantly create a posted journal entry to record this bank charge and match it to line:
             </p>
             <div class="fee-summary">
-              <div><strong>Date:</strong> {{ activeChargeLine.txnDate }}</div>
-              <div><strong>Amount:</strong> {{ Math.abs(activeChargeLine.amount) | number:'1.2-2' }}</div>
-              <div><strong>Narration:</strong> {{ activeChargeLine.description }}</div>
+              <div><strong>Date:</strong> {{ chargeLine.txnDate }}</div>
+              <div><strong>Amount:</strong> {{ Math.abs(chargeLine.amount) | number:'1.2-2' }}</div>
+              <div><strong>Narration:</strong> {{ chargeLine.description }}</div>
             </div>
             <div class="form-group mt-3">
               <label>Expense Narration</label>
-              <input type="text" [(ngModel)]="chargeDescription" class="form-control" />
+              <input type="text" [ngModel]="chargeDescription()" (ngModelChange)="chargeDescription.set($event)" class="form-control" />
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-light" (click)="closeChargeModal()">Cancel</button>
-            <button class="btn btn-warning" (click)="submitBankCharge()" [disabled]="loading">
+            <button class="btn btn-warning" (click)="submitBankCharge()" [disabled]="loading()">
               Create Entry & Match
             </button>
           </div>
@@ -819,41 +820,39 @@ export class ReconciliationComponent implements OnInit {
 
   Math = Math;
 
-  bankAccounts: BankAccount[] = [];
-  selectedAccountId: number | null = null;
-  statementDate: string = new Date().toISOString().split('T')[0];
-  statementBalance: number | null = null;
+  bankAccounts = signal<BankAccount[]>([]);
+  selectedAccountId = signal<number | null>(null);
+  statementDate = signal<string>(new Date().toISOString().split('T')[0]);
+  statementBalance = signal<number | null>(null);
 
-  currentReconciliation: BankReconciliation | null = null;
-  loading: boolean = false;
+  currentReconciliation = signal<BankReconciliation | null>(null);
+  loading = signal<boolean>(false);
 
   // Manual matching state
-  selectedStmtLineId: number | null = null;
-  selectedBookLineId: number | null = null;
+  selectedStmtLineId = signal<number | null>(null);
+  selectedBookLineId = signal<number | null>(null);
 
   // Upload modal state
-  showUploadModal: boolean = false;
-  uploadAccountId: number | null = null;
-  uploadDate: string = '';
-  selectedFile: File | null = null;
+  showUploadModal = signal<boolean>(false);
+  uploadAccountId = signal<number | null>(null);
+  uploadDate = signal<string>('');
+  selectedFile = signal<File | null>(null);
 
   // Quick Charge modal state
-  showChargeModal: boolean = false;
-  activeChargeLine: BankStatementLine | null = null;
-  chargeDescription: string = '';
+  showChargeModal = signal<boolean>(false);
+  activeChargeLine = signal<BankStatementLine | null>(null);
+  chargeDescription = signal<string>('');
 
-  get isBalanced(): boolean {
-    if (!this.currentReconciliation) return false;
-    return Math.abs(this.currentReconciliation.difference) < 0.001;
-  }
+  isBalanced = computed<boolean>(() => {
+    const recon = this.currentReconciliation();
+    if (!recon) return false;
+    return Math.abs(recon.difference) < 0.001;
+  });
 
-  get canComplete(): boolean {
-    return (
-      !!this.currentReconciliation &&
-      this.currentReconciliation.status === 'IN_PROGRESS' &&
-      this.isBalanced
-    );
-  }
+  canComplete = computed<boolean>(() => {
+    const recon = this.currentReconciliation();
+    return !!recon && recon.status === 'IN_PROGRESS' && this.isBalanced();
+  });
 
   ngOnInit(): void {
     this.loadBankAccounts();
@@ -862,10 +861,10 @@ export class ReconciliationComponent implements OnInit {
   loadBankAccounts(): void {
     this.bankingService.getBankAccounts().subscribe({
       next: (accounts) => {
-        this.bankAccounts = accounts;
-        if (accounts.length > 0 && !this.selectedAccountId) {
-          this.selectedAccountId = accounts[0].id;
-          this.uploadAccountId = accounts[0].id;
+        this.bankAccounts.set(accounts);
+        if (accounts.length > 0 && !this.selectedAccountId()) {
+          this.selectedAccountId.set(accounts[0].id);
+          this.uploadAccountId.set(accounts[0].id);
           this.checkExistingReconciliations();
         }
       },
@@ -874,184 +873,198 @@ export class ReconciliationComponent implements OnInit {
   }
 
   onAccountChange(): void {
-    this.uploadAccountId = this.selectedAccountId;
+    this.uploadAccountId.set(this.selectedAccountId());
     this.checkExistingReconciliations();
   }
 
   checkExistingReconciliations(): void {
-    if (!this.selectedAccountId) return;
-    this.bankingService.getReconciliationsByAccount(this.selectedAccountId).subscribe({
+    const accountId = this.selectedAccountId();
+    if (!accountId) return;
+    this.bankingService.getReconciliationsByAccount(accountId).subscribe({
       next: (recons) => {
         if (recons.length > 0) {
           const latest = recons[0];
-          this.currentReconciliation = latest;
-          this.statementDate = latest.statementDate;
-          this.statementBalance = latest.statementBalance;
+          this.currentReconciliation.set(latest);
+          this.statementDate.set(latest.statementDate);
+          this.statementBalance.set(latest.statementBalance);
         } else {
-          this.currentReconciliation = null;
+          this.currentReconciliation.set(null);
         }
       }
     });
   }
 
   startOrLoadReconciliation(): void {
-    if (!this.selectedAccountId || !this.statementDate) return;
-    this.loading = true;
+    const accountId = this.selectedAccountId();
+    const stmtDate = this.statementDate();
+    if (!accountId || !stmtDate) return;
+    this.loading.set(true);
     const req: StartReconciliationRequest = {
-      bankAccountId: this.selectedAccountId,
-      statementDate: this.statementDate,
-      statementBalance: this.statementBalance ?? 0
+      bankAccountId: accountId,
+      statementDate: stmtDate,
+      statementBalance: this.statementBalance() ?? 0
     };
 
     this.bankingService.startReconciliation(req).subscribe({
       next: (recon) => {
-        this.currentReconciliation = recon;
-        this.loading = false;
+        this.currentReconciliation.set(recon);
+        this.loading.set(false);
         this.clearSelection();
         this.notificationService.success('Reconciliation loaded successfully');
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Failed to start reconciliation');
       }
     });
   }
 
   selectStmtLine(id: number): void {
-    this.selectedStmtLineId = this.selectedStmtLineId === id ? null : id;
+    this.selectedStmtLineId.set(this.selectedStmtLineId() === id ? null : id);
   }
 
   selectBookLine(id: number): void {
-    this.selectedBookLineId = this.selectedBookLineId === id ? null : id;
+    this.selectedBookLineId.set(this.selectedBookLineId() === id ? null : id);
   }
 
   getSelectedStmtLine(): BankStatementLine | undefined {
-    return this.currentReconciliation?.statementLines.find(l => l.id === this.selectedStmtLineId);
+    const stmtId = this.selectedStmtLineId();
+    return this.currentReconciliation()?.statementLines.find(l => l.id === stmtId);
   }
 
   getSelectedBookLine(): BookTransaction | undefined {
-    return this.currentReconciliation?.bookTransactions.find(b => b.journalLineId === this.selectedBookLineId);
+    const bookId = this.selectedBookLineId();
+    return this.currentReconciliation()?.bookTransactions.find(b => b.journalLineId === bookId);
   }
 
   clearSelection(): void {
-    this.selectedStmtLineId = null;
-    this.selectedBookLineId = null;
+    this.selectedStmtLineId.set(null);
+    this.selectedBookLineId.set(null);
   }
 
   handleManualMatch(): void {
-    if (!this.currentReconciliation || !this.selectedStmtLineId || !this.selectedBookLineId) return;
-    this.loading = true;
+    const recon = this.currentReconciliation();
+    const stmtId = this.selectedStmtLineId();
+    const bookId = this.selectedBookLineId();
+    if (!recon || !stmtId || !bookId) return;
+    this.loading.set(true);
 
-    this.bankingService.match(this.currentReconciliation.id, {
-      statementLineId: this.selectedStmtLineId,
-      journalLineId: this.selectedBookLineId
+    this.bankingService.match(recon.id, {
+      statementLineId: stmtId,
+      journalLineId: bookId
     }).subscribe({
       next: (updated) => {
-        this.currentReconciliation = updated;
+        this.currentReconciliation.set(updated);
         this.clearSelection();
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.success('Matched statement line with journal entry');
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Match failed');
       }
     });
   }
 
   handleUnmatch(statementLineId: number): void {
-    if (!this.currentReconciliation) return;
-    this.loading = true;
+    const recon = this.currentReconciliation();
+    if (!recon) return;
+    this.loading.set(true);
 
-    this.bankingService.unmatch(this.currentReconciliation.id, statementLineId).subscribe({
+    this.bankingService.unmatch(recon.id, statementLineId).subscribe({
       next: (updated) => {
-        this.currentReconciliation = updated;
+        this.currentReconciliation.set(updated);
         this.clearSelection();
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.success('Unmatched statement line');
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Unmatch failed');
       }
     });
   }
 
   handleAutoMatch(): void {
-    if (!this.currentReconciliation) return;
-    this.loading = true;
+    const recon = this.currentReconciliation();
+    if (!recon) return;
+    this.loading.set(true);
 
-    this.bankingService.autoMatch(this.currentReconciliation.id).subscribe({
+    this.bankingService.autoMatch(recon.id).subscribe({
       next: (result) => {
         this.notificationService.success(`Auto-match completed! Matched ${result.matchedCount} line(s) totaling ${result.reconciledTotal.toFixed(2)}.`);
         this.refreshReconciliation();
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Auto-match failed');
       }
     });
   }
 
   refreshReconciliation(): void {
-    if (!this.currentReconciliation) return;
-    this.bankingService.getReconciliation(this.currentReconciliation.id).subscribe({
-      next: (recon) => {
-        this.currentReconciliation = recon;
-        this.loading = false;
+    const recon = this.currentReconciliation();
+    if (!recon) return;
+    this.bankingService.getReconciliation(recon.id).subscribe({
+      next: (updatedRecon) => {
+        this.currentReconciliation.set(updatedRecon);
+        this.loading.set(false);
       },
-      error: () => this.loading = false
+      error: () => this.loading.set(false)
     });
   }
 
   openBankChargeModal(line: BankStatementLine): void {
-    this.activeChargeLine = line;
-    this.chargeDescription = line.description || 'Bank Charge';
-    this.showChargeModal = true;
+    this.activeChargeLine.set(line);
+    this.chargeDescription.set(line.description || 'Bank Charge');
+    this.showChargeModal.set(true);
   }
 
   closeChargeModal(): void {
-    this.showChargeModal = false;
-    this.activeChargeLine = null;
+    this.showChargeModal.set(false);
+    this.activeChargeLine.set(null);
   }
 
   submitBankCharge(): void {
-    if (!this.currentReconciliation || !this.activeChargeLine) return;
-    this.loading = true;
+    const recon = this.currentReconciliation();
+    const chargeLine = this.activeChargeLine();
+    if (!recon || !chargeLine) return;
+    this.loading.set(true);
 
-    this.bankingService.createBankCharge(this.currentReconciliation.id, {
-      statementLineId: this.activeChargeLine.id,
-      description: this.chargeDescription
+    this.bankingService.createBankCharge(recon.id, {
+      statementLineId: chargeLine.id,
+      description: this.chargeDescription()
     }).subscribe({
       next: (updated) => {
-        this.currentReconciliation = updated;
+        this.currentReconciliation.set(updated);
         this.closeChargeModal();
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.success('Bank charge recorded and matched successfully');
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Failed to record bank charge');
       }
     });
   }
 
   handleComplete(): void {
-    if (!this.currentReconciliation) return;
-    if (!this.isBalanced) {
+    const recon = this.currentReconciliation();
+    if (!recon) return;
+    if (!this.isBalanced()) {
       this.notificationService.error('Reconciliation difference must strictly equal 0.00 to complete');
       return;
     }
 
-    this.loading = true;
-    this.bankingService.completeReconciliation(this.currentReconciliation.id).subscribe({
+    this.loading.set(true);
+    this.bankingService.completeReconciliation(recon.id).subscribe({
       next: (completed) => {
-        this.currentReconciliation = completed;
-        this.loading = false;
+        this.currentReconciliation.set(completed);
+        this.loading.set(false);
         this.notificationService.success('Bank reconciliation completed and cleared!');
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Failed to complete reconciliation');
       }
     });
@@ -1059,47 +1072,51 @@ export class ReconciliationComponent implements OnInit {
 
   // Statement CSV file upload handling
   openUploadModal(): void {
-    this.uploadAccountId = this.selectedAccountId;
-    this.uploadDate = this.statementDate;
-    this.selectedFile = null;
-    this.showUploadModal = true;
+    this.uploadAccountId.set(this.selectedAccountId());
+    this.uploadDate.set(this.statementDate());
+    this.selectedFile.set(null);
+    this.showUploadModal.set(true);
   }
 
   closeUploadModal(): void {
-    this.showUploadModal = false;
-    this.selectedFile = null;
+    this.showUploadModal.set(false);
+    this.selectedFile.set(null);
   }
 
   onFileSelected(event: any): void {
     const file = event.target.files?.[0];
     if (file) {
-      this.selectedFile = file;
+      this.selectedFile.set(file);
     }
   }
 
   handleUploadStatement(): void {
-    if (!this.selectedFile || !this.uploadAccountId) return;
-    this.loading = true;
+    const file = this.selectedFile();
+    const accountId = this.uploadAccountId();
+    if (!file || !accountId) return;
+    this.loading.set(true);
 
     const formData = new FormData();
-    formData.append('file', this.selectedFile);
-    formData.append('bankAccountId', this.uploadAccountId.toString());
-    if (this.uploadDate) {
-      formData.append('statementDate', this.uploadDate);
+    formData.append('file', file);
+    formData.append('bankAccountId', accountId.toString());
+    const date = this.uploadDate();
+    if (date) {
+      formData.append('statementDate', date);
     }
-    if (this.statementBalance !== null) {
-      formData.append('closingBalance', this.statementBalance.toString());
+    const bal = this.statementBalance();
+    if (bal !== null) {
+      formData.append('closingBalance', bal.toString());
     }
 
     this.bankingService.importStatement(formData).subscribe({
       next: (stmt) => {
         this.notificationService.success(`Imported statement with ${stmt.lines?.length || 0} transaction lines!`);
         this.closeUploadModal();
-        this.loading = false;
+        this.loading.set(false);
         this.startOrLoadReconciliation();
       },
       error: (err) => {
-        this.loading = false;
+        this.loading.set(false);
         this.notificationService.error(err.error?.message || 'Failed to import CSV statement');
       }
     });

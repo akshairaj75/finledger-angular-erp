@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { HasPermissionDirective } from '../../core/directives/has-permission.directive';
 import { DashboardSummary } from '../../core/models/report.model';
@@ -19,7 +19,7 @@ import { ReportService } from '../reports/services/report.service';
           <p class="subtitle">Real-time consolidated view across Ledger, Sales, Purchases, CRM, and Inventory</p>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary" (click)="loadDashboardData()" [disabled]="loading">
+          <button class="btn btn-secondary" (click)="loadDashboardData()" [disabled]="loading()">
             🔄 Refresh Metrics
           </button>
           <a *appHasPermission="'REPORT_VIEW'" routerLink="/reports/profit-loss" class="btn btn-primary">
@@ -28,12 +28,12 @@ import { ReportService } from '../reports/services/report.service';
         </div>
       </div>
 
-      <div *ngIf="loading && !summary" class="loading-state">
+      <div *ngIf="loading() && !summary()" class="loading-state">
         <div class="spinner"></div>
         <span>Consolidating enterprise metrics...</span>
       </div>
 
-      <div *ngIf="summary" class="dashboard-content">
+      <div *ngIf="summary() as s" class="dashboard-content">
         <!-- ROW 1: Financial KPI Cards (Hidden if user lacks financial visibility) -->
         <ng-container *appHasPermission="['REPORT_VIEW', 'LEDGER_VIEW', 'JOURNAL_VIEW']">
           <div class="section-title">
@@ -44,7 +44,7 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-blue">💰</div>
             <div class="kpi-meta">
               <span class="kpi-label">Total Revenue (YTD)</span>
-              <span class="kpi-value">{{ summary.totalRevenueYtd | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-value">{{ s.totalRevenueYtd | number:'1.2-2' }} <span class="currency">AED</span></span>
               <span class="kpi-hint text-success">↑ Operating Income</span>
             </div>
           </div>
@@ -53,7 +53,7 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-red">📉</div>
             <div class="kpi-meta">
               <span class="kpi-label">Total Expenses (YTD)</span>
-              <span class="kpi-value">{{ summary.totalExpensesYtd | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-value">{{ s.totalExpensesYtd | number:'1.2-2' }} <span class="currency">AED</span></span>
               <span class="kpi-hint text-muted">Operating & Direct</span>
             </div>
           </div>
@@ -62,7 +62,7 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-amber">🧾</div>
             <div class="kpi-meta">
               <span class="kpi-label">Accounts Receivable</span>
-              <span class="kpi-value">{{ summary.accountsReceivable | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-value">{{ s.accountsReceivable | number:'1.2-2' }} <span class="currency">AED</span></span>
               <a routerLink="/reports/ar-ageing" class="kpi-hint link-hint">Open Invoices →</a>
             </div>
           </div>
@@ -71,7 +71,7 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-green">🏦</div>
             <div class="kpi-meta">
               <span class="kpi-label">Cash & Bank Balances</span>
-              <span class="kpi-value">{{ summary.cashAndBank | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-value">{{ s.cashAndBank | number:'1.2-2' }} <span class="currency">AED</span></span>
               <a routerLink="/banking/reconciliation" class="kpi-hint link-hint">Reconciliation →</a>
             </div>
           </div>
@@ -80,7 +80,7 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-purple">📥</div>
             <div class="kpi-meta">
               <span class="kpi-label">Accounts Payable</span>
-              <span class="kpi-value">{{ summary.accountsPayable | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-value">{{ s.accountsPayable | number:'1.2-2' }} <span class="currency">AED</span></span>
               <a routerLink="/reports/ap-ageing" class="kpi-hint link-hint">Vendor Bills →</a>
             </div>
           </div>
@@ -96,8 +96,8 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-indigo">🎯</div>
             <div class="kpi-meta">
               <span class="kpi-label">Open CRM Pipeline</span>
-              <span class="kpi-value">{{ summary.openPipelineValue | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint font-weight-bold">{{ summary.openPipelineCount }} active opportunities</span>
+              <span class="kpi-value">{{ s.openPipelineValue | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-hint font-weight-bold">{{ s.openPipelineCount }} active opportunities</span>
             </div>
           </div>
 
@@ -105,9 +105,9 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-teal">📦</div>
             <div class="kpi-meta">
               <span class="kpi-label">Inventory Valuation</span>
-              <span class="kpi-value">{{ summary.totalInventoryValue | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint" [ngClass]="summary.lowStockItemCount > 0 ? 'text-danger' : 'text-success'">
-                {{ summary.lowStockItemCount > 0 ? '⚠ ' + summary.lowStockItemCount + ' items below reorder' : '✓ Stock levels healthy' }}
+              <span class="kpi-value">{{ s.totalInventoryValue | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-hint" [ngClass]="s.lowStockItemCount > 0 ? 'text-danger' : 'text-success'">
+                {{ s.lowStockItemCount > 0 ? '⚠ ' + s.lowStockItemCount + ' items below reorder' : '✓ Stock levels healthy' }}
               </span>
             </div>
           </div>
@@ -116,8 +116,8 @@ import { ReportService } from '../reports/services/report.service';
             <div class="kpi-icon-box bg-orange">⏳</div>
             <div class="kpi-meta">
               <span class="kpi-label">Awaiting Expense Approval</span>
-              <span class="kpi-value">{{ summary.expensesAwaitingApprovalAmount | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint text-warning font-weight-bold">{{ summary.expensesAwaitingApprovalCount }} pending claims</span>
+              <span class="kpi-value">{{ s.expensesAwaitingApprovalAmount | number:'1.2-2' }} <span class="currency">AED</span></span>
+              <span class="kpi-hint text-warning font-weight-bold">{{ s.expensesAwaitingApprovalCount }} pending claims</span>
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ import { ReportService } from '../reports/services/report.service';
             </div>
             <div class="chart-container">
               <div class="chart-bars">
-                <div class="month-column" *ngFor="let m of summary.monthlyRevenueExpenses">
+                <div class="month-column" *ngFor="let m of s.monthlyRevenueExpenses">
                   <div class="bars-pair">
                     <!-- Revenue bar -->
                     <div
@@ -166,28 +166,28 @@ import { ReportService } from '../reports/services/report.service';
             <div class="ageing-content">
               <div class="ageing-total">
                 <span class="total-label">Total Outstanding AR</span>
-                <span class="total-val">{{ summary.receivablesAgeing.total | number:'1.2-2' }} AED</span>
+                <span class="total-val">{{ s.receivablesAgeing.total | number:'1.2-2' }} AED</span>
               </div>
               <div class="ageing-buckets">
                 <div class="bucket-row">
                   <span class="bucket-name">Current (Not Overdue)</span>
-                  <span class="bucket-val text-success">{{ summary.receivablesAgeing.current | number:'1.2-2' }}</span>
+                  <span class="bucket-val text-success">{{ s.receivablesAgeing.current | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
                   <span class="bucket-name">1 — 30 Days Overdue</span>
-                  <span class="bucket-val">{{ summary.receivablesAgeing.days1To30 | number:'1.2-2' }}</span>
+                  <span class="bucket-val">{{ s.receivablesAgeing.days1To30 | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
                   <span class="bucket-name">31 — 60 Days Overdue</span>
-                  <span class="bucket-val text-warning">{{ summary.receivablesAgeing.days31To60 | number:'1.2-2' }}</span>
+                  <span class="bucket-val text-warning">{{ s.receivablesAgeing.days31To60 | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
                   <span class="bucket-name">61 — 90 Days Overdue</span>
-                  <span class="bucket-val text-orange">{{ summary.receivablesAgeing.days61To90 | number:'1.2-2' }}</span>
+                  <span class="bucket-val text-orange">{{ s.receivablesAgeing.days61To90 | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
                   <span class="bucket-name">> 90 Days (Critical)</span>
-                  <span class="bucket-val text-danger">{{ summary.receivablesAgeing.over90 | number:'1.2-2' }}</span>
+                  <span class="bucket-val text-danger">{{ s.receivablesAgeing.over90 | number:'1.2-2' }}</span>
                 </div>
               </div>
             </div>
@@ -213,7 +213,7 @@ import { ReportService } from '../reports/services/report.service';
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let tx of summary.recentTransactions">
+                <tr *ngFor="let tx of s.recentTransactions">
                   <td>{{ tx.date }}</td>
                   <td><span class="type-pill">{{ tx.type }}</span></td>
                   <td><strong>{{ tx.reference }}</strong></td>
@@ -221,7 +221,7 @@ import { ReportService } from '../reports/services/report.service';
                   <td class="text-right font-weight-bold">{{ tx.amount | number:'1.2-2' }}</td>
                   <td><span class="status-pill status-posted">{{ tx.status }}</span></td>
                 </tr>
-                <tr *ngIf="summary.recentTransactions.length === 0">
+                <tr *ngIf="s.recentTransactions.length === 0">
                   <td colspan="6" class="text-center text-muted py-3">No posted transactions recorded yet.</td>
                 </tr>
               </tbody>
@@ -635,31 +635,32 @@ export class DashboardComponent implements OnInit {
   private reportService = inject(ReportService);
   private notificationService = inject(NotificationService);
 
-  summary: DashboardSummary | null = null;
-  loading: boolean = false;
+  summary = signal<DashboardSummary | null>(null);
+  loading = signal(false);
 
   ngOnInit(): void {
     this.loadDashboardData();
   }
 
   loadDashboardData(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.reportService.getDashboardSummary().subscribe({
       next: (res) => {
-        this.summary = res;
-        this.loading = false;
+        this.summary.set(res);
+        this.loading.set(false);
       },
-      error: (err) => {
-        this.loading = false;
+      error: () => {
+        this.loading.set(false);
         this.notificationService.error('Failed to load dashboard metrics');
       }
     });
   }
 
   getBarHeight(val: number): number {
-    if (!this.summary || !this.summary.monthlyRevenueExpenses.length) return 5;
+    const s = this.summary();
+    if (!s || !s.monthlyRevenueExpenses.length) return 5;
     const maxVal = Math.max(
-      ...this.summary.monthlyRevenueExpenses.map(m => Math.max(m.revenue, m.expenses)),
+      ...s.monthlyRevenueExpenses.map(m => Math.max(m.revenue, m.expenses)),
       1000
     );
     const pct = (val / maxVal) * 100;

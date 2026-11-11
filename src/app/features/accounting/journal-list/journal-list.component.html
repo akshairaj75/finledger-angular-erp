@@ -18,17 +18,17 @@
     <div class="filter-grid">
       <div class="form-group">
         <label for="filterFrom">From Date</label>
-        <input type="date" id="filterFrom" [(ngModel)]="filterFrom" class="form-control" />
+        <input type="date" id="filterFrom" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
         <label for="filterTo">To Date</label>
-        <input type="date" id="filterTo" [(ngModel)]="filterTo" class="form-control" />
+        <input type="date" id="filterTo" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
         <label for="filterStatus">Status</label>
-        <select id="filterStatus" [(ngModel)]="filterStatus" class="form-control">
+        <select id="filterStatus" [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)" class="form-control">
           <option value="">All Statuses</option>
           <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
         </select>
@@ -36,7 +36,7 @@
 
       <div class="form-group">
         <label for="filterSource">Source</label>
-        <select id="filterSource" [(ngModel)]="filterSourceType" class="form-control">
+        <select id="filterSource" [ngModel]="filterSourceType()" (ngModelChange)="filterSourceType.set($event)" class="form-control">
           <option value="">All Sources</option>
           <option *ngFor="let src of sourceTypes" [value]="src">{{ src }}</option>
         </select>
@@ -51,16 +51,16 @@
 
   <!-- Data Table Card -->
   <div class="table-card">
-    <div *ngIf="loading" class="loading-state">
+    <div *ngIf="loading()" class="loading-state">
       <div class="spinner"></div>
       <p>Loading journal entries...</p>
     </div>
 
-    <div *ngIf="!loading && journalsPage.content.length === 0" class="empty-state">
+    <div *ngIf="!loading() && journalsPage().content.length === 0" class="empty-state">
       <p>No journal entries found matching the criteria.</p>
     </div>
 
-    <div *ngIf="!loading && journalsPage.content.length > 0" class="table-responsive">
+    <div *ngIf="!loading() && journalsPage().content.length > 0" class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
@@ -76,7 +76,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let j of journalsPage.content">
+          <tr *ngFor="let j of journalsPage().content">
             <td>
               <a (click)="viewDetails(j)" class="link-entry">{{ j.entryNo }}</a>
             </td>
@@ -107,13 +107,13 @@
       <!-- Pagination Footer -->
       <div class="pagination-footer">
         <span class="pagination-info">
-          Showing {{ journalsPage.content.length }} of {{ journalsPage.totalElements }} entries (Page {{ currentPage + 1 }} of {{ journalsPage.totalPages || 1 }})
+          Showing {{ journalsPage().content.length }} of {{ journalsPage().totalElements }} entries (Page {{ currentPage() + 1 }} of {{ journalsPage().totalPages || 1 }})
         </span>
         <div class="pagination-controls">
-          <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0" class="btn btn-outline btn-sm">
+          <button (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0" class="btn btn-outline btn-sm">
             Previous
           </button>
-          <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= journalsPage.totalPages - 1" class="btn btn-outline btn-sm">
+          <button (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= journalsPage().totalPages - 1" class="btn btn-outline btn-sm">
             Next
           </button>
         </div>
@@ -122,24 +122,24 @@
   </div>
 
   <!-- Detail Drawer / Modal -->
-  <div *ngIf="selectedJournal" class="modal-overlay">
+  <div *ngIf="selectedJournal() as sj" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
         <div>
-          <h2>Journal Entry: {{ selectedJournal.entryNo }}</h2>
-          <span class="badge" [ngClass]="getStatusClass(selectedJournal.status)">{{ selectedJournal.status }}</span>
+          <h2>Journal Entry: {{ sj.entryNo }}</h2>
+          <span class="badge" [ngClass]="getStatusClass(sj.status)">{{ sj.status }}</span>
         </div>
         <button (click)="closeDetails()" class="btn-close">&times;</button>
       </div>
 
       <div class="modal-body">
         <div class="info-grid">
-          <div><strong>Date:</strong> {{ selectedJournal.entryDate }}</div>
-          <div><strong>Reference:</strong> {{ selectedJournal.reference || '—' }}</div>
-          <div><strong>Source:</strong> {{ selectedJournal.sourceType }}</div>
-          <div><strong>Currency:</strong> {{ selectedJournal.currencyCode }} (Rate: {{ selectedJournal.exchangeRate }})</div>
-          <div><strong>Narration:</strong> {{ selectedJournal.narration || '—' }}</div>
-          <div *ngIf="selectedJournal.reversalOfId"><strong>Reversal Of:</strong> Entry #{{ selectedJournal.reversalOfId }}</div>
+          <div><strong>Date:</strong> {{ sj.entryDate }}</div>
+          <div><strong>Reference:</strong> {{ sj.reference || '—' }}</div>
+          <div><strong>Source:</strong> {{ sj.sourceType }}</div>
+          <div><strong>Currency:</strong> {{ sj.currencyCode }} (Rate: {{ sj.exchangeRate }})</div>
+          <div><strong>Narration:</strong> {{ sj.narration || '—' }}</div>
+          <div *ngIf="sj.reversalOfId"><strong>Reversal Of:</strong> Entry #{{ sj.reversalOfId }}</div>
         </div>
 
         <h3 class="lines-title">Journal Lines</h3>
@@ -149,12 +149,12 @@
               <th>#</th>
               <th>Account</th>
               <th>Description</th>
-              <th class="text-right">Debit ({{ selectedJournal.currencyCode }})</th>
-              <th class="text-right">Credit ({{ selectedJournal.currencyCode }})</th>
+              <th class="text-right">Debit ({{ sj.currencyCode }})</th>
+              <th class="text-right">Credit ({{ sj.currencyCode }})</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let line of selectedJournal.lines">
+            <tr *ngFor="let line of sj.lines">
               <td>{{ line.lineNo }}</td>
               <td>{{ line.accountCode }} - {{ line.accountName }}</td>
               <td>{{ line.description || '—' }}</td>
@@ -165,18 +165,18 @@
           <tfoot>
             <tr class="font-bold">
               <td colspan="3" class="text-right">Total:</td>
-              <td class="text-right font-mono">{{ selectedJournal.totalDebit | number:'1.2-2' }}</td>
-              <td class="text-right font-mono">{{ selectedJournal.totalCredit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono">{{ sj.totalDebit | number:'1.2-2' }}</td>
+              <td class="text-right font-mono">{{ sj.totalCredit | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
       <div class="modal-footer">
-        <button *ngIf="selectedJournal.status === 'DRAFT'" (click)="postDraft(selectedJournal)" class="btn btn-primary">
+        <button *ngIf="sj.status === 'DRAFT'" (click)="postDraft(sj)" class="btn btn-primary">
           Post This Entry
         </button>
-        <button *ngIf="selectedJournal.status === 'POSTED'" (click)="openReversalModal(selectedJournal)" class="btn btn-danger">
+        <button *ngIf="sj.status === 'POSTED'" (click)="openReversalModal(sj)" class="btn btn-danger">
           Reverse Entry
         </button>
         <button (click)="closeDetails()" class="btn btn-outline">Close</button>
@@ -185,17 +185,17 @@
   </div>
 
   <!-- Reversal Modal -->
-  <div *ngIf="showReversalModal && journalToReverse" class="modal-overlay">
+  <div *ngIf="showReversalModal() && journalToReverse() as revTarget" class="modal-overlay">
     <div class="modal-card sm">
       <div class="modal-header">
-        <h2>Reverse Journal {{ journalToReverse.entryNo }}</h2>
+        <h2>Reverse Journal {{ revTarget.entryNo }}</h2>
         <button (click)="closeReversalModal()" class="btn-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p>This action will mark entry <strong>{{ journalToReverse.entryNo }}</strong> as VOID and create a linked reversing double-entry transaction.</p>
+        <p>This action will mark entry <strong>{{ revTarget.entryNo }}</strong> as VOID and create a linked reversing double-entry transaction.</p>
         <div class="form-group">
           <label for="reversalReason">Reason for Reversal (Optional):</label>
-          <input type="text" id="reversalReason" [(ngModel)]="reversalReason" placeholder="e.g. Invoicing error, customer return" class="form-control" />
+          <input type="text" id="reversalReason" [ngModel]="reversalReason()" (ngModelChange)="reversalReason.set($event)" placeholder="e.g. Invoicing error, customer return" class="form-control" />
         </div>
       </div>
       <div class="modal-footer">
