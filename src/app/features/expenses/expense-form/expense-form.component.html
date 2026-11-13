@@ -323,6 +323,16 @@
           </div>
         </div>
 
+        <div *ngIf="uploadProgress() !== null" style="margin-top:0.75rem;">
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#475569;margin-bottom:0.25rem;">
+            <span>Uploading receipts...</span>
+            <span>{{ uploadProgress() }}%</span>
+          </div>
+          <div style="height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+            <div [style.width.%]="uploadProgress()" style="height:100%;background:#2563eb;transition:width 150ms ease;"></div>
+          </div>
+        </div>
+
         <!-- Files Staged for Upload -->
         <div class="file-list mt-3" *ngIf="pendingFiles().length > 0">
           <h5 class="file-list-heading">Queued for Upload ({{ pendingFiles().length }})</h5>

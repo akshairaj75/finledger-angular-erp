@@ -22,6 +22,7 @@ export class InvoiceService {
       if (query.status) params = params.set('status', query.status);
       if (query.docType) params = params.set('docType', query.docType);
       if (query.customerId) params = params.set('customerId', query.customerId.toString());
+      if (query.q && query.q.trim()) params = params.set('q', query.q.trim());
     }
     return this.http.get<Page<Invoice>>(this.base, { params });
   }

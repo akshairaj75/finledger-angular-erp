@@ -30,6 +30,7 @@ export interface CompanyProfile {
   phone?: string;
   logoPath?: string;
   isActive: boolean;
+  allowNegativeStock?: boolean;
 }
 
 export interface MeResponse {

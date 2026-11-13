@@ -120,6 +120,15 @@ import { ReportService } from '../reports/services/report.service';
               <span class="kpi-hint text-warning font-weight-bold">{{ s.expensesAwaitingApprovalCount }} pending claims</span>
             </div>
           </div>
+
+          <div class="kpi-card approval-card" *ngIf="(s.overdueActivitiesCount ?? 0) > 0">
+            <div class="kpi-icon-box bg-red">⏰</div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Overdue CRM Tasks</span>
+              <span class="kpi-value">{{ s.overdueActivitiesCount }}</span>
+              <span class="kpi-hint text-danger font-weight-bold">Require immediate follow-up</span>
+            </div>
+          </div>
         </div>
 
         <!-- Visualizations Grid (Gated by REPORT_VIEW / LEDGER_VIEW) -->
@@ -651,7 +660,6 @@ export class DashboardComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.notificationService.error('Failed to load dashboard metrics');
       }
     });
   }

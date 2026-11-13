@@ -18,6 +18,10 @@ export class BillService {
       if (query.page !== undefined) params = params.set('page', query.page.toString());
       if (query.size !== undefined) params = params.set('size', query.size.toString());
       if (query.vendorId !== undefined) params = params.set('vendorId', query.vendorId.toString());
+      if (query.status) params = params.set('status', query.status);
+      if (query.from) params = params.set('from', query.from);
+      if (query.to) params = params.set('to', query.to);
+      if (query.q && query.q.trim()) params = params.set('q', query.q.trim());
     }
     return this.http.get<Page<Bill>>(this.base, { params });
   }

@@ -6,6 +6,7 @@ import { Account } from '../../../core/models/account.model';
 import { CostCenter } from '../../../core/models/cost-center.model';
 import { CreateJournalEntryRequest, JournalLineRequest, JournalSourceType } from '../../../core/models/journal.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { AccountService } from '../services/account.service';
 import { CostCenterService } from '../services/cost-center.service';
 import { JournalService } from '../services/journal.service';
@@ -167,6 +168,7 @@ export class JournalFormComponent implements OnInit {
 
     this.submitting.set(true);
     this.backendFieldErrors.set({});
+    clearServerFieldErrors(this.journalForm);
 
     const formVal = this.journalForm.value;
     const lineRequests: JournalLineRequest[] = formVal.lines.map((l: any) => ({
@@ -197,9 +199,10 @@ export class JournalFormComponent implements OnInit {
       },
       error: (err) => {
         this.submitting.set(false);
-        if (err.error?.fieldErrors) {
+        const parsed = applyServerFieldErrors(this.journalForm, err);
+        if (parsed.fieldErrors.length > 0) {
           const map: Record<string, string> = {};
-          err.error.fieldErrors.forEach((fe: any) => {
+          parsed.fieldErrors.forEach(fe => {
             map[fe.field] = fe.message;
           });
           this.backendFieldErrors.set(map);

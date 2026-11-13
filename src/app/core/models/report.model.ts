@@ -205,4 +205,5 @@ export interface DashboardSummary {
   monthlyRevenueExpenses: MonthlyFinancial[];
   receivablesAgeing: AgeingSummary;
   recentTransactions: RecentTransaction[];
+  overdueActivitiesCount?: number;
 }

@@ -68,6 +68,7 @@ export interface InvoiceRequest {
   quotationId?: number;
   salespersonUserId?: number;
   lines: InvoiceLineRequest[];
+  send?: boolean;
 }
 
 export interface InvoiceQuery {
@@ -78,6 +79,7 @@ export interface InvoiceQuery {
   status?: InvoiceStatus;
   docType?: InvoiceDocType;
   customerId?: number;
+  q?: string;
 }
 
 export interface OpenInvoice {

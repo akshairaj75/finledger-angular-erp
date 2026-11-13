@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpEventType } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import {
   FormArray,
@@ -23,6 +24,7 @@ import { TaxRate } from '../../../core/models/tax-rate.model';
 import { User } from '../../../core/models/user.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { UserService } from '../../../core/services/user.service';
+import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { CostCenterService } from '../../accounting/services/cost-center.service';
 import { BankAccountService } from '../../sales/services/bank-account.service';
 import { CustomerService } from '../../sales/services/customer.service';
@@ -98,6 +100,8 @@ export class ExpenseFormComponent implements OnInit {
   subtotal = signal(0);
   taxTotal = signal(0);
   grandTotal = signal(0);
+
+  uploadProgress = signal<number | null>(null);
 
   // Stepper Threshold (FinLedger v2.0 Section 4.11 & ApprovalPolicy threshold)
   readonly financeThreshold = 2000.0;
@@ -625,6 +629,8 @@ export class ExpenseFormComponent implements OnInit {
       ? this.expenseService.updateExpense(existingId, createReq)
       : this.expenseService.createExpense(createReq);
 
+    clearServerFieldErrors(this.expenseForm);
+
     operation$.subscribe({
       next: savedExp => {
         // Upload any pending receipts
@@ -657,8 +663,7 @@ export class ExpenseFormComponent implements OnInit {
       error: err => {
         this.savingDraft.set(false);
         this.submitting.set(false);
-        const msg = err?.error?.message || 'Failed to save expense claim.';
-        this.notificationService.error(msg);
+        applyServerFieldErrors(this.expenseForm, err);
       }
     });
   }
@@ -666,28 +671,45 @@ export class ExpenseFormComponent implements OnInit {
   private uploadPendingFiles(expenseId: number, onDone: () => void): void {
     const files = this.pendingFiles();
     if (files.length === 0) {
+      this.uploadProgress.set(null);
       onDone();
       return;
     }
 
     let completed = 0;
-    for (const pf of files) {
-      this.expenseService.uploadAttachment(pf.file, 'EXPENSE', expenseId).subscribe({
-        next: () => {
-          completed++;
-          if (completed === files.length) {
-            onDone();
+    const progressByIndex = new Array<number>(files.length).fill(0);
+    this.uploadProgress.set(0);
+
+    files.forEach((pf, idx) => {
+      this.expenseService.uploadAttachmentWithProgress(pf.file, 'EXPENSE', expenseId).subscribe({
+        next: event => {
+          if (event.type === HttpEventType.UploadProgress) {
+            const total = event.total || pf.size || 1;
+            progressByIndex[idx] = Math.min(100, Math.round((100 * event.loaded) / total));
+            const avg = Math.round(progressByIndex.reduce((sum, p) => sum + p, 0) / files.length);
+            this.uploadProgress.set(avg);
+          } else if (event.type === HttpEventType.Response) {
+            progressByIndex[idx] = 100;
+            completed++;
+            const avg = Math.round(progressByIndex.reduce((sum, p) => sum + p, 0) / files.length);
+            this.uploadProgress.set(avg);
+            if (completed === files.length) {
+              this.uploadProgress.set(null);
+              onDone();
+            }
           }
         },
         error: () => {
           // Even if an individual upload fails, complete the flow
+          progressByIndex[idx] = 100;
           completed++;
           if (completed === files.length) {
+            this.uploadProgress.set(null);
             onDone();
           }
         }
       });
-    }
+    });
   }
 }
 

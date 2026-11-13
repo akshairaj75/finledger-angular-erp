@@ -1,5 +1,8 @@
 import '@angular/compiler';
-import { describe, expect, it } from 'vitest';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   Attachment,
   Expense,
@@ -303,5 +306,48 @@ describe('Expenses Module - Approval Flow Stepper & Journal Entry Preview (Secti
     expect(totalDebits).toBe(840);
     expect(totalCredits).toBe(840);
     expect(totalDebits).toBe(totalCredits);
+  });
+});
+
+describe('Expenses Module - Attachment Upload Progress', () => {
+  let service: ExpenseService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), ExpenseService]
+    });
+    service = TestBed.inject(ExpenseService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should emit upload progress events and final attachment response', () => {
+    const file = new File(['receipt-bytes'], 'receipt.pdf', { type: 'application/pdf' });
+    const eventTypes: HttpEventType[] = [];
+
+    service.uploadAttachmentWithProgress(file, 'EXPENSE', 42).subscribe(ev => {
+      eventTypes.push(ev.type);
+    });
+
+    const req = httpMock.expectOne(r => r.url.endsWith('/attachments'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.reportProgress).toBe(true);
+
+    req.event({ type: HttpEventType.UploadProgress, loaded: 50, total: 100 });
+    req.flush({
+      id: 7,
+      entityType: 'EXPENSE',
+      entityId: 42,
+      fileName: 'receipt.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 13
+    });
+
+    expect(eventTypes).toContain(HttpEventType.UploadProgress);
+    expect(eventTypes).toContain(HttpEventType.Response);
   });
 });

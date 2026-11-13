@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import '@angular/compiler';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { InvoiceService } from './services/invoice.service';
 import { LineTotalsCalculator } from './validators/line-totals.calculator';
 
 describe('Sales Module - LineTotalsCalculator', () => {
@@ -112,6 +117,64 @@ describe('Sales Module - Oldest-First Receipt Auto-Allocation', () => {
     expect(res.totalAllocated).toBe(300);
     expect(res.unappliedAmount).toBe(200);
     expect(invoices[0].allocatedAmount).toBe(300);
+  });
+});
+
+describe('Sales Module - InvoiceService HTTP Contract', () => {
+  let service: InvoiceService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), InvoiceService]
+    });
+    service = TestBed.inject(InvoiceService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should forward status, docType, from, to, and q query params on getInvoices', () => {
+    service.getInvoices({
+      status: 'SENT',
+      docType: 'INVOICE',
+      from: '2026-01-01',
+      to: '2026-01-31',
+      q: 'ACME',
+      page: 1,
+      size: 20
+    }).subscribe();
+
+    const req = httpMock.expectOne(r => r.url.endsWith('/invoices'));
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('status')).toBe('SENT');
+    expect(req.request.params.get('docType')).toBe('INVOICE');
+    expect(req.request.params.get('from')).toBe('2026-01-01');
+    expect(req.request.params.get('to')).toBe('2026-01-31');
+    expect(req.request.params.get('q')).toBe('ACME');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('20');
+    req.flush({ content: [], totalElements: 0, totalPages: 0, size: 20, number: 1 });
+  });
+
+  it('should include atomic send flag in createInvoice request payload', () => {
+    service.createInvoice({
+      docType: 'INVOICE',
+      customerId: 10,
+      invoiceDate: '2026-02-01',
+      dueDate: '2026-03-03',
+      currencyCode: 'AED',
+      exchangeRate: 1,
+      send: true,
+      lines: [{ lineNo: 1, description: 'Services', quantity: 1, unitPrice: 100, discountPct: 0, accountId: 5 }]
+    }).subscribe();
+
+    const req = httpMock.expectOne(r => r.url.endsWith('/invoices'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body.send).toBe(true);
+    req.flush({ id: 99, invoiceNo: 'INV-2026-0099', status: 'SENT' });
   });
 });
 

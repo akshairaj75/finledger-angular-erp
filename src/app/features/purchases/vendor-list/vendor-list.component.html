@@ -337,8 +337,8 @@
                 <tr *ngFor="let b of openBills()">
                   <td><strong>{{ b.billNo }}</strong></td>
                   <td>{{ b.vendorInvoiceNo || '—' }}</td>
-                  <td>{{ b.billDate | date:'mediumDate' }}</td>
-                  <td>{{ b.dueDate | date:'mediumDate' }}</td>
+                  <td>{{ b.billDate | date:'dd-MMM-yyyy' }}</td>
+                  <td>{{ b.dueDate | date:'dd-MMM-yyyy' }}</td>
                   <td class="text-right">{{ b.total | number:'1.2-2' }} AED</td>
                   <td class="text-right text-success">{{ b.amountPaid | number:'1.2-2' }} AED</td>
                   <td class="text-right text-danger font-bold">{{ b.balanceDue | number:'1.2-2' }} AED</td>

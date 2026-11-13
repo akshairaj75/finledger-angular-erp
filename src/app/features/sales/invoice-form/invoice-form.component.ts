@@ -8,6 +8,7 @@ import { Item, Warehouse } from '../../../core/models/inventory.model';
 import { InvoiceDocType, InvoiceLineRequest, InvoiceRequest } from '../../../core/models/invoice.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { AccountService } from '../../accounting/services/account.service';
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { CustomerService } from '../services/customer.service';
@@ -368,6 +369,7 @@ export class InvoiceFormComponent implements OnInit {
     if (!payload) return;
 
     this.saving.set(true);
+    clearServerFieldErrors(this.invoiceForm);
     this.invoiceService.createInvoice(payload).subscribe({
       next: created => {
         this.saving.set(false);
@@ -376,7 +378,7 @@ export class InvoiceFormComponent implements OnInit {
       },
       error: err => {
         this.saving.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to save draft invoice');
+        applyServerFieldErrors(this.invoiceForm, err);
       }
     });
   }
@@ -386,25 +388,16 @@ export class InvoiceFormComponent implements OnInit {
     if (!payload) return;
 
     this.saving.set(true);
-    this.invoiceService.createInvoice(payload).subscribe({
-      next: created => {
-        // Send invoice to trigger GL posting and formal number generation
-        this.invoiceService.sendInvoice(created.id).subscribe({
-          next: sent => {
-            this.saving.set(false);
-            this.notificationService.success(`Invoice ${sent.invoiceNo} successfully generated, posted to GL, and marked SENT!`);
-            this.router.navigate(['/sales/invoices']);
-          },
-          error: err => {
-            this.saving.set(false);
-            this.notificationService.warning(`Invoice saved as Draft (#${created.id}), but failed to post to GL: ` + (err?.error?.message || 'Unknown error'));
-            this.router.navigate(['/sales/invoices']);
-          }
-        });
+    clearServerFieldErrors(this.invoiceForm);
+    this.invoiceService.createInvoice({ ...payload, send: true }).subscribe({
+      next: sent => {
+        this.saving.set(false);
+        this.notificationService.success(`Invoice ${sent.invoiceNo || '#' + sent.id} successfully generated, posted to GL, and marked SENT!`);
+        this.router.navigate(['/sales/invoices']);
       },
       error: err => {
         this.saving.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to create invoice');
+        applyServerFieldErrors(this.invoiceForm, err);
       }
     });
   }
@@ -414,6 +407,7 @@ export class InvoiceFormComponent implements OnInit {
     if (!payload) return;
 
     this.previewingPdf.set(true);
+    clearServerFieldErrors(this.invoiceForm);
     // Save as draft first, then fetch PDF
     this.invoiceService.createInvoice(payload).subscribe({
       next: created => {
@@ -424,15 +418,14 @@ export class InvoiceFormComponent implements OnInit {
             window.open(fileURL, '_blank');
             this.notificationService.success(`Invoice PDF generated successfully!`);
           },
-          error: err => {
+          error: () => {
             this.previewingPdf.set(false);
-            this.notificationService.error(err?.error?.message || 'Failed to render PDF preview');
           }
         });
       },
       error: err => {
         this.previewingPdf.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to prepare invoice for PDF preview');
+        applyServerFieldErrors(this.invoiceForm, err);
       }
     });
   }

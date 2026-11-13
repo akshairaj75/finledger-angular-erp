@@ -144,10 +144,10 @@
                 <span class="vendor-code text-muted">{{ b.vendorCode }}</span>
               </div>
             </td>
-            <td>{{ b.billDate | date:'mediumDate' }}</td>
+            <td>{{ b.billDate | date:'dd-MMM-yyyy' }}</td>
             <td>
               <span [ngClass]="{'overdue-due-date': isOverdue(b)}">
-                {{ b.dueDate | date:'mediumDate' }}
+                {{ b.dueDate | date:'dd-MMM-yyyy' }}
               </span>
             </td>
             <td class="text-right font-medium">{{ b.total | number:'1.2-2' }} {{ b.currencyCode }}</td>
@@ -244,9 +244,9 @@
 
             <div class="detail-card">
               <span class="detail-label">Bill Dates</span>
-              <span class="detail-main-text">Issued: {{ sb.billDate | date:'mediumDate' }}</span>
+              <span class="detail-main-text">Issued: {{ sb.billDate | date:'dd-MMM-yyyy' }}</span>
               <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(sb)}">
-                Due: {{ sb.dueDate | date:'mediumDate' }}
+                Due: {{ sb.dueDate | date:'dd-MMM-yyyy' }}
               </span>
             </div>
 

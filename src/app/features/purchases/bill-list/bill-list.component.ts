@@ -83,48 +83,21 @@ export class BillListComponent implements OnInit {
     this.loading.set(true);
     const query: BillQuery = {
       page: this.currentPage(),
-      size: this.pageSize
+      size: this.pageSize,
+      status: this.filterStatus() || undefined,
+      from: this.filterFrom() || undefined,
+      to: this.filterTo() || undefined,
+      q: this.searchQuery().trim() || undefined
     };
 
     this.billService.getBills(query).subscribe({
       next: page => {
-        let items = page.content;
-        const st = this.filterStatus();
-        const fFrom = this.filterFrom();
-        const fTo = this.filterTo();
-        const sq = this.searchQuery().trim();
-
-        // In-memory filter for status, dates, and search query
-        if (st) {
-          items = items.filter(b => b.status === st);
-        }
-        if (fFrom) {
-          items = items.filter(b => b.billDate >= fFrom);
-        }
-        if (fTo) {
-          items = items.filter(b => b.billDate <= fTo);
-        }
-        if (sq) {
-          const q = sq.toLowerCase();
-          items = items.filter(
-            b =>
-              (b.billNo && b.billNo.toLowerCase().includes(q)) ||
-              (b.vendorInvoiceNo && b.vendorInvoiceNo.toLowerCase().includes(q)) ||
-              (b.vendorName && b.vendorName.toLowerCase().includes(q)) ||
-              (b.vendorCode && b.vendorCode.toLowerCase().includes(q))
-          );
-        }
-
-        this.billsPage.set({
-          ...page,
-          content: items
-        });
+        this.billsPage.set(page);
         this.loading.set(false);
         this.calculateSummary(page.content);
       },
-      error: err => {
+      error: () => {
         this.loading.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to load bills');
       }
     });
   }
@@ -212,9 +185,8 @@ export class BillListComponent implements OnInit {
           this.selectedBill.set(updated);
         }
       },
-      error: err => {
+      error: () => {
         this.approvingId.set(null);
-        this.notificationService.error(err?.error?.message || 'Failed to approve bill');
       }
     });
   }
@@ -249,9 +221,8 @@ export class BillListComponent implements OnInit {
           this.closeDetailModal();
         }
       },
-      error: err => {
+      error: () => {
         this.voiding.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to void bill');
       }
     });
   }

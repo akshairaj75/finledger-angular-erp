@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import '@angular/compiler';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { BillService } from './services/bill.service';
 import { LineTotalsCalculator } from '../sales/validators/line-totals.calculator';
 
 describe('Purchases Module - Bill Line Totals & Input VAT Calculation', () => {
@@ -105,6 +110,42 @@ describe('Purchases Module - Oldest-First Payment Auto-Allocation', () => {
     expect(res.totalAllocated).toBe(750);
     expect(res.unappliedAmount).toBe(250);
     expect(bills[0].allocatedAmount).toBe(750);
+  });
+});
+
+describe('Purchases Module - BillService HTTP Contract', () => {
+  let service: BillService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), BillService]
+    });
+    service = TestBed.inject(BillService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should forward status, from, to, and q query params on getBills', () => {
+    service.getBills({
+      status: 'APPROVED',
+      from: '2026-01-01',
+      to: '2026-01-31',
+      q: 'SUP',
+      page: 0,
+      size: 20
+    }).subscribe();
+
+    const req = httpMock.expectOne(r => r.url.endsWith('/bills'));
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('status')).toBe('APPROVED');
+    expect(req.request.params.get('from')).toBe('2026-01-01');
+    expect(req.request.params.get('to')).toBe('2026-01-31');
+    expect(req.request.params.get('q')).toBe('SUP');
+    req.flush({ content: [], totalElements: 0, totalPages: 0, size: 20, number: 0 });
   });
 });
 

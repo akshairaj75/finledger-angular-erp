@@ -190,9 +190,9 @@
               <td>
                 <span class="text-sm font-medium">{{ bill.vendorInvoiceNo || '-' }}</span>
               </td>
-              <td>{{ bill.billDate | date:'mediumDate' }}</td>
+              <td>{{ bill.billDate | date:'dd-MMM-yyyy' }}</td>
               <td>
-                <span>{{ bill.dueDate | date:'mediumDate' }}</span>
+                <span>{{ bill.dueDate | date:'dd-MMM-yyyy' }}</span>
               </td>
               <td class="text-right font-mono">{{ bill.total | number:'1.2-2' }}</td>
               <td class="text-right font-mono font-bold text-danger">{{ bill.balanceDue | number:'1.2-2' }}</td>

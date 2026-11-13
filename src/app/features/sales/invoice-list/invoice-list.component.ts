@@ -87,32 +87,18 @@ export class InvoiceListComponent implements OnInit {
       size: this.pageSize,
       from: this.filterFrom() || undefined,
       to: this.filterTo() || undefined,
-      status: this.filterStatus() || undefined
+      status: this.filterStatus() || undefined,
+      q: this.searchQuery().trim() || undefined
     };
 
     this.invoiceService.getInvoices(query).subscribe({
       next: page => {
-        let items = page.content;
-        const sq = this.searchQuery().trim();
-        if (sq) {
-          const q = sq.toLowerCase();
-          items = items.filter(
-            inv =>
-              (inv.invoiceNo && inv.invoiceNo.toLowerCase().includes(q)) ||
-              (inv.customerName && inv.customerName.toLowerCase().includes(q)) ||
-              (inv.customerCode && inv.customerCode.toLowerCase().includes(q))
-          );
-        }
-        this.invoicesPage.set({
-          ...page,
-          content: items
-        });
+        this.invoicesPage.set(page);
         this.loading.set(false);
         this.calculateSummary(page.content);
       },
-      error: err => {
+      error: () => {
         this.loading.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to load invoices');
       }
     });
   }
@@ -200,9 +186,8 @@ export class InvoiceListComponent implements OnInit {
           this.selectedInvoice.set(updated);
         }
       },
-      error: err => {
+      error: () => {
         this.sendingId.set(null);
-        this.notificationService.error(err?.error?.message || 'Failed to send and post invoice');
       }
     });
   }
@@ -222,9 +207,8 @@ export class InvoiceListComponent implements OnInit {
         a.click();
         URL.revokeObjectURL(blobUrl);
       },
-      error: err => {
+      error: () => {
         this.pdfLoadingId.set(null);
-        this.notificationService.error(err?.error?.message || 'Failed to download invoice PDF');
       }
     });
   }
@@ -259,9 +243,8 @@ export class InvoiceListComponent implements OnInit {
           this.closeDetailModal();
         }
       },
-      error: err => {
+      error: () => {
         this.voiding.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to void invoice');
       }
     });
   }

@@ -74,6 +74,13 @@ import { SettingsService } from '../services/settings.service';
             <textarea rows="2" formControlName="address"></textarea>
           </div>
 
+          <div class="form-group full-width">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:500;">
+              <input type="checkbox" formControlName="allowNegativeStock" style="width:auto;" />
+              <span>Allow negative stock balances on outbound movements &amp; invoices</span>
+            </label>
+          </div>
+
           <div class="form-actions full-width" *appHasPermission="['COMPANY_EDIT', 'SETTINGS_EDIT']">
             <button type="submit" class="btn-primary" [disabled]="saving() || form.invalid">
               {{ saving() ? 'Saving...' : 'Save Company Profile' }}
@@ -143,7 +150,8 @@ export class CompanySettingsComponent implements OnInit {
     fiscalYearStartMonth: [1, Validators.required],
     email: [''],
     phone: [''],
-    address: ['']
+    address: [''],
+    allowNegativeStock: [false]
   });
 
   ngOnInit(): void {
@@ -157,7 +165,8 @@ export class CompanySettingsComponent implements OnInit {
           fiscalYearStartMonth: company.fiscalYearStartMonth,
           email: company.email || '',
           phone: company.phone || '',
-          address: company.address || ''
+          address: company.address || '',
+          allowNegativeStock: Boolean(company.allowNegativeStock)
         });
       }
     });

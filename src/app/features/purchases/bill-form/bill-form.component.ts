@@ -8,6 +8,7 @@ import { Item, Warehouse } from '../../../core/models/inventory.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { Vendor } from '../../../core/models/vendor.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { AccountService } from '../../accounting/services/account.service';
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { TaxRateService } from '../../sales/services/tax-rate.service';
@@ -347,6 +348,7 @@ export class BillFormComponent implements OnInit {
     if (!payload) return;
 
     this.saving.set(true);
+    clearServerFieldErrors(this.billForm);
     this.billService.createBill(payload).subscribe({
       next: created => {
         this.saving.set(false);
@@ -355,7 +357,7 @@ export class BillFormComponent implements OnInit {
       },
       error: err => {
         this.saving.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to save draft bill');
+        applyServerFieldErrors(this.billForm, err);
       }
     });
   }
@@ -365,6 +367,7 @@ export class BillFormComponent implements OnInit {
     if (!payload) return;
 
     this.saving.set(true);
+    clearServerFieldErrors(this.billForm);
     this.billService.createBill(payload).subscribe({
       next: created => {
         // Approve bill to post to General Ledger
@@ -383,7 +386,7 @@ export class BillFormComponent implements OnInit {
       },
       error: err => {
         this.saving.set(false);
-        this.notificationService.error(err?.error?.message || 'Failed to create bill');
+        applyServerFieldErrors(this.billForm, err);
       }
     });
   }

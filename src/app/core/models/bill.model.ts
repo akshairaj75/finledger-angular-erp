@@ -71,6 +71,7 @@ export interface BillQuery {
   status?: BillStatus;
   from?: string;
   to?: string;
+  q?: string;
 }
 
 export interface OpenBill {

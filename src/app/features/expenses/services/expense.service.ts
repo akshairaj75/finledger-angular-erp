@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams, HttpRequest } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
@@ -80,6 +80,17 @@ export class ExpenseService {
     formData.append('entityType', entityType);
     formData.append('entityId', entityId.toString());
     return this.http.post<Attachment>(this.attachmentsBase, formData);
+  }
+
+  uploadAttachmentWithProgress(file: File, entityType: string, entityId: number): Observable<HttpEvent<Attachment>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('entityType', entityType);
+    formData.append('entityId', entityId.toString());
+    const req = new HttpRequest('POST', this.attachmentsBase, formData, {
+      reportProgress: true
+    });
+    return this.http.request<Attachment>(req);
   }
 
   getAttachments(entityType: string, entityId: number): Observable<Attachment[]> {

@@ -42,6 +42,7 @@ export interface CompanyUpdateRequest {
   email?: string;
   phone?: string;
   logoPath?: string;
+  allowNegativeStock?: boolean;
   isActive?: boolean;
 }
 

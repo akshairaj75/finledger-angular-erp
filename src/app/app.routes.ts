@@ -23,7 +23,8 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { permissions: ['DASHBOARD_VIEW', 'REPORT_VIEW'] },
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
     title: 'FinLedger - Executive Dashboard'
   },
