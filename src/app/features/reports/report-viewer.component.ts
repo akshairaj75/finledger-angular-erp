@@ -9,10 +9,14 @@ import { CostCenterService } from '../accounting/services/cost-center.service';
 import { InventoryService } from '../inventory/services/inventory.service';
 import { Account } from '../../core/models/account.model';
 import { CostCenter } from '../../core/models/cost-center.model';
+import { Item } from '../../core/models/inventory.model';
 import {
   ProfitLossReport,
   BalanceSheetReport,
   GeneralLedgerReport,
+  TrialBalanceReport,
+  ArAgeingReport,
+  ApAgeingReport,
   VatReturnReport,
   StockValuationReport,
   StockMovementReport,
@@ -106,6 +110,16 @@ import {
             <select [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event)" class="form-control">
               <option *ngFor="let acc of accounts()" [ngValue]="acc.id">
                 {{ acc.code }} - {{ acc.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Item selector (for Stock Movement) -->
+          <div class="form-group" *ngIf="reportType() === 'stock-movement'">
+            <label>Select Product / Item</label>
+            <select [ngModel]="selectedItemId()" (ngModelChange)="selectedItemId.set($event)" class="form-control">
+              <option *ngFor="let item of items()" [ngValue]="item.id">
+                {{ item.sku }} - {{ item.name }}
               </option>
             </select>
           </div>
@@ -498,7 +512,336 @@ import {
           </table>
         </div>
 
-        <!-- 7. GENERAL LEDGER / TRIAL BALANCE / AGEING FALLBACK -->
+        <!-- 7. TRIAL BALANCE -->
+        <div *ngIf="reportType() === 'trial-balance' && trialBalanceData() as tb" class="report-content">
+          <div class="report-heading">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3>Trial Balance</h3>
+                <p>As of {{ tb.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
+              </div>
+              <div>
+                <span *ngIf="tb.isBalanced" class="balance-badge badge-success" style="display: inline-block; margin-top: 0;">
+                  ✓ Balanced (Total Debits = Total Credits)
+                </span>
+                <span *ngIf="!tb.isBalanced" class="balance-badge badge-danger" style="display: inline-block; margin-top: 0;">
+                  ⚠ Out of Balance (Difference: {{ (tb.totalDebit - tb.totalCredit) | number:'1.2-2' }} AED)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Account Code</th>
+                <th>Account Name</th>
+                <th style="width: 140px;">Type</th>
+                <th class="text-right" style="width: 160px;">Debit (AED)</th>
+                <th class="text-right" style="width: 160px;">Credit (AED)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of tb.lines" class="clickable-row" (click)="drillDownGl(line.accountId)" title="Click to view General Ledger for {{ line.accountCode }}">
+                <td><span class="acc-code">{{ line.accountCode }}</span></td>
+                <td><strong>{{ line.accountName }}</strong></td>
+                <td><span class="type-pill">{{ line.accountType }}</span></td>
+                <td class="text-right">{{ line.debitBalance ? (line.debitBalance | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ line.creditBalance ? (line.creditBalance | number:'1.2-2') : '-' }}</td>
+              </tr>
+              <tr *ngIf="!tb.lines || tb.lines.length === 0">
+                <td colspan="5" class="text-center text-muted" style="padding: 2rem;">No posted journal entries found for this period.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="grandtotal-row">
+                <td colspan="3">TOTAL</td>
+                <td class="text-right font-weight-bold">{{ tb.totalDebit | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ tb.totalCredit | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- 8. GENERAL LEDGER -->
+        <div *ngIf="reportType() === 'general-ledger' && generalLedgerData() as gl" class="report-content">
+          <div class="report-heading">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3>General Ledger &mdash; {{ gl.accountCode }} {{ gl.accountName }}</h3>
+                <p>Period: {{ gl.fromDate | date:'dd-MMM-yyyy' }} to {{ gl.toDate | date:'dd-MMM-yyyy' }} &bull; Normal Balance: {{ gl.normalBalance }} &bull; Type: {{ gl.accountType }}</p>
+              </div>
+              <div class="gl-summary-cards">
+                <div class="gl-card">
+                  <span class="gl-card-label">Opening Balance</span>
+                  <span class="gl-card-val">{{ gl.openingBalance | number:'1.2-2' }} AED</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Net Movement</span>
+                  <span class="gl-card-val" [class.text-success]="gl.totalDebit > gl.totalCredit" [class.text-danger]="gl.totalCredit > gl.totalDebit">
+                    {{ (gl.totalDebit - gl.totalCredit) | number:'1.2-2' }} AED
+                  </span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Closing Balance</span>
+                  <span class="gl-card-val font-weight-bold" style="color: #2563eb;">{{ gl.closingBalance | number:'1.2-2' }} AED</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">Date</th>
+                <th style="width: 130px;">Entry #</th>
+                <th style="width: 130px;">Reference</th>
+                <th>Description</th>
+                <th class="text-right" style="width: 130px;">Debit (AED)</th>
+                <th class="text-right" style="width: 130px;">Credit (AED)</th>
+                <th class="text-right" style="width: 150px;">Running Balance (AED)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="subtotal-row">
+                <td colspan="4"><em>Opening Balance as of {{ gl.fromDate | date:'dd-MMM-yyyy' }}</em></td>
+                <td class="text-right">-</td>
+                <td class="text-right">-</td>
+                <td class="text-right font-weight-bold">{{ gl.openingBalance | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngFor="let line of gl.lines">
+                <td>{{ line.date | date:'dd-MMM-yyyy' }}</td>
+                <td><span class="acc-code">{{ line.entryNo }}</span></td>
+                <td>{{ line.reference || '-' }}</td>
+                <td>{{ line.description || '-' }}</td>
+                <td class="text-right">{{ line.debit ? (line.debit | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ line.credit ? (line.credit | number:'1.2-2') : '-' }}</td>
+                <td class="text-right font-weight-bold">{{ line.runningBalance | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="!gl.lines || gl.lines.length === 0">
+                <td colspan="7" class="text-center text-muted" style="padding: 2rem;">No transactions recorded in this period for this account.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="grandtotal-row">
+                <td colspan="4">TOTAL ACTIVITY &amp; CLOSING BALANCE</td>
+                <td class="text-right font-weight-bold">{{ gl.totalDebit | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ gl.totalCredit | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold" style="color: #2563eb;">{{ gl.closingBalance | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- 9. AR AGEING (RECEIVABLES) -->
+        <div *ngIf="reportType() === 'ar-ageing' && arAgeingData() as ar" class="report-content">
+          <div class="report-heading">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3>Accounts Receivable Ageing Report</h3>
+                <p>Outstanding customer receivables as of {{ ar.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
+              </div>
+              <div class="gl-summary-cards">
+                <div class="gl-card">
+                  <span class="gl-card-label">Current (&le;0 Days)</span>
+                  <span class="gl-card-val text-success">{{ ar.totalCurrent | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Overdue 1-60 Days</span>
+                  <span class="gl-card-val" style="color: #d97706;">{{ (ar.total1To30 + ar.total31To60) | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Overdue &gt;60 Days</span>
+                  <span class="gl-card-val text-danger">{{ (ar.total61To90 + ar.totalOver90) | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Grand Total AR</span>
+                  <span class="gl-card-val font-weight-bold" style="color: #2563eb;">{{ ar.grandTotal | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">Code</th>
+                <th>Customer Name</th>
+                <th class="text-right" style="width: 120px;">Current</th>
+                <th class="text-right" style="width: 120px;">1-30 Days</th>
+                <th class="text-right" style="width: 120px;">31-60 Days</th>
+                <th class="text-right" style="width: 120px;">61-90 Days</th>
+                <th class="text-right" style="width: 120px;">&gt;90 Days</th>
+                <th class="text-right" style="width: 140px;">Total Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of ar.customers">
+                <td><span class="acc-code">{{ c.customerCode }}</span></td>
+                <td><strong>{{ c.customerName }}</strong></td>
+                <td class="text-right">{{ c.current ? (c.current | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ c.days1To30 ? (c.days1To30 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ c.days31To60 ? (c.days31To60 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ c.days61To90 ? (c.days61To90 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right" [class.text-danger]="c.daysOver90 > 0">{{ c.daysOver90 ? (c.daysOver90 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right font-weight-bold">{{ c.totalOutstanding | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="!ar.customers || ar.customers.length === 0">
+                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">No outstanding customer invoices found as of {{ ar.asOfDate | date:'dd-MMM-yyyy' }}.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="grandtotal-row">
+                <td colspan="2">TOTAL RECEIVABLES</td>
+                <td class="text-right font-weight-bold">{{ ar.totalCurrent | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ ar.total1To30 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ ar.total31To60 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ ar.total61To90 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold text-danger">{{ ar.totalOver90 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold" style="color: #2563eb;">{{ ar.grandTotal | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- 10. AP AGEING (PAYABLES) -->
+        <div *ngIf="reportType() === 'ap-ageing' && apAgeingData() as ap" class="report-content">
+          <div class="report-heading">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3>Accounts Payable Ageing Report</h3>
+                <p>Outstanding vendor payables as of {{ ap.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
+              </div>
+              <div class="gl-summary-cards">
+                <div class="gl-card">
+                  <span class="gl-card-label">Current (&le;0 Days)</span>
+                  <span class="gl-card-val text-success">{{ ap.totalCurrent | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Overdue 1-60 Days</span>
+                  <span class="gl-card-val" style="color: #d97706;">{{ (ap.total1To30 + ap.total31To60) | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Overdue &gt;60 Days</span>
+                  <span class="gl-card-val text-danger">{{ (ap.total61To90 + ap.totalOver90) | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Grand Total AP</span>
+                  <span class="gl-card-val font-weight-bold" style="color: #ef4444;">{{ ap.grandTotal | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">Code</th>
+                <th>Vendor / Supplier</th>
+                <th class="text-right" style="width: 120px;">Current</th>
+                <th class="text-right" style="width: 120px;">1-30 Days</th>
+                <th class="text-right" style="width: 120px;">31-60 Days</th>
+                <th class="text-right" style="width: 120px;">61-90 Days</th>
+                <th class="text-right" style="width: 120px;">&gt;90 Days</th>
+                <th class="text-right" style="width: 140px;">Total Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let v of ap.vendors">
+                <td><span class="acc-code">{{ v.vendorCode }}</span></td>
+                <td><strong>{{ v.vendorName }}</strong></td>
+                <td class="text-right">{{ v.current ? (v.current | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ v.days1To30 ? (v.days1To30 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ v.days31To60 ? (v.days31To60 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right">{{ v.days61To90 ? (v.days61To90 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right" [class.text-danger]="v.daysOver90 > 0">{{ v.daysOver90 ? (v.daysOver90 | number:'1.2-2') : '-' }}</td>
+                <td class="text-right font-weight-bold">{{ v.totalOutstanding | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="!ap.vendors || ap.vendors.length === 0">
+                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">No outstanding vendor bills found as of {{ ap.asOfDate | date:'dd-MMM-yyyy' }}.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="grandtotal-row">
+                <td colspan="2">TOTAL PAYABLES</td>
+                <td class="text-right font-weight-bold">{{ ap.totalCurrent | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ ap.total1To30 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ ap.total31To60 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold">{{ ap.total61To90 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold text-danger">{{ ap.totalOver90 | number:'1.2-2' }}</td>
+                <td class="text-right font-weight-bold" style="color: #ef4444;">{{ ap.grandTotal | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- 11. STOCK MOVEMENT LEDGER -->
+        <div *ngIf="reportType() === 'stock-movement' && stockMovementData() as sm" class="report-content">
+          <div class="report-heading">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3>Stock Movement Ledger &mdash; {{ sm.sku }} {{ sm.itemName }}</h3>
+                <p>Period: {{ sm.fromDate | date:'dd-MMM-yyyy' }} to {{ sm.toDate | date:'dd-MMM-yyyy' }}</p>
+              </div>
+              <div class="gl-summary-cards">
+                <div class="gl-card">
+                  <span class="gl-card-label">Opening Qty</span>
+                  <span class="gl-card-val">{{ sm.openingQty | number:'1.2-2' }}</span>
+                </div>
+                <div class="gl-card">
+                  <span class="gl-card-label">Closing Qty</span>
+                  <span class="gl-card-val font-weight-bold" style="color: #2563eb;">{{ sm.closingQty | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">Date</th>
+                <th style="width: 140px;">Movement Type</th>
+                <th style="width: 140px;">Reference</th>
+                <th>Warehouse</th>
+                <th class="text-right" style="width: 110px;">Qty In</th>
+                <th class="text-right" style="width: 110px;">Qty Out</th>
+                <th class="text-right" style="width: 130px;">Running Balance</th>
+                <th class="text-right" style="width: 120px;">Unit Cost (AED)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="subtotal-row">
+                <td colspan="4"><em>Opening Stock as of {{ sm.fromDate | date:'dd-MMM-yyyy' }}</em></td>
+                <td class="text-right">-</td>
+                <td class="text-right">-</td>
+                <td class="text-right font-weight-bold">{{ sm.openingQty | number:'1.2-2' }}</td>
+                <td class="text-right">-</td>
+              </tr>
+              <tr *ngFor="let m of sm.movements">
+                <td>{{ m.date | date:'dd-MMM-yyyy' }}</td>
+                <td><span class="type-pill">{{ m.movementType }}</span></td>
+                <td><span class="acc-code">{{ m.reference || '-' }}</span></td>
+                <td>{{ m.warehouseName || '-' }}</td>
+                <td class="text-right text-success">{{ m.qtyIn ? ('+' + (m.qtyIn | number:'1.2-2')) : '-' }}</td>
+                <td class="text-right text-danger">{{ m.qtyOut ? ('-' + (m.qtyOut | number:'1.2-2')) : '-' }}</td>
+                <td class="text-right font-weight-bold">{{ m.runningBalance | number:'1.2-2' }}</td>
+                <td class="text-right">{{ m.unitCost ? (m.unitCost | number:'1.2-2') : '-' }}</td>
+              </tr>
+              <tr *ngIf="!sm.movements || sm.movements.length === 0">
+                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">No stock movements recorded for this item in this period.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="grandtotal-row">
+                <td colspan="6">CLOSING STOCK QUANTITY</td>
+                <td class="text-right font-weight-bold" style="color: #2563eb;">{{ sm.closingQty | number:'1.2-2' }}</td>
+                <td colspan="1"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- 12. GENERIC FALLBACK (FOR ANY UNMAPPED REPORTS) -->
         <div *ngIf="genericTableData() as gen" class="report-content">
           <div class="report-heading">
             <h3>{{ reportTitle() }}</h3>
@@ -733,6 +1076,11 @@ import {
     .text-primary { color: #2563eb; }
     .text-muted { color: #94a3b8; }
     .font-weight-bold { font-weight: 700; }
+    .gl-summary-cards { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .gl-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.5rem 0.85rem; display: flex; flex-direction: column; min-width: 120px; }
+    .gl-card-label { font-size: 0.6875rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .gl-card-val { font-size: 1rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
+    .type-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: #e0e7ff; color: #3730a3; }
     .json-preview { background: #f8fafc; padding: 1rem; border-radius: 6px; font-size: 0.8125rem; overflow-x: auto; }
   `]
 })
@@ -757,12 +1105,14 @@ export class ReportViewerComponent implements OnInit {
   selectedCostCenterId = signal<number | null>(null);
   selectedAccountId = signal<number | null>(null);
   selectedWarehouseId = signal<number | null>(null);
+  selectedItemId = signal<number | null>(null);
   expenseGroupBy = signal<string>('category');
 
   // Catalogs
   accounts = signal<Account[]>([]);
   costCenters = signal<CostCenter[]>([]);
   warehouses = signal<any[]>([]);
+  items = signal<Item[]>([]);
 
   // Report payloads
   profitLossData = signal<ProfitLossReport | null>(null);
@@ -771,6 +1121,11 @@ export class ReportViewerComponent implements OnInit {
   stockValuationData = signal<StockValuationReport | null>(null);
   pipelineData = signal<PipelineForecastReport | null>(null);
   expenseData = signal<ExpenseAnalysisReport | null>(null);
+  trialBalanceData = signal<TrialBalanceReport | null>(null);
+  generalLedgerData = signal<GeneralLedgerReport | null>(null);
+  arAgeingData = signal<ArAgeingReport | null>(null);
+  apAgeingData = signal<ApAgeingReport | null>(null);
+  stockMovementData = signal<StockMovementReport | null>(null);
   genericTableData = signal<any>(null);
 
   readonly usesDateRange = computed(() =>
@@ -782,6 +1137,21 @@ export class ReportViewerComponent implements OnInit {
   );
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe(qp => {
+      if (qp['accountId']) {
+        this.selectedAccountId.set(Number(qp['accountId']));
+      }
+      if (qp['from']) {
+        this.fromDate.set(qp['from']);
+      }
+      if (qp['to']) {
+        this.toDate.set(qp['to']);
+      }
+      if (qp['itemId']) {
+        this.selectedItemId.set(Number(qp['itemId']));
+      }
+    });
+
     this.route.params.subscribe(params => {
       if (params['type']) {
         this.reportType.set(params['type']);
@@ -824,12 +1194,28 @@ export class ReportViewerComponent implements OnInit {
         this.accounts.set(accList);
         if (accList.length > 0 && !this.selectedAccountId()) {
           this.selectedAccountId.set(accList[0].id);
+          if (this.reportType() === 'general-ledger' && !this.generalLedgerData()) {
+            this.loadReport();
+          }
         }
       },
       error: () => {}
     });
     this.inventoryService.getWarehouses().subscribe({
       next: (res) => this.warehouses.set(res),
+      error: () => {}
+    });
+    this.inventoryService.getItems({ size: 100, active: true }).subscribe({
+      next: (res) => {
+        const itemList = res?.content || (Array.isArray(res) ? res : []);
+        this.items.set(itemList);
+        if (itemList.length > 0 && !this.selectedItemId()) {
+          this.selectedItemId.set(itemList[0].id);
+          if (this.reportType() === 'stock-movement' && !this.stockMovementData()) {
+            this.loadReport();
+          }
+        }
+      },
       error: () => {}
     });
   }
@@ -880,7 +1266,7 @@ export class ReportViewerComponent implements OnInit {
         const accId = this.selectedAccountId();
         if (accId) {
           this.reportService.getGeneralLedger(accId, this.fromDate(), this.toDate()).subscribe({
-            next: (res) => { this.genericTableData.set(res); this.loading.set(false); },
+            next: (res) => { this.generalLedgerData.set(res); this.loading.set(false); },
             error: (err) => this.handleError(err)
           });
         } else {
@@ -890,22 +1276,34 @@ export class ReportViewerComponent implements OnInit {
       }
       case 'trial-balance':
         this.reportService.getTrialBalance(this.asOfDate()).subscribe({
-          next: (res) => { this.genericTableData.set(res); this.loading.set(false); },
+          next: (res) => { this.trialBalanceData.set(res); this.loading.set(false); },
           error: (err) => this.handleError(err)
         });
         break;
       case 'ar-ageing':
         this.reportService.getArAgeing(this.asOfDate()).subscribe({
-          next: (res) => { this.genericTableData.set(res); this.loading.set(false); },
+          next: (res) => { this.arAgeingData.set(res); this.loading.set(false); },
           error: (err) => this.handleError(err)
         });
         break;
       case 'ap-ageing':
         this.reportService.getApAgeing(this.asOfDate()).subscribe({
-          next: (res) => { this.genericTableData.set(res); this.loading.set(false); },
+          next: (res) => { this.apAgeingData.set(res); this.loading.set(false); },
           error: (err) => this.handleError(err)
         });
         break;
+      case 'stock-movement': {
+        const itemId = this.selectedItemId();
+        if (itemId) {
+          this.reportService.getStockMovement(itemId, this.fromDate(), this.toDate()).subscribe({
+            next: (res) => { this.stockMovementData.set(res); this.loading.set(false); },
+            error: (err) => this.handleError(err)
+          });
+        } else {
+          this.loading.set(false);
+        }
+        break;
+      }
       default:
         this.loading.set(false);
     }
@@ -928,6 +1326,8 @@ export class ReportViewerComponent implements OnInit {
     const ccId = this.selectedCostCenterId();
     if (compare) params['compare'] = compare;
     if (ccId) params['costCenterId'] = ccId.toString();
+    if (this.selectedAccountId()) params['accountId'] = this.selectedAccountId()!.toString();
+    if (this.selectedItemId()) params['itemId'] = this.selectedItemId()!.toString();
 
     const type = this.reportType();
     this.reportService.exportReport(type, format, params).subscribe({
@@ -955,6 +1355,11 @@ export class ReportViewerComponent implements OnInit {
     this.stockValuationData.set(null);
     this.pipelineData.set(null);
     this.expenseData.set(null);
+    this.trialBalanceData.set(null);
+    this.generalLedgerData.set(null);
+    this.arAgeingData.set(null);
+    this.apAgeingData.set(null);
+    this.stockMovementData.set(null);
     this.genericTableData.set(null);
   }
 

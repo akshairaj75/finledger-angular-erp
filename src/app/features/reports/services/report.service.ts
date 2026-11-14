@@ -7,6 +7,9 @@ import {
   ProfitLossReport,
   BalanceSheetReport,
   GeneralLedgerReport,
+  TrialBalanceReport,
+  ArAgeingReport,
+  ApAgeingReport,
   VatReturnReport,
   StockValuationReport,
   StockMovementReport,
@@ -52,22 +55,22 @@ export class ReportService {
     return this.http.get<GeneralLedgerReport>(`${this.baseReports}/general-ledger`, { params });
   }
 
-  getTrialBalance(asOf?: string): Observable<any> {
+  getTrialBalance(asOf?: string): Observable<TrialBalanceReport> {
     let params = new HttpParams();
     if (asOf) params = params.set('asOf', asOf);
-    return this.http.get<any>(`${this.baseReports}/trial-balance`, { params });
+    return this.http.get<TrialBalanceReport>(`${this.baseReports}/trial-balance`, { params });
   }
 
-  getArAgeing(asOf?: string): Observable<any> {
+  getArAgeing(asOf?: string): Observable<ArAgeingReport> {
     let params = new HttpParams();
     if (asOf) params = params.set('asOf', asOf);
-    return this.http.get<any>(`${this.baseReports}/ar-ageing`, { params });
+    return this.http.get<ArAgeingReport>(`${this.baseReports}/ar-ageing`, { params });
   }
 
-  getApAgeing(asOf?: string): Observable<any> {
+  getApAgeing(asOf?: string): Observable<ApAgeingReport> {
     let params = new HttpParams();
     if (asOf) params = params.set('asOf', asOf);
-    return this.http.get<any>(`${this.baseReports}/ap-ageing`, { params });
+    return this.http.get<ApAgeingReport>(`${this.baseReports}/ap-ageing`, { params });
   }
 
   getVatReturn(from?: string, to?: string): Observable<VatReturnReport> {
