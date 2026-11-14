@@ -93,12 +93,16 @@
               <button (click)="viewDetails(j)" class="btn-icon" title="View lines">
                 👁
               </button>
-              <button *appHasPermission="'JOURNAL_POST'" [hidden]="j.status !== 'DRAFT'" (click)="postDraft(j)" class="btn-sm btn-success" title="Post Entry">
-                Post
-              </button>
-              <button *appHasPermission="'JOURNAL_VOID'" [hidden]="j.status !== 'POSTED'" (click)="openReversalModal(j)" class="btn-sm btn-danger" title="Reverse Entry">
-                Reverse
-              </button>
+              <ng-container *appHasPermission="'JOURNAL_POST'">
+                <button *ngIf="j.status === 'DRAFT'" (click)="postDraft(j)" class="btn-sm btn-success" title="Post Entry">
+                  Post
+                </button>
+              </ng-container>
+              <ng-container *appHasPermission="'JOURNAL_VOID'">
+                <button *ngIf="j.status === 'POSTED'" (click)="openReversalModal(j)" class="btn-sm btn-danger" title="Reverse Entry">
+                  Reverse
+                </button>
+              </ng-container>
             </td>
           </tr>
         </tbody>

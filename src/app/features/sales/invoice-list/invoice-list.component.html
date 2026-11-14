@@ -157,16 +157,17 @@
             </td>
             <td class="text-right actions-col" (click)="$event.stopPropagation()">
               <!-- Action: Send (for DRAFT) -->
-              <button
-                *appHasPermission="'INVOICE_SEND'"
-                [hidden]="inv.status !== 'DRAFT'"
-                (click)="sendInvoice(inv, $event)"
-                class="btn btn-primary btn-xs"
-                [disabled]="sendingId() === inv.id"
-                title="Post to GL & Send Invoice"
-              >
-                {{ sendingId() === inv.id ? 'Posting...' : 'Send' }}
-              </button>
+              <ng-container *appHasPermission="'INVOICE_SEND'">
+                <button
+                  *ngIf="inv.status === 'DRAFT'"
+                  (click)="sendInvoice(inv, $event)"
+                  class="btn btn-primary btn-xs"
+                  [disabled]="sendingId() === inv.id"
+                  title="Post to GL & Send Invoice"
+                >
+                  {{ sendingId() === inv.id ? 'Posting...' : 'Send' }}
+                </button>
+              </ng-container>
 
               <!-- Action: Preview PDF -->
               <button
@@ -179,15 +180,16 @@
               </button>
 
               <!-- Action: Void (for non-VOID) -->
-              <button
-                *appHasPermission="'INVOICE_VOID'"
-                [hidden]="inv.status === 'VOID'"
-                (click)="openVoidModal(inv, $event)"
-                class="btn btn-outline btn-xs btn-danger-hover ml-1"
-                title="Void Invoice"
-              >
-                Void
-              </button>
+              <ng-container *appHasPermission="'INVOICE_VOID'">
+                <button
+                  *ngIf="inv.status !== 'VOID'"
+                  (click)="openVoidModal(inv, $event)"
+                  class="btn btn-outline btn-xs btn-danger-hover ml-1"
+                  title="Void Invoice"
+                >
+                  Void
+                </button>
+              </ng-container>
             </td>
           </tr>
         </tbody>

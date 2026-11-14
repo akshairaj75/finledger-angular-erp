@@ -358,3 +358,8 @@
   }
 }
 
+/* Ensure [hidden] attribute is never overridden by .btn or flex display */
+[hidden] {
+  display: none !important;
+}
+

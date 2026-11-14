@@ -162,27 +162,29 @@
             </td>
             <td class="text-right actions-col" (click)="$event.stopPropagation()">
               <!-- Action: Approve (for DRAFT) -->
-              <button
-                *appHasPermission="'BILL_APPROVE'"
-                [hidden]="b.status !== 'DRAFT'"
-                (click)="approveBill(b, $event)"
-                class="btn btn-primary btn-xs"
-                [disabled]="approvingId() === b.id"
-                title="Approve & Post to GL"
-              >
-                {{ approvingId() === b.id ? 'Approving...' : 'Approve' }}
-              </button>
+              <ng-container *appHasPermission="'BILL_APPROVE'">
+                <button
+                  *ngIf="b.status === 'DRAFT'"
+                  (click)="approveBill(b, $event)"
+                  class="btn btn-primary btn-xs"
+                  [disabled]="approvingId() === b.id"
+                  title="Approve & Post to GL"
+                >
+                  {{ approvingId() === b.id ? 'Approving...' : 'Approve' }}
+                </button>
+              </ng-container>
 
               <!-- Action: Void (for non-VOID) -->
-              <button
-                *appHasPermission="'BILL_VOID'"
-                [hidden]="b.status === 'VOID'"
-                (click)="openVoidModal(b, $event)"
-                class="btn btn-outline btn-xs btn-danger-hover ml-1"
-                title="Void Bill"
-              >
-                Void
-              </button>
+              <ng-container *appHasPermission="'BILL_VOID'">
+                <button
+                  *ngIf="b.status !== 'VOID'"
+                  (click)="openVoidModal(b, $event)"
+                  class="btn btn-outline btn-xs btn-danger-hover ml-1"
+                  title="Void Bill"
+                >
+                  Void
+                </button>
+              </ng-container>
             </td>
           </tr>
         </tbody>
