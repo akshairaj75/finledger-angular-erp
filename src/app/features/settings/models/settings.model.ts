@@ -41,9 +41,9 @@ export interface CompanyUpdateRequest {
   address?: string;
   email?: string;
   phone?: string;
-  logoPath?: string;
   allowNegativeStock?: boolean;
   isActive?: boolean;
+  removeLogo?: boolean;
 }
 
 export interface FiscalPeriod {

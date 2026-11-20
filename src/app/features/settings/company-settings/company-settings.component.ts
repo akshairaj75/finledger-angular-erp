@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { NotificationService } from '../../../core/services/notification.service';
+import { CompanyUpdateRequest } from '../models/settings.model';
 import { SettingsService } from '../services/settings.service';
 
 @Component({
@@ -21,6 +22,40 @@ import { SettingsService } from '../services/settings.service';
 
       <div class="card">
         <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+
+          <!-- Company Logo Upload -->
+          <div class="logo-section full-width">
+            <div class="logo-preview">
+              <img *ngIf="logoPreviewUrl()" [src]="logoPreviewUrl()" alt="Company Logo" class="logo-img" />
+              <div *ngIf="!logoPreviewUrl()" class="logo-placeholder">No Logo</div>
+            </div>
+
+            <div class="logo-details">
+              <label class="logo-title">Company Logo</label>
+              <p class="logo-hint">Upload PNG or JPEG (max 2 MB)</p>
+
+              <div class="logo-buttons">
+                <input #fileInput
+                       type="file"
+                       (change)="onFileSelected($event)"
+                       accept="image/png,image/jpeg"
+                       style="display: none;" />
+
+                <button type="button" class="btn-secondary" (click)="fileInput.click()">
+                  {{ logoPreviewUrl() ? 'Change Logo' : 'Upload Logo' }}
+                </button>
+
+                <button type="button"
+                        class="btn-danger"
+                        *ngIf="logoPreviewUrl()"
+                        (click)="onRemoveLogo(fileInput)">
+                  Remove Logo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Existing Form Fields -->
           <div class="form-group">
             <label>Legal Entity Name *</label>
             <input type="text" formControlName="legalName" />
@@ -126,6 +161,81 @@ import { SettingsService } from '../services/settings.service';
       cursor: pointer;
     }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Logo section */
+    .logo-section {
+      display: flex;
+      gap: 1.25rem;
+      align-items: center;
+      padding: 1rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .logo-preview {
+      width: 100px;
+      height: 100px;
+      min-width: 100px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .logo-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .logo-placeholder {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .logo-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .logo-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .logo-hint {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .logo-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-danger {
+      background: #fff;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-danger:hover { background: #fee2e2; }
   `]
 })
 export class CompanySettingsComponent implements OnInit {
@@ -135,6 +245,12 @@ export class CompanySettingsComponent implements OnInit {
   private notification = inject(NotificationService);
 
   saving = signal<boolean>(false);
+  hasExistingLogo = signal<boolean>(false);
+  removeLogo = signal<boolean>(false);
+  logoPreviewUrl = signal<string | null>(null);
+
+  selectedLogoFile: File | null = null;
+
   months = [
     { val: 1, label: 'January' }, { val: 2, label: 'February' }, { val: 3, label: 'March' },
     { val: 4, label: 'April' }, { val: 5, label: 'May' }, { val: 6, label: 'June' },
@@ -168,22 +284,95 @@ export class CompanySettingsComponent implements OnInit {
           address: company.address || '',
           allowNegativeStock: Boolean(company.allowNegativeStock)
         });
+
+        if (company.logoPath) {
+          this.hasExistingLogo.set(true);
+          this.settingsService.getCompanyLogo().subscribe({
+            next: (blob) => {
+              this.logoPreviewUrl.set(URL.createObjectURL(blob));
+            },
+            error: () => {
+              this.hasExistingLogo.set(false);
+            }
+          });
+        }
       }
     });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      this.notification.error('Only PNG and JPEG images are allowed.');
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      this.notification.error('Logo file size must not exceed 2 MB.');
+      input.value = '';
+      return;
+    }
+
+    this.selectedLogoFile = file;
+    this.removeLogo.set(false);
+    this.logoPreviewUrl.set(URL.createObjectURL(file));
+    input.value = '';
+  }
+
+  onRemoveLogo(input?: HTMLInputElement): void {
+    this.selectedLogoFile = null;
+    this.removeLogo.set(true);
+    this.logoPreviewUrl.set(null);
+    if (input) input.value = '';
   }
 
   save(): void {
     if (this.form.invalid || this.saving()) return;
     this.saving.set(true);
     const val = this.form.getRawValue();
-    this.settingsService.updateCurrentCompany({
-      ...val,
+
+    const companyData: CompanyUpdateRequest = {
+      legalName: val.legalName,
+      trn: val.trn || undefined,
+      countryCode: val.countryCode,
+      baseCurrency: val.baseCurrency,
       fiscalYearStartMonth: Number(val.fiscalYearStartMonth),
-      isActive: true
-    }).subscribe({
+      email: val.email || undefined,
+      phone: val.phone || undefined,
+      address: val.address || undefined,
+      allowNegativeStock: Boolean(val.allowNegativeStock),
+      isActive: true,
+      removeLogo: this.removeLogo()
+    };
+
+    const formData = new FormData();
+    formData.append(
+      'data',
+      new Blob([JSON.stringify(companyData)], { type: 'application/json' })
+    );
+
+    if (this.selectedLogoFile) {
+      formData.append('logoFile', this.selectedLogoFile);
+    }
+
+    this.settingsService.updateCurrentCompany(formData).subscribe({
       next: () => {
         this.saving.set(false);
-        this.notification.success('Company settings saved');
+        this.notification.success('Company profile and logo saved successfully');
+
+        if (this.removeLogo()) {
+          this.hasExistingLogo.set(false);
+          this.removeLogo.set(false);
+        } else if (this.selectedLogoFile) {
+          this.hasExistingLogo.set(true);
+          this.selectedLogoFile = null;
+        }
+
         this.authService.reloadProfile().subscribe();
       },
       error: () => {
@@ -192,4 +381,3 @@ export class CompanySettingsComponent implements OnInit {
     });
   }
 }
-

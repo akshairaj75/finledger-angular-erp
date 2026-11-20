@@ -41,8 +41,17 @@ export class SettingsService {
     return this.http.get<CompanyProfile>(`${this.api}/companies/current`);
   }
 
-  updateCurrentCompany(req: CompanyUpdateRequest): Observable<CompanyProfile> {
-    return this.http.put<CompanyProfile>(`${this.api}/companies/current`, req);
+  updateCurrentCompany(data: FormData | CompanyUpdateRequest): Observable<CompanyProfile> {
+    if (data instanceof FormData) {
+      return this.http.put<CompanyProfile>(`${this.api}/companies/current`, data);
+    }
+    const formData = new FormData();
+    formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    return this.http.put<CompanyProfile>(`${this.api}/companies/current`, formData);
+  }
+
+  getCompanyLogo(): Observable<Blob> {
+    return this.http.get(`${this.api}/companies/current/logo`, { responseType: 'blob' });
   }
 
   // Users
