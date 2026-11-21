@@ -5,11 +5,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { LocaleService } from '../../../core/services/locale.service';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="login-split-page">
       <!-- Left Product Showcase Panel (FinLedger v2.0 Section 4.1) -->
@@ -18,44 +20,43 @@ import { NotificationService } from '../../../core/services/notification.service
           <div class="logo-row">
             <div class="brand-badge">FL</div>
             <div>
-              <span class="brand-title">FinLedger</span>
-              <span class="brand-version">ERP v2.0</span>
+              <span class="brand-title">{{ 'app.title' | translate }}</span>
+              <span class="brand-version">{{ 'app.version' | translate }}</span>
             </div>
           </div>
 
-          <h1>Double-Entry Accounting &amp; Operations in One Platform</h1>
+          <h1>{{ 'login.headline' | translate }}</h1>
           <p class="lead-copy">
-            End-to-end lead-to-cash, procure-to-pay, inventory costing, and automated financial
-            reporting designed for UAE &amp; KSA enterprises.
+            {{ 'login.lead' | translate }}
           </p>
 
           <ul class="feature-list">
             <li>
-              <span class="feat-icon">📒</span>
+              <span class="feat-icon">📖</span>
               <div>
-                <strong>Immutable General Ledger</strong>
-                <span>Strict debit/credit validation, fiscal period locking &amp; reversal audit trails.</span>
+                <strong>{{ 'login.featGl' | translate }}</strong>
+                <span>{{ 'login.featGlDesc' | translate }}</span>
               </div>
             </li>
             <li>
               <span class="feat-icon">📦</span>
               <div>
-                <strong>Multi-Warehouse Weighted-Average Costing</strong>
-                <span>Concurrent row locking prevents overselling and keeps valuation accurate.</span>
+                <strong>{{ 'login.featCosting' | translate }}</strong>
+                <span>{{ 'login.featCostingDesc' | translate }}</span>
               </div>
             </li>
             <li>
               <span class="feat-icon">📑</span>
               <div>
-                <strong>UAE 5% &amp; KSA 15% VAT Ready</strong>
-                <span>Tax invoices, input/output VAT recovery, and FTA 201 return summaries.</span>
+                <strong>{{ 'login.featVat' | translate }}</strong>
+                <span>{{ 'login.featVatDesc' | translate }}</span>
               </div>
             </li>
             <li>
               <span class="feat-icon">🏦</span>
               <div>
-                <strong>CRM Pipeline &amp; Auto Bank Reconciliation</strong>
-                <span>Quote-to-invoice conversion and zero-difference bank statement matching.</span>
+                <strong>{{ 'login.featCrm' | translate }}</strong>
+                <span>{{ 'login.featCrmDesc' | translate }}</span>
               </div>
             </li>
           </ul>
@@ -64,44 +65,57 @@ import { NotificationService } from '../../../core/services/notification.service
 
       <!-- Right Sign-In Panel -->
       <section class="form-panel">
+        <div class="login-top-bar">
+          <button
+            type="button"
+            class="lang-pill-btn"
+            (click)="localeService.toggleLocale()"
+            [attr.aria-label]="localeService.locale() === 'en' ? 'التبديل إلى العربية' : 'Switch to English'"
+          >
+            🌐 <span [class.active-lang]="localeService.locale() === 'en'">EN</span>
+            <span class="pill-divider">|</span>
+            <span [class.active-lang]="localeService.locale() === 'ar'">العربية</span>
+          </button>
+        </div>
+
         <div class="login-card">
           <div class="form-header">
-            <h2>Sign in to FinLedger</h2>
-            <p>Enter your company email and password to continue</p>
+            <h2>{{ 'login.cardTitle' | translate }}</h2>
+            <p>{{ 'login.cardSubtitle' | translate }}</p>
           </div>
 
           <div *ngIf="errorBanner()" class="error-alert" [class.locked-alert]="isLocked()">
             <span class="alert-icon">{{ isLocked() ? '🔒' : '⚠️' }}</span>
             <div class="alert-body">
-              <strong>{{ isLocked() ? 'Account Locked (5 Failed Attempts)' : 'Authentication Failed' }}</strong>
+              <strong>{{ isLocked() ? ('login.accountLocked' | translate) : ('login.authFailed' | translate) }}</strong>
               <p>{{ errorBanner() }}</p>
             </div>
           </div>
 
           <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
             <div class="form-group">
-              <label for="email">Work Email</label>
+              <label for="email">{{ 'login.workEmail' | translate }}</label>
               <input
                 id="email"
                 type="email"
                 formControlName="email"
-                placeholder="name@company.com"
+                [placeholder]="localeService.t('login.workEmailPlaceholder')"
                 autocomplete="email"
                 [class.invalid]="isInvalid('email')"
               />
               <span class="field-error" *ngIf="isInvalid('email')">
-                Please enter a valid corporate email address.
+                {{ 'login.emailError' | translate }}
               </span>
             </div>
 
             <div class="form-group">
-              <label for="password">Password</label>
+              <label for="password">{{ 'login.password' | translate }}</label>
               <div class="password-wrapper">
                 <input
                   id="password"
                   [type]="showPassword() ? 'text' : 'password'"
                   formControlName="password"
-                  placeholder="Enter your password"
+                  [placeholder]="localeService.t('login.passwordPlaceholder')"
                   autocomplete="current-password"
                   [class.invalid]="isInvalid('password')"
                 />
@@ -110,24 +124,24 @@ import { NotificationService } from '../../../core/services/notification.service
                   class="toggle-pw"
                   (click)="showPassword.set(!showPassword())"
                   tabindex="-1"
-                  [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                  [attr.aria-label]="showPassword() ? ('login.hide' | translate) : ('login.show' | translate)"
                 >
-                  {{ showPassword() ? 'Hide' : 'Show' }}
+                  {{ showPassword() ? ('login.hide' | translate) : ('login.show' | translate) }}
                 </button>
               </div>
               <span class="field-error" *ngIf="isInvalid('password')">
-                Password is required.
+                {{ 'login.passwordError' | translate }}
               </span>
             </div>
 
             <button type="submit" class="btn-submit" [disabled]="loading() || loginForm.invalid">
               <span *ngIf="loading()" class="spinner-sm"></span>
-              {{ loading() ? 'Authenticating...' : 'Sign In' }}
+              {{ loading() ? ('login.signingIn' | translate) : ('login.signIn' | translate) }}
             </button>
           </form>
 
           <div *ngIf="!isProduction" class="dev-hint">
-            <span>Seeded Admin:</span>
+            <span>{{ 'login.devCreds' | translate }}</span>
             <code>admin&#64;finledger.com</code> / <code>password</code>
           </div>
         </div>
@@ -154,7 +168,8 @@ import { NotificationService } from '../../../core/services/notification.service
     .brand-panel {
       background: linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
       color: #f8fafc;
-      padding: 3.5rem 4rem;
+      padding-block: 3.5rem;
+      padding-inline: 4rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -181,7 +196,7 @@ import { NotificationService } from '../../../core/services/notification.service
       display: flex;
       align-items: center;
       gap: 0.9rem;
-      margin-bottom: 2.25rem;
+      margin-block-end: 2.25rem;
     }
 
     .brand-badge {
@@ -200,27 +215,31 @@ import { NotificationService } from '../../../core/services/notification.service
     .brand-title {
       display: block;
       font-size: 1.35rem;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
 
     .brand-version {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       color: #94a3b8;
-      letter-spacing: 0.05em;
+      font-weight: 600;
     }
 
-    .brand-content h1 {
-      font-size: 2rem;
+    .brand-panel h1 {
+      font-size: 2.1rem;
+      font-weight: 800;
       line-height: 1.25;
       margin: 0 0 1rem;
-      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
     }
 
     .lead-copy {
-      color: #cbd5e1;
-      font-size: 0.98rem;
+      font-size: 1rem;
+      color: #94a3b8;
       line-height: 1.6;
-      margin-bottom: 2.25rem;
+      margin-block-end: 2.25rem;
     }
 
     .feature-list {
@@ -229,60 +248,104 @@ import { NotificationService } from '../../../core/services/notification.service
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 1.2rem;
+      gap: 1.15rem;
     }
 
     .feature-list li {
       display: flex;
       align-items: flex-start;
-      gap: 0.9rem;
+      gap: 0.85rem;
     }
 
     .feat-icon {
       font-size: 1.35rem;
-      line-height: 1;
-      margin-top: 0.1rem;
+      line-height: 1.2;
+      flex-shrink: 0;
     }
 
     .feature-list strong {
       display: block;
-      font-size: 0.92rem;
-      color: #f8fafc;
-      margin-bottom: 0.15rem;
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-block-end: 0.15rem;
     }
 
     .feature-list span {
-      font-size: 0.82rem;
+      display: block;
       color: #94a3b8;
-      line-height: 1.4;
+      font-size: 0.825rem;
+      line-height: 1.45;
     }
 
     .form-panel {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
+      padding-block: 2rem;
+      padding-inline: 2.5rem;
+      position: relative;
+    }
+
+    .login-top-bar {
+      position: absolute;
+      inset-block-start: 1.5rem;
+      inset-inline-end: 1.5rem;
+    }
+
+    .lang-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: #475569;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: all 0.15s ease;
+    }
+
+    .lang-pill-btn:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    .pill-divider {
+      color: #cbd5e1;
+    }
+
+    .active-lang {
+      font-weight: 700;
+      color: #2563eb;
     }
 
     .login-card {
       width: 100%;
-      max-width: 410px;
+      max-width: 420px;
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 2.25rem;
-      box-shadow: 0 12px 30px -10px rgba(15, 23, 42, 0.12);
+      border-radius: 14px;
+      padding-block: 2.5rem;
+      padding-inline: 2.25rem;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05),
+                  0 8px 10px -6px rgba(15, 23, 42, 0.04);
     }
 
     .form-header {
-      margin-bottom: 1.75rem;
+      margin-block-end: 1.75rem;
+      text-align: start;
     }
 
     .form-header h2 {
-      margin: 0;
       font-size: 1.5rem;
-      font-weight: 700;
+      font-weight: 800;
       color: #0f172a;
+      margin: 0;
+      letter-spacing: -0.02em;
     }
 
     .form-header p {
@@ -297,10 +360,12 @@ import { NotificationService } from '../../../core/services/notification.service
       background: #fef2f2;
       border: 1px solid #fecaca;
       color: #991b1b;
-      padding: 0.85rem 1rem;
+      padding-block: 0.85rem;
+      padding-inline: 1rem;
       border-radius: 10px;
-      margin-bottom: 1.25rem;
+      margin-block-end: 1.25rem;
       font-size: 0.85rem;
+      text-align: start;
     }
 
     .error-alert.locked-alert {
@@ -311,7 +376,7 @@ import { NotificationService } from '../../../core/services/notification.service
 
     .alert-body strong {
       display: block;
-      margin-bottom: 0.15rem;
+      margin-block-end: 0.15rem;
     }
 
     .alert-body p {
@@ -329,6 +394,7 @@ import { NotificationService } from '../../../core/services/notification.service
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
+      text-align: start;
     }
 
     .form-group label {
@@ -340,7 +406,8 @@ import { NotificationService } from '../../../core/services/notification.service
     .form-group input {
       width: 100%;
       box-sizing: border-box;
-      padding: 0.7rem 0.9rem;
+      padding-block: 0.7rem;
+      padding-inline: 0.9rem;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
       font-size: 0.925rem;
@@ -364,12 +431,12 @@ import { NotificationService } from '../../../core/services/notification.service
     }
 
     .password-wrapper input {
-      padding-right: 3.75rem;
+      padding-inline-end: 3.75rem;
     }
 
     .toggle-pw {
       position: absolute;
-      right: 0.65rem;
+      inset-inline-end: 0.65rem;
       background: transparent;
       border: none;
       color: #64748b;
@@ -384,8 +451,9 @@ import { NotificationService } from '../../../core/services/notification.service
     }
 
     .btn-submit {
-      margin-top: 0.5rem;
-      padding: 0.8rem 1rem;
+      margin-block-start: 0.5rem;
+      padding-block: 0.8rem;
+      padding-inline: 1rem;
       border: none;
       border-radius: 8px;
       background: #2563eb;
@@ -422,8 +490,8 @@ import { NotificationService } from '../../../core/services/notification.service
     }
 
     .dev-hint {
-      margin-top: 1.5rem;
-      padding-top: 1rem;
+      margin-block-start: 1.5rem;
+      padding-block-start: 1rem;
       border-top: 1px solid #f1f5f9;
       text-align: center;
       font-size: 0.78rem;
@@ -444,6 +512,7 @@ export class LoginComponent {
   private notificationService = inject(NotificationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  public localeService = inject(LocaleService);
 
   public readonly isProduction = environment.production;
   public loading = signal(false);

@@ -7,10 +7,13 @@ import { LoadingService } from './core/services/loading.service';
 import { NotificationService } from './core/services/notification.service';
 import { ChangePasswordModalComponent } from './features/auth/change-password/change-password-modal.component';
 
+import { LocaleService } from './core/services/locale.service';
+import { TranslatePipe } from './core/pipes/translate.pipe';
+
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterModule, HasPermissionDirective, ChangePasswordModalComponent],
+  imports: [CommonModule, RouterOutlet, RouterModule, HasPermissionDirective, ChangePasswordModalComponent, TranslatePipe],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -18,6 +21,7 @@ export class App {
   public authService = inject(AuthService);
   public loadingService = inject(LoadingService);
   public notificationService = inject(NotificationService);
+  public localeService = inject(LocaleService);
 
   public showUserMenu = signal(false);
   public showChangePasswordModal = signal(false);

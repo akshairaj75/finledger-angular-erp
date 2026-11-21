@@ -1,1 +1,106 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global Styles for FinLedger ERP */
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-slate: #f8fafc;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1e293b;
+  background-color: #f8fafc;
+  line-height: 1.5;
+}
+
+/* Arabic Typography Enhancements */
+html[lang="ar"],
+html[dir="rtl"] {
+  font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+/* Direction-Neutral Logical Text Alignment */
+.text-start {
+  text-align: start !important;
+}
+
+.text-end {
+  text-align: end !important;
+}
+
+/* When templates use text-left / text-right, map to logical properties */
+.text-left {
+  text-align: start;
+}
+
+.text-right {
+  text-align: end;
+}
+
+/* BiDi Isolation for Numbers, Codes, TRN & Dates in RTL */
+.numeric-cell,
+.currency-amount,
+.code-badge,
+.phone-number,
+.trn-number,
+.date-cell,
+.acc-code,
+.mono-val {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  display: inline-block;
+}
+
+/* Common UI Alerts & Badges Logical Spacing */
+.alert-box {
+  padding-block: 0.75rem;
+  padding-inline: 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  margin-block: 0.75rem;
+}
+
+.alert-danger {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.alert-warning {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.alert-success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+/* Generic Button & Form Logical Alignment */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+/* Ensure [hidden] attribute is never overridden */
+[hidden] {
+  display: none !important;
+}
