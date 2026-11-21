@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import {
   Item,
   ItemCategory,
@@ -104,8 +104,13 @@ export class InventoryService {
     return this.http.get<StockBalance[]>(`${this.apiPrefix}/stock-balances`, { params });
   }
 
-  getStockBalance(itemId: number, warehouseId: number): Observable<StockBalance> {
-    return this.http.get<StockBalance>(`${this.apiPrefix}/stock-balances/${itemId}/${warehouseId}`);
+  getStockBalance(itemId: number, warehouseId: number): Observable<StockBalance | null> {
+    const params = new HttpParams()
+      .set('itemId', itemId.toString())
+      .set('warehouseId', warehouseId.toString());
+    return this.http
+      .get<StockBalance[]>(`${this.apiPrefix}/stock-balances`, { params })
+      .pipe(map(list => (list && list.length > 0 ? list[0] : null)));
   }
 
   // 6. Stock Adjustments

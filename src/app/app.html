@@ -217,15 +217,15 @@
       <div class="company-switcher-wrapper">
         <button type="button" class="tenant-selector-btn" (click)="toggleCompanyMenu()">
           <span class="tenant-icon">🏢</span>
-          <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }}</span>
+          <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'Not set' }}</span>
           <span class="currency-tag">{{ 'topbar.base' | translate }}: {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
           <span class="caret">▾</span>
         </button>
 
         <div class="company-dropdown" *ngIf="showCompanyMenu()">
           <div class="company-dropdown-header">
-            <h4>{{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }}</h4>
-            <span class="company-trn">TRN: {{ authService.currentCompany()?.trn || '100987654300003' }}</span>
+            <h4>{{ authService.currentCompany()?.legalName || 'Not set' }}</h4>
+            <span class="company-trn">TRN: {{ authService.currentCompany()?.trn || '—' }}</span>
           </div>
           <div class="company-dropdown-body">
             <div class="company-meta-item">
@@ -239,7 +239,7 @@
             <div class="company-list-section">
               <span class="section-hint">Accessible Entities:</span>
               <div class="active-company-chip">
-                <span>✓ {{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }} (Current)</span>
+                <span>✓ {{ authService.currentCompany()?.legalName || 'Not set' }} (Current)</span>
               </div>
             </div>
           </div>

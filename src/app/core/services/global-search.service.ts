@@ -41,11 +41,12 @@ export class GlobalSearchService {
       requests['invoices'] = this.http.get<any>(`${this.api}/invoices`, { params }).pipe(
         map(res => {
           const list = res.content || [];
+          const baseCurrency = this.authService.currentCompany()?.baseCurrency || 'AED';
           return list.map((inv: any) => ({
             id: inv.id,
             title: inv.invoiceNo,
             subtitle: inv.customerName || 'Customer Invoice',
-            badge: `${inv.totalAmount || 0} AED`,
+            badge: `${inv.total ?? 0} ${inv.currencyCode || baseCurrency}`,
             badgeClass: 'badge-blue',
             route: ['/sales/invoices']
           }));
@@ -64,7 +65,7 @@ export class GlobalSearchService {
             id: c.id,
             title: c.name,
             subtitle: `${c.code}${c.phone ? ' • ' + c.phone : ''}`,
-            badge: c.customerType || 'Customer',
+            badge: c.currencyCode || 'Customer',
             badgeClass: 'badge-green',
             route: ['/sales/customers']
           }));
@@ -79,11 +80,12 @@ export class GlobalSearchService {
       requests['items'] = this.http.get<any>(`${this.api}/items`, { params }).pipe(
         map(res => {
           const list = res.content || [];
+          const baseCurrency = this.authService.currentCompany()?.baseCurrency || 'AED';
           return list.map((item: any) => ({
             id: item.id,
             title: item.name,
             subtitle: `SKU: ${item.sku} • On Hand: ${item.totalOnHand ?? 0} ${item.unit || 'PCS'}`,
-            badge: `${item.salesPrice || 0} AED`,
+            badge: `${item.salesPrice || 0} ${baseCurrency}`,
             badgeClass: 'badge-purple',
             route: ['/inventory/items', item.id]
           }));

@@ -258,9 +258,9 @@ export class StockAdjustmentFormComponent implements OnInit {
               itemId: item.id,
               sku: item.sku,
               name: item.name,
-              systemQty: bal.qtyOnHand,
-              countedQty: bal.qtyOnHand,
-              unitCost: bal.avgCost > 0 ? bal.avgCost : item.purchasePrice
+              systemQty: bal?.qtyOnHand ?? 0,
+              countedQty: bal?.qtyOnHand ?? 0,
+              unitCost: bal && bal.avgCost > 0 ? bal.avgCost : item.purchasePrice
             })
           );
           this.recalculateAll();

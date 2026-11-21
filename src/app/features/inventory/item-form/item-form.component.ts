@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
@@ -32,6 +33,7 @@ export class ItemFormComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   itemForm!: FormGroup;
   isEditMode = signal(false);
@@ -67,15 +69,39 @@ export class ItemFormComponent implements OnInit {
     this.initForm();
     this.loadDropdowns();
 
-    const paramId = this.route.snapshot.paramMap.get('id');
-    if (paramId && paramId !== 'new') {
-      const id = Number(paramId);
-      if (!isNaN(id)) {
-        this.isEditMode.set(true);
-        this.itemId.set(id);
-        this.loadItem(id);
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const paramId = params.get('id');
+      if (paramId && paramId !== 'new') {
+        const id = Number(paramId);
+        if (!isNaN(id)) {
+          this.isEditMode.set(true);
+          this.itemId.set(id);
+          this.loadItem(id);
+        }
+      } else {
+        this.isEditMode.set(false);
+        this.itemId.set(null);
+        this.itemForm.reset({
+          sku: '',
+          barcode: '',
+          name: '',
+          categoryId: null,
+          itemType: 'INVENTORY',
+          unit: 'PCS',
+          costingMethod: 'WEIGHTED_AVERAGE',
+          salesPrice: 0,
+          purchasePrice: 0,
+          reorderLevel: 0,
+          reorderQty: 0,
+          incomeAccountId: null,
+          cogsAccountId: null,
+          inventoryAccountId: null,
+          taxRateId: null,
+          isActive: true
+        });
+        this.movements.set([]);
       }
-    }
+    });
   }
 
   private initForm(): void {
@@ -112,7 +138,7 @@ export class ItemFormComponent implements OnInit {
 
     this.accountService.getAccounts(0, 500).subscribe({
       next: page => {
-        const accs = page.content;
+        const accs = page.content.filter(a => !a.isGroup && a.isActive);
         this.incomeAccounts.set(accs.filter(a => a.accountType === 'INCOME'));
         this.cogsAccounts.set(accs.filter(a => a.accountType === 'EXPENSE'));
         this.inventoryAccounts.set(accs.filter(a => a.accountType === 'ASSET'));
@@ -147,7 +173,6 @@ export class ItemFormComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.notificationService.error('Failed to load item details.');
         this.router.navigate(['/inventory/items']);
       }
     });
@@ -198,9 +223,8 @@ export class ItemFormComponent implements OnInit {
           this.notificationService.success(`Item "${updated.sku}" updated successfully.`);
           this.router.navigate(['/inventory/items']);
         },
-        error: err => {
+        error: () => {
           this.saving.set(false);
-          this.notificationService.error(err?.error?.message || 'Failed to update item.');
         }
       });
     } else {
@@ -210,9 +234,8 @@ export class ItemFormComponent implements OnInit {
           this.notificationService.success(`Item "${created.sku}" created successfully.`);
           this.router.navigate(['/inventory/items']);
         },
-        error: err => {
+        error: () => {
           this.saving.set(false);
-          this.notificationService.error(err?.error?.message || 'Failed to create item.');
         }
       });
     }

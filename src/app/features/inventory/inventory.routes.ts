@@ -20,6 +20,16 @@ export const INVENTORY_ROUTES: Routes = [
     canActivate: [permissionGuard],
     data: { permissions: ['ITEM_EDIT'] }
   },
-  { path: 'adjustments/new', component: StockAdjustmentFormComponent },
-  { path: 'transfers/new', component: StockTransferFormComponent }
+  {
+    path: 'adjustments/new',
+    component: StockAdjustmentFormComponent,
+    canActivate: [permissionGuard],
+    data: { permissions: ['STOCK_ADJUST'] }
+  },
+  {
+    path: 'transfers/new',
+    component: StockTransferFormComponent,
+    canActivate: [permissionGuard],
+    data: { permissions: ['STOCK_TRANSFER'] }
+  }
 ];

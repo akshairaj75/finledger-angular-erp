@@ -184,7 +184,7 @@ export class BillFormComponent implements OnInit {
         next: bal => {
           this.stockBalances.update(prev => {
             const next = new Map(prev);
-            next.set(`${itemId}_${whId}`, bal.qtyOnHand);
+            next.set(`${itemId}_${whId}`, bal?.qtyOnHand ?? 0);
             return next;
           });
         },

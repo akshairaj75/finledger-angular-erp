@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { catchError, concatMap, from, of, tap } from 'rxjs';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { Account, AccountType, NormalBalance } from '../../../core/models/account.model';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -191,10 +192,10 @@ export interface ParsedAccountRow {
                 <tbody>
                   <tr *ngFor="let r of parsedRows()">
                     <td>
-                      <span *ngIf="r.isValid" class="badge active">Valid</span>
-                      <span *ngIf="!r.isValid" class="badge">Invalid</span>
                       <span *ngIf="r.importStatus === 'SUCCESS'" class="badge active">Imported</span>
                       <span *ngIf="r.importStatus === 'ERROR'" class="badge">Failed</span>
+                      <span *ngIf="!r.importStatus && r.isValid" class="badge active">Valid</span>
+                      <span *ngIf="!r.importStatus && !r.isValid" class="badge">Invalid</span>
                     </td>
                     <td class="mono font-bold">{{ r.code }}</td>
                     <td>{{ r.name }}</td>
@@ -438,39 +439,41 @@ export class ChartOfAccountsComponent implements OnInit {
     if (validRows.length === 0) return;
 
     this.importing.set(true);
-    let completed = 0;
     let successes = 0;
     let failures = 0;
 
-    validRows.forEach(row => {
-      this.settingsService.createAccount({
-        code: row.code,
-        name: row.name,
-        accountType: row.accountType,
-        normalBalance: row.normalBalance,
-        subType: row.subType,
-        isActive: true,
-        isGroup: false
-      }).subscribe({
-        next: () => {
-          row.importStatus = 'SUCCESS';
-          successes++;
-          completed++;
-          if (completed === validRows.length) {
-            this.finishImport(successes, failures);
-          }
-        },
-        error: (err) => {
-          row.importStatus = 'ERROR';
-          row.errorMessage = err?.error?.message || 'Creation failed';
-          failures++;
-          completed++;
-          if (completed === validRows.length) {
-            this.finishImport(successes, failures);
-          }
+    from(validRows)
+      .pipe(
+        concatMap(row =>
+          this.settingsService
+            .createAccount({
+              code: row.code,
+              name: row.name,
+              accountType: row.accountType,
+              normalBalance: row.normalBalance,
+              subType: row.subType,
+              isActive: true,
+              isGroup: false
+            })
+            .pipe(
+              tap(() => {
+                row.importStatus = 'SUCCESS';
+                successes++;
+              }),
+              catchError(err => {
+                row.importStatus = 'ERROR';
+                row.errorMessage = err?.error?.message || 'Creation failed';
+                failures++;
+                return of(null);
+              })
+            )
+        )
+      )
+      .subscribe({
+        complete: () => {
+          this.finishImport(successes, failures);
         }
       });
-    });
   }
 
   private finishImport(successes: number, failures: number): void {
