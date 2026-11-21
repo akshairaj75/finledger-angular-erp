@@ -6,6 +6,17 @@ import { Account, AccountType, NormalBalance } from '../../../core/models/accoun
 import { NotificationService } from '../../../core/services/notification.service';
 import { SettingsService } from '../services/settings.service';
 
+export interface ParsedAccountRow {
+  code: string;
+  name: string;
+  accountType: AccountType;
+  normalBalance: NormalBalance;
+  subType?: string;
+  isValid: boolean;
+  errorMessage?: string;
+  importStatus?: 'PENDING' | 'SUCCESS' | 'ERROR';
+}
+
 @Component({
   selector: 'app-chart-of-accounts',
   standalone: true,
@@ -17,9 +28,22 @@ import { SettingsService } from '../services/settings.service';
           <h2>Chart of Accounts</h2>
           <p class="subtitle">Manage postable ledger accounts, parent groups, and normal balances</p>
         </div>
-        <button *appHasPermission="['ACCOUNT_CREATE', 'ACCOUNT_EDIT']" class="btn-primary" (click)="openNew()">
-          + New Account
-        </button>
+        <div class="header-actions">
+          <button type="button" class="btn-outline" (click)="exportCsv()" [disabled]="accounts().length === 0">
+            📊 Export CSV
+          </button>
+          <button
+            *appHasPermission="['ACCOUNT_CREATE', 'ACCOUNT_EDIT']"
+            type="button"
+            class="btn-outline"
+            (click)="openImportModal()"
+          >
+            📥 Import Accounts
+          </button>
+          <button *appHasPermission="['ACCOUNT_CREATE', 'ACCOUNT_EDIT']" class="btn-primary" (click)="openNew()">
+            + New Account
+          </button>
+        </div>
       </div>
 
       <div class="card">
@@ -39,7 +63,7 @@ import { SettingsService } from '../services/settings.service';
             <tr *ngFor="let a of accounts()" [class.group-row]="a.isGroup">
               <td class="mono font-bold">{{ a.code }}</td>
               <td>
-                <span [style.padding-left.px]="a.parentId ? 18 : 0">
+                <span [style.padding-inline-start.px]="a.parentId ? 18 : 0">
                   {{ a.isGroup ? '📁 ' : '' }}{{ a.name }}
                 </span>
               </td>
@@ -63,6 +87,7 @@ import { SettingsService } from '../services/settings.service';
         </table>
       </div>
 
+      <!-- Create / Edit Modal -->
       <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
@@ -115,7 +140,7 @@ import { SettingsService } from '../services/settings.service';
             </div>
 
             <div class="checks-row">
-              <label><input type="checkbox" formControlName="isGroup" /> Header Group Account (Non-postable)</label>
+              <label><input type="checkbox" formControlName="isGroup" /> Is Header Group</label>
               <label><input type="checkbox" formControlName="isActive" /> Active</label>
             </div>
 
@@ -128,28 +153,102 @@ import { SettingsService } from '../services/settings.service';
           </form>
         </div>
       </div>
+
+      <!-- CSV Import Modal -->
+      <div class="modal-backdrop" *ngIf="showImportModal()">
+        <div class="modal-card modal-wide">
+          <div class="modal-header">
+            <h3>Import Chart of Accounts (CSV)</h3>
+            <button class="close-btn" (click)="showImportModal.set(false)">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="import-help">
+              Upload a standard CSV file with columns: <code>Code, Name, AccountType, NormalBalance, SubType</code>.
+              Allowed types: <strong>ASSET, LIABILITY, EQUITY, INCOME, EXPENSE</strong>.
+            </p>
+
+            <div class="file-picker-row">
+              <input type="file" accept=".csv,text/csv" (change)="onFileSelected($event)" />
+            </div>
+
+            <div *ngIf="importSummary()" class="alert-box alert-info mt-2">
+              {{ importSummary() }}
+            </div>
+
+            <!-- Preview Table -->
+            <div class="preview-scroll" *ngIf="parsedRows().length > 0">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Code</th>
+                    <th>Account Name</th>
+                    <th>Type</th>
+                    <th>Balance</th>
+                    <th>Validation Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let r of parsedRows()">
+                    <td>
+                      <span *ngIf="r.isValid" class="badge active">Valid</span>
+                      <span *ngIf="!r.isValid" class="badge">Invalid</span>
+                      <span *ngIf="r.importStatus === 'SUCCESS'" class="badge active">Imported</span>
+                      <span *ngIf="r.importStatus === 'ERROR'" class="badge">Failed</span>
+                    </td>
+                    <td class="mono font-bold">{{ r.code }}</td>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.accountType }}</td>
+                    <td>{{ r.normalBalance }}</td>
+                    <td [class.text-danger]="!r.isValid" [class.text-muted]="r.isValid">
+                      {{ r.errorMessage || 'Ready for import' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-outline" (click)="showImportModal.set(false)">Close</button>
+              <button
+                type="button"
+                class="btn-primary"
+                (click)="runImport()"
+                [disabled]="importing() || validRowCount() === 0"
+              >
+                {{ importing() ? 'Importing Accounts...' : 'Import ' + validRowCount() + ' Valid Accounts' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .page-header h2 { margin: 0; font-size: 1.45rem; color: #0f172a; }
-    .subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem; }
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+    .coa-page { padding: 1.5rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+    .page-header h2 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    .subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.85rem; }
+    .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
     .data-table { width: 100%; border-collapse: collapse; }
-    .data-table th { background: #f8fafc; padding: 0.8rem 1rem; text-align: left; font-size: 0.78rem; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-    .data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; }
+    .data-table th { background: #f8fafc; padding: 0.8rem 1rem; text-align: start; font-size: 0.78rem; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+    .data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; text-align: start; }
     .group-row { background: #f8fafc; font-weight: 600; }
     .mono { font-family: monospace; }
     .font-bold { font-weight: 700; }
-    .text-right { text-align: right; }
+    .text-right { text-align: end; }
+    .text-danger { color: #dc2626; font-size: 0.8rem; }
+    .text-muted { color: #64748b; font-size: 0.8rem; }
     .type-pill { background: #eff6ff; color: #1d4ed8; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; }
     .badge { padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; background: #fee2e2; color: #991b1b; }
     .badge.active { background: #dcfce7; color: #166534; }
     .btn-primary { background: #2563eb; color: #fff; border: none; padding: 0.6rem 1.15rem; border-radius: 8px; font-weight: 600; cursor: pointer; }
     .btn-sm { padding: 0.3rem 0.65rem; font-size: 0.78rem; }
-    .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; }
+    .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 500; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal-card { background: #fff; border-radius: 12px; width: 100%; max-width: 520px; }
+    .modal-wide { max-width: 760px; }
     .modal-header { padding: 1rem 1.35rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
     .modal-header h3 { margin: 0; }
     .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; }
@@ -160,6 +259,9 @@ import { SettingsService } from '../services/settings.service';
     .form-group input, .form-group select { padding: 0.55rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; }
     .checks-row { display: flex; gap: 1.25rem; font-size: 0.85rem; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; }
+    .import-help { font-size: 0.85rem; color: #475569; margin: 0; }
+    .import-help code { background: #f1f5f9; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    .preview-scroll { max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
   `]
 })
 export class ChartOfAccountsComponent implements OnInit {
@@ -169,8 +271,13 @@ export class ChartOfAccountsComponent implements OnInit {
 
   accounts = signal<Account[]>([]);
   showModal = signal<boolean>(false);
+  showImportModal = signal<boolean>(false);
   saving = signal<boolean>(false);
+  importing = signal<boolean>(false);
   editing = signal<Account | null>(null);
+
+  parsedRows = signal<ParsedAccountRow[]>([]);
+  importSummary = signal<string | null>(null);
 
   form = this.fb.group({
     code: ['', Validators.required],
@@ -184,6 +291,7 @@ export class ChartOfAccountsComponent implements OnInit {
   });
 
   groupAccounts = computed<Account[]>(() => this.accounts().filter(a => a.isGroup));
+  validRowCount = computed(() => this.parsedRows().filter(r => r.isValid && r.importStatus !== 'SUCCESS').length);
 
   ngOnInit(): void {
     this.load();
@@ -191,6 +299,189 @@ export class ChartOfAccountsComponent implements OnInit {
 
   load(): void {
     this.settingsService.getAccounts().subscribe(res => this.accounts.set(res.content || []));
+  }
+
+  exportCsv(): void {
+    const headers = ['Code', 'Name', 'AccountType', 'NormalBalance', 'Classification', 'Status'];
+    const rows = this.accounts().map(a => [
+      `"${a.code}"`,
+      `"${(a.name || '').replace(/"/g, '""')}"`,
+      `"${a.accountType}"`,
+      `"${a.normalBalance}"`,
+      `"${a.isGroup ? 'Header Group' : (a.subType || 'Transactional')}"`,
+      `"${a.isActive ? 'Active' : 'Inactive'}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `chart_of_accounts_${new Date().toISOString().substring(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    this.notification.success('Chart of Accounts exported successfully.');
+  }
+
+  openImportModal(): void {
+    this.parsedRows.set([]);
+    this.importSummary.set(null);
+    this.showImportModal.set(true);
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+      this.parseCsvContent(text);
+    };
+
+    reader.readAsText(file);
+  }
+
+  parseCsvContent(csv: string): void {
+    const lines = csv.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      this.notification.error('CSV file is empty or missing headers.');
+      return;
+    }
+
+    const header = lines[0].toLowerCase().split(',').map(h => h.replace(/["']/g, '').trim());
+    const codeIdx = header.findIndex(h => h.includes('code'));
+    const nameIdx = header.findIndex(h => h.includes('name'));
+    const typeIdx = header.findIndex(h => h.includes('type'));
+    const balIdx = header.findIndex(h => h.includes('balance'));
+    const subTypeIdx = header.findIndex(h => h.includes('subtype') || h.includes('class'));
+
+    if (codeIdx === -1 || nameIdx === -1) {
+      this.notification.error('CSV header must contain "Code" and "Name" columns.');
+      return;
+    }
+
+    const validTypes: AccountType[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
+    const validBalances: NormalBalance[] = ['DEBIT', 'CREDIT'];
+    const parsed: ParsedAccountRow[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const rawCols = this.parseCsvLine(lines[i]);
+      const code = (rawCols[codeIdx] || '').trim();
+      const name = (rawCols[nameIdx] || '').trim();
+      const rawType = (rawCols[typeIdx] || 'EXPENSE').trim().toUpperCase() as AccountType;
+      const rawBal = (rawCols[balIdx] || (rawType === 'ASSET' || rawType === 'EXPENSE' ? 'DEBIT' : 'CREDIT')).trim().toUpperCase() as NormalBalance;
+      const subType = subTypeIdx !== -1 ? (rawCols[subTypeIdx] || '').trim() : undefined;
+
+      let isValid = true;
+      let errorMessage = '';
+
+      if (!code) {
+        isValid = false;
+        errorMessage = 'Missing account code';
+      } else if (!name) {
+        isValid = false;
+        errorMessage = 'Missing account name';
+      } else if (!validTypes.includes(rawType)) {
+        isValid = false;
+        errorMessage = `Invalid AccountType "${rawType}"`;
+      } else if (!validBalances.includes(rawBal)) {
+        isValid = false;
+        errorMessage = `Invalid NormalBalance "${rawBal}"`;
+      }
+
+      parsed.push({
+        code,
+        name,
+        accountType: rawType,
+        normalBalance: rawBal,
+        subType: subType || undefined,
+        isValid,
+        errorMessage: errorMessage || undefined,
+        importStatus: 'PENDING'
+      });
+    }
+
+    this.parsedRows.set(parsed);
+    const validCount = parsed.filter(p => p.isValid).length;
+    this.importSummary.set(`Found ${parsed.length} rows (${validCount} valid, ${parsed.length - validCount} invalid).`);
+  }
+
+  private parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        inQuotes = !inQuotes;
+      } else if (c === ',' && !inQuotes) {
+        result.push(cur.replace(/^"|"$/g, ''));
+        cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    result.push(cur.replace(/^"|"$/g, ''));
+    return result;
+  }
+
+  runImport(): void {
+    const validRows = this.parsedRows().filter(r => r.isValid && r.importStatus !== 'SUCCESS');
+    if (validRows.length === 0) return;
+
+    this.importing.set(true);
+    let completed = 0;
+    let successes = 0;
+    let failures = 0;
+
+    validRows.forEach(row => {
+      this.settingsService.createAccount({
+        code: row.code,
+        name: row.name,
+        accountType: row.accountType,
+        normalBalance: row.normalBalance,
+        subType: row.subType,
+        isActive: true,
+        isGroup: false
+      }).subscribe({
+        next: () => {
+          row.importStatus = 'SUCCESS';
+          successes++;
+          completed++;
+          if (completed === validRows.length) {
+            this.finishImport(successes, failures);
+          }
+        },
+        error: (err) => {
+          row.importStatus = 'ERROR';
+          row.errorMessage = err?.error?.message || 'Creation failed';
+          failures++;
+          completed++;
+          if (completed === validRows.length) {
+            this.finishImport(successes, failures);
+          }
+        }
+      });
+    });
+  }
+
+  private finishImport(successes: number, failures: number): void {
+    this.importing.set(false);
+    this.load();
+    if (failures === 0) {
+      this.notification.success(`Successfully imported ${successes} accounts!`);
+      this.showImportModal.set(false);
+    } else {
+      this.notification.warning(`Imported ${successes} accounts with ${failures} errors.`);
+    }
   }
 
   openNew(): void {
@@ -254,4 +545,3 @@ export class ChartOfAccountsComponent implements OnInit {
     });
   }
 }
-

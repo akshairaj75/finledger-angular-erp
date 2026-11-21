@@ -213,9 +213,78 @@
   <div class="main-wrapper">
     <!-- Top Bar -->
     <header class="topbar">
-      <div class="tenant-selector">
-        <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }}</span>
-        <span class="currency-tag">{{ 'topbar.base' | translate }}: {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
+      <!-- Interactive Company Switcher -->
+      <div class="company-switcher-wrapper">
+        <button type="button" class="tenant-selector-btn" (click)="toggleCompanyMenu()">
+          <span class="tenant-icon">🏢</span>
+          <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }}</span>
+          <span class="currency-tag">{{ 'topbar.base' | translate }}: {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
+          <span class="caret">▾</span>
+        </button>
+
+        <div class="company-dropdown" *ngIf="showCompanyMenu()">
+          <div class="company-dropdown-header">
+            <h4>{{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }}</h4>
+            <span class="company-trn">TRN: {{ authService.currentCompany()?.trn || '100987654300003' }}</span>
+          </div>
+          <div class="company-dropdown-body">
+            <div class="company-meta-item">
+              <span class="meta-label">Country & Currency:</span>
+              <span class="meta-val">{{ authService.currentCompany()?.countryCode || 'AE' }} • {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
+            </div>
+            <div class="company-meta-item">
+              <span class="meta-label">Status:</span>
+              <span class="meta-status active">Active Primary Entity</span>
+            </div>
+            <div class="company-list-section">
+              <span class="section-hint">Accessible Entities:</span>
+              <div class="active-company-chip">
+                <span>✓ {{ authService.currentCompany()?.legalName || 'BSB Trading LLC' }} (Current)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Global Search Bar (300ms Debounce) -->
+      <div class="global-search-container">
+        <div class="global-search-bar">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="global-search-input"
+            [placeholder]="localeService.locale() === 'ar' ? 'بحث عام (فواتير، عملاء، مخزون)...' : 'Search invoices, customers, items, leads...'"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="onSearchInput($event)"
+            (focus)="showSearchResults.set(true)"
+          />
+          <span *ngIf="searchLoading()" class="search-spinner-sm"></span>
+          <button *ngIf="searchQuery()" type="button" class="clear-search-btn" (click)="clearSearch()">&times;</button>
+        </div>
+
+        <!-- Grouped Search Results Dropdown -->
+        <div class="search-results-dropdown" *ngIf="showSearchResults() && (searchGroups().length > 0 || (searchQuery().length >= 2 && !searchLoading()))">
+          <div *ngIf="searchGroups().length === 0 && !searchLoading()" class="no-search-results">
+            No matching records found for "{{ searchQuery() }}"
+          </div>
+
+          <div class="search-category-group" *ngFor="let g of searchGroups()">
+            <div class="search-category-title">
+              <span>{{ g.icon }}</span> {{ g.category }}
+            </div>
+            <div
+              class="search-result-item"
+              *ngFor="let item of g.items"
+              (click)="selectSearchResult(item)"
+            >
+              <div class="search-item-texts">
+                <span class="search-item-title">{{ item.title }}</span>
+                <span class="search-item-sub">{{ item.subtitle }}</span>
+              </div>
+              <span *ngIf="item.badge" class="search-item-badge" [ngClass]="item.badgeClass">{{ item.badge }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="topbar-actions">
@@ -260,7 +329,7 @@
     </header>
 
     <!-- Page View Outlet -->
-    <main class="content-area" (click)="showUserMenu.set(false)">
+    <main class="content-area" (click)="closeOverlays()">
       <router-outlet></router-outlet>
     </main>
   </div>

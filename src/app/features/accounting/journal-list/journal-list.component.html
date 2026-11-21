@@ -93,6 +93,14 @@
               <button (click)="viewDetails(j)" class="btn-icon" title="View lines">
                 👁
               </button>
+              <a
+                *ngIf="j.status === 'DRAFT'"
+                [routerLink]="['/accounting/journals', j.id, 'edit']"
+                class="btn-sm btn-outline-primary"
+                title="Edit Draft Entry"
+              >
+                Edit
+              </a>
               <ng-container *appHasPermission="'JOURNAL_POST'">
                 <button *ngIf="j.status === 'DRAFT'" (click)="postDraft(j)" class="btn-sm btn-success" title="Post Entry">
                   Post
@@ -177,6 +185,9 @@
       </div>
 
       <div class="modal-footer">
+        <a *ngIf="sj.status === 'DRAFT'" [routerLink]="['/accounting/journals', sj.id, 'edit']" class="btn btn-secondary">
+          Edit Draft
+        </a>
         <button *ngIf="sj.status === 'DRAFT'" (click)="postDraft(sj)" class="btn btn-primary">
           Post This Entry
         </button>

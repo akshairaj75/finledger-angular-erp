@@ -16,5 +16,12 @@ export const ACCOUNTING_ROUTES: Routes = [
   },
   { path: 'journals', component: JournalListComponent },
   { path: 'journals/new', component: JournalFormComponent },
+  {
+    path: 'journals/:id/edit',
+    component: JournalFormComponent,
+    canActivate: [permissionGuard],
+    data: { permissions: ['JOURNAL_CREATE', 'JOURNAL_POST'] },
+    title: 'FinLedger - Edit Journal Entry'
+  },
   { path: 'ledger', component: LedgerComponent }
 ];

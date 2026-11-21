@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { switchMap } from 'rxjs';
 import { Account } from '../../../core/models/account.model';
 import { CostCenter } from '../../../core/models/cost-center.model';
 import { CreateJournalEntryRequest, JournalLineRequest, JournalSourceType } from '../../../core/models/journal.model';
@@ -25,12 +26,17 @@ export class JournalFormComponent implements OnInit {
   private accountService = inject(AccountService);
   private costCenterService = inject(CostCenterService);
   private notificationService = inject(NotificationService);
+  private route = inject(ActivatedRoute);
   private router = inject(Router);
 
   journalForm!: FormGroup;
   accounts = signal<Account[]>([]);
   costCenters = signal<CostCenter[]>([]);
   submitting = signal(false);
+  loading = signal(false);
+  isEditMode = signal(false);
+  journalId = signal<number | null>(null);
+  entryNumber = signal<string | null>(null);
   backendFieldErrors = signal<Record<string, string>>({});
   private formRevision = signal(0);
 
@@ -39,6 +45,58 @@ export class JournalFormComponent implements OnInit {
   ngOnInit(): void {
     this.initForm();
     this.loadDropdownData();
+
+    const paramId = this.route.snapshot.paramMap.get('id');
+    if (paramId && paramId !== 'new') {
+      const id = Number(paramId);
+      if (!isNaN(id)) {
+        this.isEditMode.set(true);
+        this.journalId.set(id);
+        this.loadJournal(id);
+      }
+    }
+  }
+
+  loadJournal(id: number): void {
+    this.loading.set(true);
+    this.journalService.getJournalEntryById(id).subscribe({
+      next: j => {
+        this.loading.set(false);
+        if (j.status !== 'DRAFT') {
+          this.notificationService.warning(`Only DRAFT journal entries can be edited. Current status: ${j.status}`);
+          this.router.navigate(['/accounting/journals']);
+          return;
+        }
+
+        this.entryNumber.set(j.entryNo);
+        this.journalForm.patchValue({
+          entryDate: j.entryDate,
+          reference: j.reference || '',
+          currencyCode: j.currencyCode || 'AED',
+          exchangeRate: j.exchangeRate || 1.0,
+          narration: j.narration || ''
+        });
+
+        this.lines.clear();
+        for (const l of j.lines) {
+          this.lines.push(
+            this.fb.group({
+              accountId: [l.accountId, [Validators.required]],
+              costCenterId: [l.costCenterId || null],
+              description: [l.description || ''],
+              debit: [l.debit || 0, [Validators.min(0)]],
+              credit: [l.credit || 0, [Validators.min(0)]]
+            })
+          );
+        }
+        this.formRevision.update(v => v + 1);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.notificationService.error('Failed to load journal entry for editing.');
+        this.router.navigate(['/accounting/journals']);
+      }
+    });
   }
 
   private initForm(): void {
@@ -190,11 +248,17 @@ export class JournalFormComponent implements OnInit {
       postImmediately
     };
 
-    this.journalService.createJournalEntry(req).subscribe({
-      next: (created) => {
+    const action$ = this.isEditMode() && this.journalId()
+      ? (postImmediately
+          ? this.journalService.update(this.journalId()!, req).pipe(switchMap(upd => this.journalService.postJournalEntry(upd.id)))
+          : this.journalService.update(this.journalId()!, req))
+      : this.journalService.createJournalEntry(req);
+
+    action$.subscribe({
+      next: (result) => {
         this.submitting.set(false);
-        const actionVerb = postImmediately ? 'posted' : 'saved as draft';
-        this.notificationService.success(`Journal entry ${created.entryNo} successfully ${actionVerb}.`);
+        const actionVerb = postImmediately ? 'posted' : (this.isEditMode() ? 'updated' : 'saved as draft');
+        this.notificationService.success(`Journal entry ${result.entryNo} successfully ${actionVerb}.`);
         this.router.navigate(['/accounting/journals']);
       },
       error: (err) => {
@@ -206,6 +270,8 @@ export class JournalFormComponent implements OnInit {
             map[fe.field] = fe.message;
           });
           this.backendFieldErrors.set(map);
+        } else {
+          this.notificationService.error(err?.error?.message || 'Failed to save journal entry.');
         }
       }
     });

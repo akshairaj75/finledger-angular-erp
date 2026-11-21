@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { ItemCategory, StockMovement, StockSummary, Warehouse } from '../../../core/models/inventory.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { InventoryService } from '../services/inventory.service';
@@ -9,7 +10,7 @@ import { InventoryService } from '../services/inventory.service';
 @Component({
   selector: 'app-stock-overview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, HasPermissionDirective],
   templateUrl: './stock-overview.component.html',
   styleUrls: ['./stock-overview.component.css']
 })

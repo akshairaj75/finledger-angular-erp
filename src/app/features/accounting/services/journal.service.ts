@@ -37,6 +37,14 @@ export class JournalService {
     return this.http.post<JournalEntry>(this.base, request);
   }
 
+  updateJournalEntry(id: number, request: CreateJournalEntryRequest): Observable<JournalEntry> {
+    return this.http.put<JournalEntry>(`${this.base}/${id}`, request);
+  }
+
+  update(id: number, req: CreateJournalEntryRequest): Observable<JournalEntry> {
+    return this.updateJournalEntry(id, req);
+  }
+
   postJournalEntry(id: number): Observable<JournalEntry> {
     return this.http.post<JournalEntry>(`${this.base}/${id}/post`, {});
   }

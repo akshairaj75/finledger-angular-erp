@@ -6,10 +6,13 @@
       <p class="page-subtitle">Real-time stock valuation, multi-warehouse on-hand levels, and movements ledger</p>
     </div>
     <div class="header-actions">
+      <a *appHasPermission="['ITEM_CREATE', 'ITEM_EDIT']" routerLink="/inventory/items/new" class="btn btn-primary">
+        <span class="btn-icon">➕</span> New Item
+      </a>
       <a routerLink="/inventory/transfers/new" class="btn btn-secondary">
         <span class="btn-icon">⇄</span> Stock Transfer
       </a>
-      <a routerLink="/inventory/adjustments/new" class="btn btn-primary">
+      <a routerLink="/inventory/adjustments/new" class="btn btn-secondary">
         <span class="btn-icon">⚖️</span> Stock Adjustment
       </a>
     </div>
@@ -139,6 +142,7 @@
             <th class="text-right">Stock Value</th>
             <th class="text-center">Status</th>
             <th class="text-center">Ledger</th>
+            <th class="text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -200,6 +204,16 @@
               >
                 📜
               </button>
+            </td>
+            <td class="text-center" (click)="$event.stopPropagation()">
+              <a
+                *appHasPermission="'ITEM_EDIT'"
+                [routerLink]="['/inventory/items', item.itemId]"
+                class="btn btn-sm btn-outline-primary"
+                title="Edit Item Details"
+              >
+                Edit
+              </a>
             </td>
           </tr>
         </tbody>

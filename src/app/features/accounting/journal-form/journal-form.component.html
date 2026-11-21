@@ -1,8 +1,8 @@
 <div class="page-container">
   <div class="header-section">
     <div>
-      <h1 class="page-title">New Journal Entry</h1>
-      <p class="page-subtitle">Record manual double-entry financial voucher</p>
+      <h1 class="page-title">{{ isEditMode() ? 'Edit Journal Entry' : 'New Journal Entry' }} {{ entryNumber() ? '(' + entryNumber() + ')' : '' }}</h1>
+      <p class="page-subtitle">{{ isEditMode() ? 'Update draft double-entry voucher before GL posting' : 'Record manual double-entry financial voucher' }}</p>
     </div>
     <div class="header-actions">
       <a routerLink="/accounting/journals" class="btn btn-outline">Cancel</a>
