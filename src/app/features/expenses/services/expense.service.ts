@@ -104,6 +104,12 @@ export class ExpenseService {
     return this.http.delete<void>(`${this.attachmentsBase}/${id}`);
   }
 
+  downloadAttachment(id: number): Observable<Blob> {
+    return this.http.get(`${this.attachmentsBase}/${id}`, {
+      responseType: 'blob'
+    });
+  }
+
   getAttachmentDownloadUrl(id: number): string {
     return `${this.attachmentsBase}/${id}`;
   }

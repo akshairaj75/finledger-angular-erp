@@ -273,7 +273,7 @@ describe('Expenses Module - Approval Flow Stepper & Journal Entry Preview (Secti
 
     const debits = [
       { account: '5300 Travel & Lodging', amount: subtotal },
-      { account: '2200 Input VAT', amount: vat }
+      { account: '1400 Input VAT', amount: vat }
     ];
     const credits = [
       { account: '1110 Emirates NBD Bank', amount: grandTotal }
@@ -294,7 +294,7 @@ describe('Expenses Module - Approval Flow Stepper & Journal Entry Preview (Secti
 
     const debits = [
       { account: '5310 Meals & Entertainment', amount: subtotal },
-      { account: '2200 Input VAT', amount: vat }
+      { account: '1400 Input VAT', amount: vat }
     ];
     const credits = [
       { account: '2150 Employee Reimbursements Payable', amount: grandTotal }
@@ -349,5 +349,21 @@ describe('Expenses Module - Attachment Upload Progress', () => {
 
     expect(eventTypes).toContain(HttpEventType.UploadProgress);
     expect(eventTypes).toContain(HttpEventType.Response);
+  });
+
+  it('should request attachment download as Blob with Bearer token header handling', () => {
+    const mockBlob = new Blob(['sample-pdf-content'], { type: 'application/pdf' });
+    let receivedBlob: Blob | null = null;
+
+    service.downloadAttachment(101).subscribe(blob => {
+      receivedBlob = blob;
+    });
+
+    const req = httpMock.expectOne(r => r.url.endsWith('/attachments/101'));
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+
+    req.flush(mockBlob);
+    expect(receivedBlob).toBeTruthy();
   });
 });

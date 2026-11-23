@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpEventType } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormBuilder,
@@ -22,6 +23,7 @@ import {
 } from '../../../core/models/expense.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { User } from '../../../core/models/user.model';
+import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { UserService } from '../../../core/services/user.service';
 import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
@@ -70,12 +72,17 @@ export class ExpenseFormComponent implements OnInit {
   private customerService = inject(CustomerService);
   private userService = inject(UserService);
   private notificationService = inject(NotificationService);
+  private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   expenseForm!: FormGroup;
   expenseId = signal<number | null>(null);
   existingExpense = signal<Expense | null>(null);
+
+  loading = signal(true);
+  downloadingAttachmentId = signal<number | null>(null);
 
   // Master Data
   categories = signal<ExpenseCategory[]>([]);
@@ -103,6 +110,9 @@ export class ExpenseFormComponent implements OnInit {
 
   uploadProgress = signal<number | null>(null);
 
+  // Dynamic currency derived from company base currency
+  currencyCode = computed(() => this.authService.currentCompany()?.baseCurrency || 'AED');
+
   // Stepper Threshold (FinLedger v2.0 Section 4.11 & ApprovalPolicy threshold)
   readonly financeThreshold = 2000.0;
 
@@ -110,12 +120,22 @@ export class ExpenseFormComponent implements OnInit {
     this.initForm();
     this.loadDependencies();
 
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam && idParam !== 'new') {
-      const id = Number(idParam);
-      this.expenseId.set(id);
-      this.loadExistingExpense(id);
-    }
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const idParam = params.get('id');
+      if (idParam && idParam !== 'new') {
+        const id = Number(idParam);
+        if (!isNaN(id)) {
+          this.expenseId.set(id);
+          this.loadExistingExpense(id);
+        }
+      } else {
+        this.expenseId.set(null);
+        this.existingExpense.set(null);
+        this.existingAttachments.set([]);
+        this.pendingFiles.set([]);
+        this.resetToNew();
+      }
+    });
   }
 
   private initForm(): void {
@@ -127,7 +147,7 @@ export class ExpenseFormComponent implements OnInit {
       bankAccountId: [null],
       payeeName: [''],
       expenseDate: [today, [Validators.required]],
-      currencyCode: ['AED', [Validators.required]],
+      currencyCode: [this.currencyCode(), [Validators.required]],
       exchangeRate: [1.0, [Validators.required, Validators.min(0.000001)]],
       lines: this.fb.array([])
     });
@@ -136,35 +156,56 @@ export class ExpenseFormComponent implements OnInit {
     this.addLine();
 
     // Listen to form value changes for policy checks and totals
-    this.expenseForm.valueChanges.subscribe(() => {
-      this.calculateTotals();
-      this.evaluatePolicyChecks();
-    });
+    this.expenseForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.calculateTotals();
+        this.evaluatePolicyChecks();
+      });
 
     // Adjust validators when paidBy changes
-    this.expenseForm.get('paidBy')?.valueChanges.subscribe((val: PaidBy) => {
-      const bankControl = this.expenseForm.get('bankAccountId');
-      const employeeControl = this.expenseForm.get('employeeUserId');
-      const banks = this.bankAccounts();
-      const emps = this.employees();
+    this.expenseForm.get('paidBy')?.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((val: PaidBy) => {
+        const bankControl = this.expenseForm.get('bankAccountId');
+        const employeeControl = this.expenseForm.get('employeeUserId');
+        const banks = this.bankAccounts();
+        const emps = this.employees();
 
-      if (val === 'COMPANY') {
-        bankControl?.setValidators([Validators.required]);
-        employeeControl?.clearValidators();
-        if (!bankControl?.value && banks.length > 0) {
-          bankControl?.setValue(banks[0].id);
+        if (val === 'COMPANY') {
+          bankControl?.setValidators([Validators.required]);
+          employeeControl?.clearValidators();
+          if (!bankControl?.value && banks.length > 0) {
+            bankControl?.setValue(banks[0].id, { emitEvent: false });
+          }
+        } else {
+          employeeControl?.setValidators([Validators.required]);
+          bankControl?.clearValidators();
+          bankControl?.setValue(null, { emitEvent: false });
+          if (!employeeControl?.value && emps.length > 0) {
+            employeeControl?.setValue(emps[0].id, { emitEvent: false });
+          }
         }
-      } else {
-        employeeControl?.setValidators([Validators.required]);
-        bankControl?.clearValidators();
-        bankControl?.setValue(null);
-        if (!employeeControl?.value && emps.length > 0) {
-          employeeControl?.setValue(emps[0].id);
-        }
-      }
-      bankControl?.updateValueAndValidity();
-      employeeControl?.updateValueAndValidity();
+        bankControl?.updateValueAndValidity();
+        employeeControl?.updateValueAndValidity();
+      });
+  }
+
+  private resetToNew(): void {
+    const today = new Date().toISOString().substring(0, 10);
+    this.expenseForm.reset({
+      paidBy: 'EMPLOYEE',
+      employeeUserId: this.employees().length > 0 ? this.employees()[0].id : null,
+      bankAccountId: null,
+      payeeName: '',
+      expenseDate: today,
+      currencyCode: this.currencyCode(),
+      exchangeRate: 1.0
     });
+    this.lines.clear();
+    this.addLine();
+    this.calculateTotals();
+    this.evaluatePolicyChecks();
   }
 
   get lines(): FormArray {
@@ -216,62 +257,98 @@ export class ExpenseFormComponent implements OnInit {
     this.evaluatePolicyChecks();
   }
 
+  onCustomerChange(index: number): void {
+    const line = this.lines.at(index);
+    const custId = line.get('customerId')?.value;
+    if (!custId) {
+      line.get('isBillable')?.setValue(false);
+    }
+  }
+
   setPaidBy(type: PaidBy): void {
     this.expenseForm.patchValue({ paidBy: type });
   }
 
   private loadDependencies(): void {
-    // Categories
+    let pendingCount = 6;
+    const checkDone = () => {
+      pendingCount--;
+      if (pendingCount <= 0) {
+        this.loading.set(false);
+        this.calculateTotals();
+        this.evaluatePolicyChecks();
+      }
+    };
+
+    // 1. Categories
     this.expenseService.getAllActiveCategories().subscribe({
       next: cats => {
         this.categories.set(cats);
-        // If first line exists and categoryId not set, set it
         if (this.lines.length > 0 && !this.lines.at(0).get('categoryId')?.value && cats.length > 0) {
           this.lines.at(0).get('categoryId')?.setValue(cats[0].id);
-        }
-        this.evaluatePolicyChecks();
-      }
-    });
-
-    // Bank Accounts
-    this.bankAccountService.getBankAccounts().subscribe({
-      next: accounts => {
-        this.bankAccounts.set(accounts);
-        if (this.expenseForm.get('paidBy')?.value === 'COMPANY' && !this.expenseForm.get('bankAccountId')?.value) {
-          if (accounts.length > 0) {
-            this.expenseForm.patchValue({ bankAccountId: accounts[0].id });
+          if (cats[0].defaultTaxRateId) {
+            this.lines.at(0).get('taxRateId')?.setValue(cats[0].defaultTaxRateId);
           }
         }
-      }
+        checkDone();
+      },
+      error: () => checkDone()
     });
 
-    // Tax Rates
+    // 2. Bank Accounts
+    this.bankAccountService.getBankAccounts().subscribe({
+      next: accounts => {
+        const active = accounts.filter(a => a.isActive);
+        this.bankAccounts.set(active);
+        if (this.expenseForm.get('paidBy')?.value === 'COMPANY' && !this.expenseForm.get('bankAccountId')?.value) {
+          if (active.length > 0) {
+            this.expenseForm.patchValue({ bankAccountId: active[0].id });
+          }
+        }
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 3. Tax Rates
     this.taxRateService.getTaxRates().subscribe({
       next: rates => {
         this.taxRates.set(rates);
-        // set default on lines without tax rate
         this.lines.controls.forEach(control => {
           if (!control.get('taxRateId')?.value && rates.length > 0) {
             control.get('taxRateId')?.setValue(rates[0].id);
           }
         });
-        this.calculateTotals();
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 4. Cost Centers
+    this.costCenterService.getCostCenters().subscribe({
+      next: ccs => {
+        this.costCenters.set(ccs);
+        checkDone();
+      },
+      error: () => {
+        this.costCenters.set([]);
+        checkDone();
       }
     });
 
-    // Cost Centers
-    this.costCenterService.getCostCenters().subscribe({
-      next: ccs => this.costCenters.set(ccs),
-      error: () => this.costCenters.set([])
-    });
-
-    // Customers
+    // 5. Customers
     this.customerService.getCustomers({ isActive: true }).subscribe({
-      next: page => this.customers.set(page.content || []),
-      error: () => this.customers.set([])
+      next: page => {
+        this.customers.set(page.content || []);
+        checkDone();
+      },
+      error: () => {
+        this.customers.set([]);
+        checkDone();
+      }
     });
 
-    // Employees / Users
+    // 6. Employees / Users
     this.userService.getUsers().subscribe({
       next: users => {
         this.employees.set(users);
@@ -280,11 +357,14 @@ export class ExpenseFormComponent implements OnInit {
             this.expenseForm.patchValue({ employeeUserId: users[0].id });
           }
         }
-      }
+        checkDone();
+      },
+      error: () => checkDone()
     });
   }
 
   private loadExistingExpense(id: number): void {
+    this.loading.set(true);
     this.expenseService.getExpenseById(id).subscribe({
       next: exp => {
         this.existingExpense.set(exp);
@@ -296,9 +376,9 @@ export class ExpenseFormComponent implements OnInit {
           bankAccountId: exp.bankAccountId,
           payeeName: exp.payeeName,
           expenseDate: exp.expenseDate,
-          currencyCode: exp.currencyCode,
-          exchangeRate: exp.exchangeRate
-        });
+          currencyCode: exp.currencyCode || this.currencyCode(),
+          exchangeRate: exp.exchangeRate || 1.0
+        }, { emitEvent: false });
 
         // Populate lines
         this.lines.clear();
@@ -320,11 +400,14 @@ export class ExpenseFormComponent implements OnInit {
           this.addLine();
         }
 
+        this.loading.set(false);
         this.calculateTotals();
         this.evaluatePolicyChecks();
       },
       error: () => {
+        this.loading.set(false);
         this.notificationService.error(`Failed to load expense #${id}`);
+        this.router.navigate(['/expenses']);
       }
     });
   }
@@ -368,6 +451,7 @@ export class ExpenseFormComponent implements OnInit {
     const warnings: PolicyWarning[] = [];
     const hasAttachments = this.pendingFiles().length > 0 || this.existingAttachments().length > 0;
     const cats = this.categories();
+    const curr = this.currencyCode();
 
     for (let i = 0; i < this.lines.length; i++) {
       const line = this.lines.at(i);
@@ -393,7 +477,7 @@ export class ExpenseFormComponent implements OnInit {
           type: 'LIMIT',
           lineIndex: i,
           categoryName: category.name,
-          message: `Line #${i + 1} amount (AED ${amount.toFixed(2)}) exceeds policy limit of AED ${category.limitPerClaim.toFixed(2)} for "${category.name}".`
+          message: `Line #${i + 1} amount (${curr} ${amount.toFixed(2)}) exceeds policy limit of ${curr} ${category.limitPerClaim.toFixed(2)} for "${category.name}".`
         });
       }
     }
@@ -443,7 +527,23 @@ export class ExpenseFormComponent implements OnInit {
 
   private addFiles(files: File[]): void {
     const added: PendingFile[] = [];
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB limit
+
     for (const file of files) {
+      // Validate file size
+      if (file.size > maxSizeBytes) {
+        this.notificationService.error(`"${file.name}" exceeds the maximum allowed upload size (10 MB).`);
+        continue;
+      }
+
+      // Validate file type
+      const isImage = file.type.startsWith('image/');
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (!isImage && !isPdf) {
+        this.notificationService.error(`"${file.name}" has an unsupported format. Please upload JPG, PNG, or PDF receipts.`);
+        continue;
+      }
+
       const pending: PendingFile = {
         file,
         name: file.name,
@@ -451,7 +551,7 @@ export class ExpenseFormComponent implements OnInit {
         type: file.type
       };
 
-      if (file.type.startsWith('image/')) {
+      if (isImage) {
         const reader = new FileReader();
         reader.onload = e => {
           pending.previewUrl = e.target?.result as string;
@@ -463,9 +563,11 @@ export class ExpenseFormComponent implements OnInit {
       added.push(pending);
     }
 
-    this.pendingFiles.update(list => [...list, ...added]);
-    this.evaluatePolicyChecks();
-    this.notificationService.info(`Added ${files.length} file(s) for upload.`);
+    if (added.length > 0) {
+      this.pendingFiles.update(list => [...list, ...added]);
+      this.evaluatePolicyChecks();
+      this.notificationService.info(`Added ${added.length} file(s) for upload.`);
+    }
   }
 
   removePendingFile(index: number): void {
@@ -486,7 +588,85 @@ export class ExpenseFormComponent implements OnInit {
     });
   }
 
-  // Journal Entry Preview (Section 4.11)
+  downloadExistingAttachment(att: Attachment): void {
+    this.downloadingAttachmentId.set(att.id);
+    this.expenseService.downloadAttachment(att.id).subscribe({
+      next: blob => {
+        this.downloadingAttachmentId.set(null);
+        const type = att.contentType || blob.type || 'application/octet-stream';
+        const typedBlob = new Blob([blob], { type });
+        const url = window.URL.createObjectURL(typedBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = att.fileName || `expense-receipt-${att.id}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      },
+      error: async err => {
+        this.downloadingAttachmentId.set(null);
+        let msg = `Failed to download attachment "${att.fileName}".`;
+        if (err?.error instanceof Blob) {
+          try {
+            const errText = await err.error.text();
+            const json = JSON.parse(errText);
+            if (json.message) msg += ` ${json.message}`;
+          } catch (_) {}
+        }
+        this.notificationService.error(msg);
+      }
+    });
+  }
+
+  viewExistingAttachment(att: Attachment): void {
+    this.downloadingAttachmentId.set(att.id);
+    this.expenseService.downloadAttachment(att.id).subscribe({
+      next: blob => {
+        this.downloadingAttachmentId.set(null);
+        const type = att.contentType || blob.type || 'application/octet-stream';
+        const typedBlob = new Blob([blob], { type });
+        const url = window.URL.createObjectURL(typedBlob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+      },
+      error: async err => {
+        this.downloadingAttachmentId.set(null);
+        let msg = `Failed to preview attachment "${att.fileName}".`;
+        if (err?.error instanceof Blob) {
+          try {
+            const errText = await err.error.text();
+            const json = JSON.parse(errText);
+            if (json.message) msg += ` ${json.message}`;
+          } catch (_) {}
+        }
+        this.notificationService.error(msg);
+      }
+    });
+  }
+
+  downloadPendingFile(pf: PendingFile): void {
+    const url = window.URL.createObjectURL(pf.file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = pf.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+  }
+
+  viewPendingFile(pf: PendingFile): void {
+    if (pf.previewUrl) {
+      window.open(pf.previewUrl, '_blank');
+    } else {
+      const url = window.URL.createObjectURL(pf.file);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+    }
+  }
+
+  // Journal Entry Preview (FinLedger v2.0 Section 4.11)
   getJournalPreviewLines(): JournalPreviewLine[] {
     const result: JournalPreviewLine[] = [];
     const cats = this.categories();
@@ -510,11 +690,11 @@ export class ExpenseFormComponent implements OnInit {
       }
     }
 
-    // Debit: VAT Input Tax if applicable
+    // Debit: Input VAT Recoverable (Asset Account 1400)
     const tax = this.taxTotal();
     if (tax > 0) {
       result.push({
-        accountCode: '2200',
+        accountCode: '1400',
         accountName: 'Input VAT Recoverable (5%)',
         description: 'Recoverable input VAT on expenses',
         debit: tax,
@@ -594,6 +774,14 @@ export class ExpenseFormComponent implements OnInit {
         this.notificationService.error(`Line #${i + 1} amount must be greater than zero.`);
         return false;
       }
+      if (!line.get('categoryId')?.value) {
+        this.notificationService.error(`Line #${i + 1} category is required.`);
+        return false;
+      }
+      if (!line.get('description')?.value?.trim()) {
+        this.notificationService.error(`Line #${i + 1} description is required.`);
+        return false;
+      }
     }
 
     return true;
@@ -604,23 +792,23 @@ export class ExpenseFormComponent implements OnInit {
 
     const lineRequests: ExpenseLineRequest[] = fv.lines.map((l: any, idx: number) => ({
       lineNo: (idx + 1) as any,
-      categoryId: l.categoryId,
-      description: l.description,
+      categoryId: Number(l.categoryId),
+      description: l.description?.trim() || '',
       amount: Number(l.amount),
       taxRateId: l.taxRateId ? Number(l.taxRateId) : null,
       costCenterId: l.costCenterId ? Number(l.costCenterId) : null,
       customerId: l.customerId ? Number(l.customerId) : null,
-      isBillable: !!l.isBillable
+      isBillable: Boolean(l.customerId && l.isBillable)
     }));
 
     const createReq: CreateExpenseRequest = {
       expenseDate: fv.expenseDate,
       paidBy: fv.paidBy,
-      employeeUserId: fv.paidBy === 'EMPLOYEE' ? fv.employeeUserId : null,
-      bankAccountId: fv.paidBy === 'COMPANY' ? fv.bankAccountId : null,
-      payeeName: fv.payeeName || null,
-      currencyCode: fv.currencyCode || 'AED',
-      exchangeRate: fv.exchangeRate || 1.0,
+      employeeUserId: fv.paidBy === 'EMPLOYEE' ? (fv.employeeUserId ? Number(fv.employeeUserId) : null) : null,
+      bankAccountId: fv.paidBy === 'COMPANY' ? (fv.bankAccountId ? Number(fv.bankAccountId) : null) : null,
+      payeeName: fv.payeeName?.trim() || null,
+      currencyCode: fv.currencyCode || this.currencyCode(),
+      exchangeRate: Number(fv.exchangeRate) || 1.0,
       lines: lineRequests
     };
 
@@ -677,6 +865,7 @@ export class ExpenseFormComponent implements OnInit {
     }
 
     let completed = 0;
+    let uploadErrors = 0;
     const progressByIndex = new Array<number>(files.length).fill(0);
     this.uploadProgress.set(0);
 
@@ -695,16 +884,20 @@ export class ExpenseFormComponent implements OnInit {
             this.uploadProgress.set(avg);
             if (completed === files.length) {
               this.uploadProgress.set(null);
+              if (uploadErrors > 0) {
+                this.notificationService.warning(`${uploadErrors} receipt file(s) failed to upload.`);
+              }
               onDone();
             }
           }
         },
         error: () => {
-          // Even if an individual upload fails, complete the flow
+          uploadErrors++;
           progressByIndex[idx] = 100;
           completed++;
           if (completed === files.length) {
             this.uploadProgress.set(null);
+            this.notificationService.warning(`${uploadErrors} receipt file(s) failed to upload.`);
             onDone();
           }
         }
@@ -712,4 +905,3 @@ export class ExpenseFormComponent implements OnInit {
     });
   }
 }
-

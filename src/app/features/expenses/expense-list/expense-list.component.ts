@@ -108,6 +108,7 @@ export class ExpenseListComponent implements OnInit {
 
   // Approve in progress
   approvingIds = signal<Set<number>>(new Set());
+  downloadingAttachmentId = signal<number | null>(null);
 
   canApproveExpense(exp: Expense): boolean {
     const currentId = this.authService.currentUser()?.id;
@@ -453,6 +454,63 @@ export class ExpenseListComponent implements OnInit {
   closeDetailModal(): void {
     this.showDetailModal.set(false);
     this.selectedExpense.set(null);
+  }
+
+  downloadAttachment(att: Attachment): void {
+    this.downloadingAttachmentId.set(att.id);
+    this.expenseService.downloadAttachment(att.id).subscribe({
+      next: blob => {
+        this.downloadingAttachmentId.set(null);
+        const type = att.contentType || blob.type || 'application/octet-stream';
+        const typedBlob = new Blob([blob], { type });
+        const url = window.URL.createObjectURL(typedBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = att.fileName || `expense-receipt-${att.id}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      },
+      error: async err => {
+        this.downloadingAttachmentId.set(null);
+        let msg = `Failed to download attachment "${att.fileName}".`;
+        if (err?.error instanceof Blob) {
+          try {
+            const errText = await err.error.text();
+            const json = JSON.parse(errText);
+            if (json.message) msg += ` ${json.message}`;
+          } catch (_) {}
+        }
+        this.notificationService.error(msg);
+      }
+    });
+  }
+
+  viewAttachment(att: Attachment): void {
+    this.downloadingAttachmentId.set(att.id);
+    this.expenseService.downloadAttachment(att.id).subscribe({
+      next: blob => {
+        this.downloadingAttachmentId.set(null);
+        const type = att.contentType || blob.type || 'application/octet-stream';
+        const typedBlob = new Blob([blob], { type });
+        const url = window.URL.createObjectURL(typedBlob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+      },
+      error: async err => {
+        this.downloadingAttachmentId.set(null);
+        let msg = `Failed to preview attachment "${att.fileName}".`;
+        if (err?.error instanceof Blob) {
+          try {
+            const errText = await err.error.text();
+            const json = JSON.parse(errText);
+            if (json.message) msg += ` ${json.message}`;
+          } catch (_) {}
+        }
+        this.notificationService.error(msg);
+      }
+    });
   }
 
   private replaceExpenseInList(updated: Expense): void {

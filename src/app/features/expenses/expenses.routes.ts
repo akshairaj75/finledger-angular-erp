@@ -17,10 +17,16 @@ export const EXPENSES_ROUTES: Routes = [
   },
   {
     path: 'new',
-    component: ExpenseFormComponent
+    canActivate: [permissionGuard],
+    data: { permissions: ['EXPENSE_CREATE'] },
+    component: ExpenseFormComponent,
+    title: 'FinLedger - New Expense Claim'
   },
   {
     path: ':id',
-    component: ExpenseFormComponent
+    canActivate: [permissionGuard],
+    data: { permissions: ['EXPENSE_VIEW', 'EXPENSE_CREATE'] },
+    component: ExpenseFormComponent,
+    title: 'FinLedger - Expense Details'
   }
 ];
