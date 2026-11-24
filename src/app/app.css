@@ -7,11 +7,23 @@
   min-height: 100vh;
   background-color: #f8fafc;
   color: #1e293b;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* Sidebar */
 .sidebar {
   width: 260px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  inset-block: 0;
+  inset-inline-start: 0;
+  height: 100vh;
+  overflow: hidden;
   background-color: #0f172a;
   color: #f1f5f9;
   display: flex;
@@ -19,19 +31,85 @@
   flex-shrink: 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
+  z-index: 1020;
 }
 
 [dir="rtl"] .sidebar {
+  left: auto;
+  right: 0;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   padding-block: 1.25rem;
   padding-inline: 1.5rem;
   border-bottom: 1px solid #1e293b;
+}
+
+.brand-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-close-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.sidebar-close-btn:hover {
+  color: #ffffff;
+  background-color: #1e293b;
+}
+
+.topbar-start {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-toggle-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Sidebar Backdrop for Mobile/Tablet */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 1040;
+  animation: fadeInBackdrop 0.2s ease-in-out;
+}
+
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .brand-icon {
@@ -70,12 +148,15 @@
 }
 
 .sidebar-nav {
+  flex: 1;
+  min-height: 0;
   padding-block: 1rem;
   padding-inline: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .nav-section-title {
@@ -131,6 +212,17 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: calc(100% - 260px);
+  max-width: calc(100% - 260px);
+  margin-left: 260px;
+  margin-right: 0;
+  padding-top: 60px;
+  overflow-x: hidden;
+}
+
+[dir="rtl"] .main-wrapper {
+  margin-left: 0;
+  margin-right: 260px;
 }
 
 .topbar {
@@ -141,10 +233,17 @@
   justify-content: space-between;
   align-items: center;
   padding-inline: 1.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  position: sticky;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  position: fixed;
   top: 0;
-  z-index: 50;
+  left: 260px;
+  right: 0;
+  z-index: 1000;
+}
+
+[dir="rtl"] .topbar {
+  left: 0;
+  right: 260px;
 }
 
 /* Interactive Company Switcher */
@@ -598,6 +697,9 @@
 
 .content-area {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   background-color: #f8fafc;
 }
 
@@ -628,7 +730,7 @@
 /* Toast Notifications */
 .toast-container {
   position: fixed;
-  inset-block-start: 1.5rem;
+  inset-block-start: calc(60px + 1rem);
   inset-inline-end: 1.5rem;
   z-index: 9999;
   display: flex;
@@ -702,5 +804,175 @@
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+/* Responsive Application Shell (< 1024px) */
+@media (max-width: 1023px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: auto;
+    width: 280px;
+    max-width: 85vw;
+    height: 100vh;
+    z-index: 1050;
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.25s ease-in-out, visibility 0.25s ease-in-out;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  [dir="rtl"] .sidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  [dir="rtl"] .sidebar.sidebar-open {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  .sidebar-close-btn {
+    display: block;
+    margin-inline-start: auto;
+  }
+
+  .sidebar-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .main-wrapper {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    padding-top: 60px;
+  }
+
+  [dir="rtl"] .main-wrapper {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .topbar {
+    left: 0;
+    right: 0;
+  }
+
+  [dir="rtl"] .topbar {
+    left: 0;
+    right: 0;
+  }
+}
+
+/* Responsive Topbar (< 768px) */
+@media (max-width: 767px) {
+  .topbar {
+    padding-inline: 0.75rem;
+    height: 56px;
+    gap: 0.5rem;
+  }
+
+  .main-wrapper {
+    padding-top: 56px;
+  }
+
+  .topbar-start {
+    gap: 0.5rem;
+  }
+
+  .tenant-badge {
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .global-search-container {
+    margin-inline: 0.25rem;
+    max-width: none;
+    flex: 1;
+  }
+
+  .global-search-bar {
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+
+  .global-search-input {
+    font-size: 0.8rem;
+  }
+
+  .topbar-actions {
+    gap: 0.4rem;
+  }
+
+  .lang-toggle-btn {
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+
+  .lang-choice {
+    display: none;
+  }
+
+  .lang-choice.active-lang {
+    display: inline;
+  }
+
+  .user-info,
+  .user-profile-btn .caret {
+    display: none;
+  }
+
+  .user-profile-btn {
+    padding: 0.2rem;
+  }
+
+  .company-dropdown {
+    width: min(320px, calc(100vw - 1rem));
+    left: 0;
+    right: auto;
+  }
+
+  [dir="rtl"] .company-dropdown {
+    left: auto;
+    right: 0;
+  }
+
+  .user-dropdown {
+    width: min(240px, calc(100vw - 1rem));
+  }
+
+  .toast-container {
+    inset-inline-start: 1rem;
+    inset-inline-end: 1rem;
+    max-width: none;
+    inset-block-start: calc(56px + 0.75rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .tenant-badge {
+    max-width: 70px;
+  }
+
+  .lang-toggle-btn .lang-icon {
+    margin: 0;
   }
 }

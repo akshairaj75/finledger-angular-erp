@@ -946,6 +946,15 @@ import {
       min-height: 500px;
       border-radius: 8px;
       padding: 2rem;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .report-content {
+      width: 100%;
+      min-width: 600px;
     }
 
     .report-heading {
@@ -969,6 +978,7 @@ import {
 
     .report-table {
       width: 100%;
+      min-width: 600px;
       border-collapse: collapse;
       font-size: 0.875rem;
     }
@@ -1082,6 +1092,33 @@ import {
     .gl-card-val { font-size: 1rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; }
     .type-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: #e0e7ff; color: #3730a3; }
     .json-preview { background: #f8fafc; padding: 1rem; border-radius: 6px; font-size: 0.8125rem; overflow-x: auto; }
+
+    @media (max-width: 767px) {
+      .report-viewer-page {
+        padding: 0.75rem;
+      }
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filter-actions {
+        width: 100%;
+      }
+      .filter-actions .btn {
+        flex: 1;
+        justify-content: center;
+      }
+      .report-table {
+        min-width: 600px;
+      }
+      .table-card {
+        overflow-x: auto;
+      }
+    }
   `]
 })
 export class ReportViewerComponent implements OnInit {

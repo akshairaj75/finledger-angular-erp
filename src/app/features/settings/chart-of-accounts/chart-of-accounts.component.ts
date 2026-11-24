@@ -48,44 +48,46 @@ export interface ParsedAccountRow {
       </div>
 
       <div class="card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Account Name</th>
-              <th>Type</th>
-              <th>Normal Balance</th>
-              <th>Classification</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let a of accounts()" [class.group-row]="a.isGroup">
-              <td class="mono font-bold">{{ a.code }}</td>
-              <td>
-                <span [style.padding-inline-start.px]="a.parentId ? 18 : 0">
-                  {{ a.isGroup ? '📁 ' : '' }}{{ a.name }}
-                </span>
-              </td>
-              <td><span class="type-pill">{{ a.accountType }}</span></td>
-              <td>{{ a.normalBalance }}</td>
-              <td>{{ a.isGroup ? 'Header Group' : (a.subType || 'Transactional') }}</td>
-              <td>
-                <span class="badge" [class.active]="a.isActive">{{ a.isActive ? 'Active' : 'Inactive' }}</span>
-              </td>
-              <td class="text-right">
-                <button
-                  *appHasPermission="'ACCOUNT_EDIT'"
-                  class="btn-sm btn-outline"
-                  (click)="openEdit(a)"
-                >
-                  Edit
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Account Name</th>
+                <th>Type</th>
+                <th>Normal Balance</th>
+                <th>Classification</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of accounts()" [class.group-row]="a.isGroup">
+                <td class="mono font-bold">{{ a.code }}</td>
+                <td>
+                  <span [style.padding-inline-start.px]="a.parentId ? 18 : 0">
+                    {{ a.isGroup ? '📁 ' : '' }}{{ a.name }}
+                  </span>
+                </td>
+                <td><span class="type-pill">{{ a.accountType }}</span></td>
+                <td>{{ a.normalBalance }}</td>
+                <td>{{ a.isGroup ? 'Header Group' : (a.subType || 'Transactional') }}</td>
+                <td>
+                  <span class="badge" [class.active]="a.isActive">{{ a.isActive ? 'Active' : 'Inactive' }}</span>
+                </td>
+                <td class="text-right">
+                  <button
+                    *appHasPermission="'ACCOUNT_EDIT'"
+                    class="btn-sm btn-outline"
+                    (click)="openEdit(a)"
+                  >
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Create / Edit Modal -->
@@ -263,6 +265,17 @@ export interface ParsedAccountRow {
     .import-help { font-size: 0.85rem; color: #475569; margin: 0; }
     .import-help code { background: #f1f5f9; padding: 0.15rem 0.35rem; border-radius: 4px; }
     .preview-scroll { max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+
+    @media (max-width: 767px) {
+      .coa-page { padding: 0.75rem; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+      .header-actions { width: 100%; flex-wrap: wrap; }
+      .header-actions .btn-primary, .header-actions .btn-outline { flex: 1; justify-content: center; text-align: center; }
+      .modal-card { width: 95vw; max-width: 95vw; margin: 0.5rem auto; }
+      .row-2 { grid-template-columns: 1fr; }
+      .data-table { min-width: 600px; }
+      .card { overflow-x: auto; }
+    }
   `]
 })
 export class ChartOfAccountsComponent implements OnInit {

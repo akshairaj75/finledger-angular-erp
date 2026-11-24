@@ -220,28 +220,30 @@
       <!-- Journal Entry Live Preview Card -->
       <div class="card preview-card">
         <h4 class="preview-title">📖 Double-Entry GL Preview</h4>
-        <table class="table journal-table" *ngIf="journalPreview().length > 0; else noGlTpl">
-          <thead>
-            <tr>
-              <th>Account</th>
-              <th class="text-right">Debit (AED)</th>
-              <th class="text-right">Credit (AED)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let j of journalPreview()">
-              <td>
-                <span class="journal-acc">{{ j.accountName }}</span>
-              </td>
-              <td class="text-right font-medium">
-                {{ j.debit > 0 ? (j.debit | number:'1.2-2') : '-' }}
-              </td>
-              <td class="text-right font-medium">
-                {{ j.credit > 0 ? (j.credit | number:'1.2-2') : '-' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table journal-table" *ngIf="journalPreview().length > 0; else noGlTpl">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th class="text-right">Debit (AED)</th>
+                <th class="text-right">Credit (AED)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let j of journalPreview()">
+                <td>
+                  <span class="journal-acc">{{ j.accountName }}</span>
+                </td>
+                <td class="text-right font-medium">
+                  {{ j.debit > 0 ? (j.debit | number:'1.2-2') : '-' }}
+                </td>
+                <td class="text-right font-medium">
+                  {{ j.credit > 0 ? (j.credit | number:'1.2-2') : '-' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <ng-template #noGlTpl>
           <p class="text-muted text-sm mt-2">All counted quantities match system stock. No GL entry required.</p>
         </ng-template>

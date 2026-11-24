@@ -28,49 +28,51 @@ import { SettingsService } from '../services/settings.service';
       </div>
 
       <div class="card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Full Name</th>
-              <th>Email Address</th>
-              <th>Assigned Roles</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let u of users()">
-              <td class="font-medium">{{ u.fullName }}</td>
-              <td>{{ u.email }}</td>
-              <td>
-                <span class="role-badge" *ngFor="let r of (u.roles || [])">{{ r }}</span>
-                <span class="text-muted" *ngIf="!u.roles?.length">No roles</span>
-              </td>
-              <td>
-                <span
-                  class="status-pill"
-                  [class.status-active]="u.status === 'ACTIVE'"
-                  [class.status-locked]="u.status === 'LOCKED'"
-                  [class.status-disabled]="u.status === 'DISABLED'"
-                >
-                  {{ u.status || 'ACTIVE' }}
-                </span>
-              </td>
-              <td class="text-right">
-                <div class="action-group" *appHasPermission="['USER_EDIT', 'SETTINGS_EDIT']">
-                  <button
-                    *ngIf="u.status === 'LOCKED' || u.status === 'DISABLED'"
-                    class="btn-sm btn-unlock"
-                    (click)="unlockUser(u)"
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Email Address</th>
+                <th>Assigned Roles</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let u of users()">
+                <td class="font-medium">{{ u.fullName }}</td>
+                <td>{{ u.email }}</td>
+                <td>
+                  <span class="role-badge" *ngFor="let r of (u.roles || [])">{{ r }}</span>
+                  <span class="text-muted" *ngIf="!u.roles?.length">No roles</span>
+                </td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.status-active]="u.status === 'ACTIVE'"
+                    [class.status-locked]="u.status === 'LOCKED'"
+                    [class.status-disabled]="u.status === 'DISABLED'"
                   >
-                    🔓 Unlock
-                  </button>
-                  <button class="btn-sm btn-outline" (click)="openEditModal(u)">Edit</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                    {{ u.status || 'ACTIVE' }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="action-group" *appHasPermission="['USER_EDIT', 'SETTINGS_EDIT']">
+                    <button
+                      *ngIf="u.status === 'LOCKED' || u.status === 'DISABLED'"
+                      class="btn-sm btn-unlock"
+                      (click)="unlockUser(u)"
+                    >
+                      🔓 Unlock
+                    </button>
+                    <button class="btn-sm btn-outline" (click)="openEditModal(u)">Edit</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Create / Edit User Modal -->

@@ -17,14 +17,20 @@
 
 <!-- Authenticated ERP Workspace Layout -->
 <div class="app-layout" *ngIf="authService.isAuthenticated(); else unauthLayout">
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" *ngIf="sidebarOpen()" (click)="closeSidebar()"></div>
+
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" [class.sidebar-open]="sidebarOpen()">
     <div class="sidebar-brand">
-      <div class="brand-icon">FL</div>
-      <div class="brand-text">
-        <span class="brand-name">{{ 'app.title' | translate }}</span>
-        <span class="brand-tag">{{ 'app.version' | translate }}</span>
+      <div class="brand-left">
+        <div class="brand-icon">FL</div>
+        <div class="brand-text">
+          <span class="brand-name">{{ 'app.title' | translate }}</span>
+          <span class="brand-tag">{{ 'app.version' | translate }}</span>
+        </div>
       </div>
+      <button type="button" class="sidebar-close-btn" (click)="closeSidebar()" aria-label="Close sidebar">&times;</button>
     </div>
 
     <nav class="sidebar-nav">
@@ -213,33 +219,39 @@
   <div class="main-wrapper">
     <!-- Top Bar -->
     <header class="topbar">
-      <!-- Interactive Company Switcher -->
-      <div class="company-switcher-wrapper">
-        <button type="button" class="tenant-selector-btn" (click)="toggleCompanyMenu()">
-          <span class="tenant-icon">🏢</span>
-          <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'Not set' }}</span>
-          <span class="currency-tag">{{ 'topbar.base' | translate }}: {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
-          <span class="caret">▾</span>
+      <div class="topbar-start">
+        <button type="button" class="sidebar-toggle-btn" (click)="toggleSidebar()" aria-label="Toggle navigation menu">
+          <span class="hamburger-icon">☰</span>
         </button>
 
-        <div class="company-dropdown" *ngIf="showCompanyMenu()">
-          <div class="company-dropdown-header">
-            <h4>{{ authService.currentCompany()?.legalName || 'Not set' }}</h4>
-            <span class="company-trn">TRN: {{ authService.currentCompany()?.trn || '—' }}</span>
-          </div>
-          <div class="company-dropdown-body">
-            <div class="company-meta-item">
-              <span class="meta-label">Country & Currency:</span>
-              <span class="meta-val">{{ authService.currentCompany()?.countryCode || 'AE' }} • {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
+        <!-- Interactive Company Switcher -->
+        <div class="company-switcher-wrapper">
+          <button type="button" class="tenant-selector-btn" (click)="toggleCompanyMenu()">
+            <span class="tenant-icon">🏢</span>
+            <span class="tenant-badge">{{ authService.currentCompany()?.legalName || 'Not set' }}</span>
+            <span class="currency-tag hide-mobile">{{ 'topbar.base' | translate }}: {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
+            <span class="caret">▾</span>
+          </button>
+
+          <div class="company-dropdown" *ngIf="showCompanyMenu()">
+            <div class="company-dropdown-header">
+              <h4>{{ authService.currentCompany()?.legalName || 'Not set' }}</h4>
+              <span class="company-trn">TRN: {{ authService.currentCompany()?.trn || '—' }}</span>
             </div>
-            <div class="company-meta-item">
-              <span class="meta-label">Status:</span>
-              <span class="meta-status active">Active Primary Entity</span>
-            </div>
-            <div class="company-list-section">
-              <span class="section-hint">Accessible Entities:</span>
-              <div class="active-company-chip">
-                <span>✓ {{ authService.currentCompany()?.legalName || 'Not set' }} (Current)</span>
+            <div class="company-dropdown-body">
+              <div class="company-meta-item">
+                <span class="meta-label">Country & Currency:</span>
+                <span class="meta-val">{{ authService.currentCompany()?.countryCode || 'AE' }} • {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
+              </div>
+              <div class="company-meta-item">
+                <span class="meta-label">Status:</span>
+                <span class="meta-status active">Active Primary Entity</span>
+              </div>
+              <div class="company-list-section">
+                <span class="section-hint">Accessible Entities:</span>
+                <div class="active-company-chip">
+                  <span>✓ {{ authService.currentCompany()?.legalName || 'Not set' }} (Current)</span>
+                </div>
               </div>
             </div>
           </div>

@@ -47,6 +47,10 @@ import { NotificationService } from '../../../core/services/notification.service
     .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; }
     .btn-primary { background: #2563eb; color: #fff; border: none; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 600; cursor: pointer; }
     .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 0.55rem 1rem; border-radius: 8px; cursor: pointer; }
+
+    @media (max-width: 767px) {
+      .modal-card { width: 95vw; max-width: 95vw; margin: 0.5rem; }
+    }
   `]
 })
 export class ChangePasswordModalComponent {

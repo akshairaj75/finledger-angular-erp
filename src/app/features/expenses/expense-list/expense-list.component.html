@@ -462,43 +462,45 @@
 
         <!-- Line Items -->
         <h4 class="section-heading mt-4">Expense Items</h4>
-        <table class="data-table mt-2">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Category</th>
-              <th>Description</th>
-              <th>Cost Center</th>
-              <th>Customer</th>
-              <th class="text-right">Net Amount</th>
-              <th class="text-right">VAT</th>
-              <th class="text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let line of se.lines; let i = index">
-              <td>{{ i + 1 }}</td>
-              <td><span class="badge-cat">{{ line.categoryName || 'General' }}</span></td>
-              <td>{{ line.description }}</td>
-              <td>{{ line.costCenterName || '—' }}</td>
-              <td>
-                <span *ngIf="line.isBillable" class="billable-badge">Billable:</span>
-                {{ line.customerName || '—' }}
-              </td>
-              <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
-              <td class="text-right text-muted">{{ line.taxAmount | number:'1.2-2' }}</td>
-              <td class="text-right font-bold">{{ (line.amount + (line.taxAmount || 0)) | number:'1.2-2' }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="5" class="text-right font-bold">Claim Total (AED):</td>
-              <td class="text-right font-bold">{{ se.subtotal | number:'1.2-2' }}</td>
-              <td class="text-right font-bold">{{ se.taxTotal | number:'1.2-2' }}</td>
-              <td class="text-right font-bold total-highlight">{{ se.total | number:'1.2-2' }}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <div class="table-responsive">
+          <table class="data-table mt-2">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Cost Center</th>
+                <th>Customer</th>
+                <th class="text-right">Net Amount</th>
+                <th class="text-right">VAT</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of se.lines; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td><span class="badge-cat">{{ line.categoryName || 'General' }}</span></td>
+                <td>{{ line.description }}</td>
+                <td>{{ line.costCenterName || '—' }}</td>
+                <td>
+                  <span *ngIf="line.isBillable" class="billable-badge">Billable:</span>
+                  {{ line.customerName || '—' }}
+                </td>
+                <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
+                <td class="text-right text-muted">{{ line.taxAmount | number:'1.2-2' }}</td>
+                <td class="text-right font-bold">{{ (line.amount + (line.taxAmount || 0)) | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" class="text-right font-bold">Claim Total (AED):</td>
+                <td class="text-right font-bold">{{ se.subtotal | number:'1.2-2' }}</td>
+                <td class="text-right font-bold">{{ se.taxTotal | number:'1.2-2' }}</td>
+                <td class="text-right font-bold total-highlight">{{ se.total | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
 
         <!-- Attachments / Receipts Gallery -->
         <h4 class="section-heading mt-4">Attached Receipts & Invoices</h4>

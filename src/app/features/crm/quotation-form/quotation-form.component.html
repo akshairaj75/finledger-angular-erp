@@ -272,38 +272,40 @@
       <a routerLink="/crm/quotations/new" class="btn btn-sm btn-primary">➕ New Quote</a>
     </div>
 
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Quotation #</th>
-          <th>Customer</th>
-          <th>Date</th>
-          <th>Valid Until</th>
-          <th>Status</th>
-          <th>Total Value</th>
-          <th class="text-right">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let q of recentQuotations()">
-          <td><span class="badge-code">{{ q.quotationNo }}</span></td>
-          <td>{{ q.customerName || 'Prospect' }}</td>
-          <td>{{ q.quoteDate | date:'dd-MMM-yyyy' }}</td>
-          <td>{{ q.validUntil | date:'dd-MMM-yyyy' }}</td>
-          <td>
-            <span class="status-chip" [ngClass]="'status-' + q.status.toLowerCase()">
-              {{ q.status }}
-            </span>
-          </td>
-          <td class="font-bold">{{ q.total | currency:'AED':'symbol-narrow':'1.2-2' }}</td>
-          <td class="text-right">
-            <a [routerLink]="['/crm/quotations', q.id]" class="btn btn-xs btn-outline">
-              Open →
-            </a>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Quotation #</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Valid Until</th>
+            <th>Status</th>
+            <th>Total Value</th>
+            <th class="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let q of recentQuotations()">
+            <td><span class="badge-code">{{ q.quotationNo }}</span></td>
+            <td>{{ q.customerName || 'Prospect' }}</td>
+            <td>{{ q.quoteDate | date:'dd-MMM-yyyy' }}</td>
+            <td>{{ q.validUntil | date:'dd-MMM-yyyy' }}</td>
+            <td>
+              <span class="status-chip" [ngClass]="'status-' + q.status.toLowerCase()">
+                {{ q.status }}
+              </span>
+            </td>
+            <td class="font-bold">{{ q.total | currency:'AED':'symbol-narrow':'1.2-2' }}</td>
+            <td class="text-right">
+              <a [routerLink]="['/crm/quotations', q.id]" class="btn btn-xs btn-outline">
+                Open →
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 

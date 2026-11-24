@@ -185,6 +185,42 @@
   font-weight: 700;
 }
 
+@media (max-width: 767px) {
+  .header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .filter-buttons .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .data-table {
+    min-width: 650px;
+  }
+}
+
 .link-entry {
   color: #2563eb;
   font-weight: 600;

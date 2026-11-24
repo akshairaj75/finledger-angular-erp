@@ -31,44 +31,46 @@ import { SettingsService } from '../services/settings.service';
           <span class="status-badge" [class.open]="fy.status === 'OPEN'">{{ fy.status }}</span>
         </div>
 
-        <table class="periods-table">
-          <thead>
-            <tr>
-              <th>Period #</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Status</th>
-              <th class="text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let p of fy.periods">
-              <td>Period {{ p.periodNo }}</td>
-              <td>{{ p.startDate }}</td>
-              <td>{{ p.endDate }}</td>
-              <td>
-                <span
-                  class="status-pill"
-                  [class.open]="p.status === 'OPEN'"
-                  [class.closed]="p.status === 'CLOSED'"
-                  [class.locked]="p.status === 'LOCKED'"
-                >
-                  {{ p.status }}
-                </span>
-              </td>
-              <td class="text-right">
-                <button
-                  *ngIf="p.status === 'OPEN'"
-                  class="btn-sm btn-warn"
-                  (click)="closePeriod(p.id)"
-                  [disabled]="!canEdit"
-                >
-                  Close Period
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="periods-table">
+            <thead>
+              <tr>
+                <th>Period #</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Status</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of fy.periods">
+                <td>Period {{ p.periodNo }}</td>
+                <td>{{ p.startDate }}</td>
+                <td>{{ p.endDate }}</td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.open]="p.status === 'OPEN'"
+                    [class.closed]="p.status === 'CLOSED'"
+                    [class.locked]="p.status === 'LOCKED'"
+                  >
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <button
+                    *ngIf="p.status === 'OPEN'"
+                    class="btn-sm btn-warn"
+                    (click)="closePeriod(p.id)"
+                    [disabled]="!canEdit"
+                  >
+                    Close Period
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="modal-backdrop" *ngIf="showModal()">

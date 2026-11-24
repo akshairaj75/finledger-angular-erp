@@ -188,51 +188,53 @@
     </div>
 
     <div class="table-card">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Opp #</th>
-            <th>Title</th>
-            <th>Customer</th>
-            <th>Stage</th>
-            <th>Probability</th>
-            <th>Value</th>
-            <th>Close Date</th>
-            <th>Owner</th>
-            <th class="text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let opp of allOpportunities()">
-            <td>
-              <span class="badge-code">{{ opp.opportunityNo }}</span>
-            </td>
-            <td>
-              <a [routerLink]="['/crm/opportunities', opp.id]" class="table-link">
-                <strong>{{ opp.title }}</strong>
-              </a>
-            </td>
-            <td>{{ opp.customerName || '—' }}</td>
-            <td>
-              <span class="stage-pill">{{ opp.stageName || '—' }}</span>
-            </td>
-            <td>{{ opp.probabilityPct }}%</td>
-            <td class="font-bold">{{ opp.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}</td>
-            <td>{{ opp.expectedCloseDate ? (opp.expectedCloseDate | date:'dd-MMM-yyyy') : '—' }}</td>
-            <td>{{ opp.ownerUserName || 'Unassigned' }}</td>
-            <td class="text-right">
-              <a [routerLink]="['/crm/opportunities', opp.id]" class="btn btn-sm btn-outline">
-                View Detail →
-              </a>
-            </td>
-          </tr>
-          <tr *ngIf="allOpportunities().length === 0">
-            <td colspan="9" class="text-center py-4 text-muted">
-              No sales opportunities found matching current filters.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Opp #</th>
+              <th>Title</th>
+              <th>Customer</th>
+              <th>Stage</th>
+              <th>Probability</th>
+              <th>Value</th>
+              <th>Close Date</th>
+              <th>Owner</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let opp of allOpportunities()">
+              <td>
+                <span class="badge-code">{{ opp.opportunityNo }}</span>
+              </td>
+              <td>
+                <a [routerLink]="['/crm/opportunities', opp.id]" class="table-link">
+                  <strong>{{ opp.title }}</strong>
+                </a>
+              </td>
+              <td>{{ opp.customerName || '—' }}</td>
+              <td>
+                <span class="stage-pill">{{ opp.stageName || '—' }}</span>
+              </td>
+              <td>{{ opp.probabilityPct }}%</td>
+              <td class="font-bold">{{ opp.expectedValue | currency:'AED':'symbol-narrow':'1.2-2' }}</td>
+              <td>{{ opp.expectedCloseDate ? (opp.expectedCloseDate | date:'dd-MMM-yyyy') : '—' }}</td>
+              <td>{{ opp.ownerUserName || 'Unassigned' }}</td>
+              <td class="text-right">
+                <a [routerLink]="['/crm/opportunities', opp.id]" class="btn btn-sm btn-outline">
+                  View Detail →
+                </a>
+              </td>
+            </tr>
+            <tr *ngIf="allOpportunities().length === 0">
+              <td colspan="9" class="text-center py-4 text-muted">
+                No sales opportunities found matching current filters.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

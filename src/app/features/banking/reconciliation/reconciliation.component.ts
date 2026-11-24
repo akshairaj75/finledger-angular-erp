@@ -587,6 +587,10 @@ import {
     .table-wrapper {
       max-height: 520px;
       overflow-y: auto;
+      overflow-x: auto;
+      width: 100%;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
     }
 
     .table {
@@ -811,6 +815,39 @@ import {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+    }
+
+    @media (max-width: 767px) {
+      .reconciliation-page {
+        padding: 0.75rem;
+      }
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      .header-actions .btn {
+        flex: 1;
+        justify-content: center;
+      }
+      .kpi-row {
+        grid-template-columns: 1fr;
+      }
+      .account-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .table {
+        min-width: 550px;
+      }
+      .modal-box {
+        width: 95vw;
+        max-width: 95vw;
+        margin: 0.5rem auto;
+      }
     }
   `]
 })

@@ -638,6 +638,38 @@ import { ReportService } from '../reports/services/report.service';
     .text-orange { color: #ea580c; }
     .text-muted { color: #94a3b8; }
     .font-weight-bold { font-weight: 700; }
+
+    @media (max-width: 767px) {
+      .dashboard-page {
+        padding: 0.75rem;
+      }
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      .header-actions .btn {
+        flex: 1;
+        justify-content: center;
+      }
+      .financial-grid,
+      .operational-grid {
+        grid-template-columns: 1fr;
+      }
+      .chart-bars {
+        overflow-x: auto;
+        min-width: 300px;
+      }
+      .table {
+        min-width: 500px;
+      }
+      .table-wrapper {
+        overflow-x: auto;
+      }
+    }
   `]
 })
 export class DashboardComponent implements OnInit {

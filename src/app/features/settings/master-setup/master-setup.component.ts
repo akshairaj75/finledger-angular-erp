@@ -334,6 +334,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
     </div>
   `,
   styles: [`
+    .setup-page { padding: 1.5rem; max-width: 1440px; margin: 0 auto; width: 100%; }
     .page-header { margin-bottom: 1.25rem; }
     .page-header h2 { margin: 0; font-size: 1.45rem; color: #0f172a; }
     .subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem; }
@@ -351,9 +352,9 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
     .tabs-bar button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
     .panel-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; align-items: start; }
     @media (max-width: 960px) { .panel-grid { grid-template-columns: 1fr; } }
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; overflow-x: auto; width: 100%; max-width: 100%; -webkit-overflow-scrolling: touch; }
     .card h3 { margin: 0 0 1rem; font-size: 1.05rem; color: #0f172a; }
-    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table { width: 100%; min-width: 520px; border-collapse: collapse; }
     .data-table th { text-align: left; padding: 0.6rem; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #e2e8f0; }
     .data-table td { padding: 0.65rem 0.6rem; font-size: 0.86rem; border-bottom: 1px solid #f1f5f9; }
     .font-medium { font-weight: 600; }
@@ -375,6 +376,15 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
     .audit-toolbar h3 { margin: 0; }
     .audit-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
     .audit-json { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; font-size: 0.75rem; color: #475569; }
+
+    @media (max-width: 767px) {
+      .setup-page { padding: 0.75rem; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .tabs-bar { gap: 0.35rem; }
+      .tabs-bar button { padding: 0.4rem 0.65rem; font-size: 0.78rem; flex: 1 1 auto; text-align: center; }
+      .panel-grid { grid-template-columns: 1fr; }
+      .card { padding: 0.85rem; }
+    }
   `]
 })
 export class MasterSetupComponent implements OnInit {

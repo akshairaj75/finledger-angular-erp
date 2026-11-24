@@ -155,33 +155,35 @@
         </div>
 
         <h3 class="lines-title">Journal Lines</h3>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Account</th>
-              <th>Description</th>
-              <th class="text-right">Debit ({{ sj.currencyCode }})</th>
-              <th class="text-right">Credit ({{ sj.currencyCode }})</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let line of sj.lines">
-              <td>{{ line.lineNo }}</td>
-              <td>{{ line.accountCode }} - {{ line.accountName }}</td>
-              <td>{{ line.description || '—' }}</td>
-              <td class="text-right font-mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '—' }}</td>
-              <td class="text-right font-mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '—' }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr class="font-bold">
-              <td colspan="3" class="text-right">Total:</td>
-              <td class="text-right font-mono">{{ sj.totalDebit | number:'1.2-2' }}</td>
-              <td class="text-right font-mono">{{ sj.totalCredit | number:'1.2-2' }}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Account</th>
+                <th>Description</th>
+                <th class="text-right">Debit ({{ sj.currencyCode }})</th>
+                <th class="text-right">Credit ({{ sj.currencyCode }})</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of sj.lines">
+                <td>{{ line.lineNo }}</td>
+                <td>{{ line.accountCode }} - {{ line.accountName }}</td>
+                <td>{{ line.description || '—' }}</td>
+                <td class="text-right font-mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '—' }}</td>
+                <td class="text-right font-mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '—' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="font-bold">
+                <td colspan="3" class="text-right">Total:</td>
+                <td class="text-right font-mono">{{ sj.totalDebit | number:'1.2-2' }}</td>
+                <td class="text-right font-mono">{{ sj.totalCredit | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
       <div class="modal-footer">

@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule, RouterOutlet } from '@angular/router';
-import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { NavigationEnd, Router, RouterModule, RouterOutlet } from '@angular/router';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, filter, switchMap } from 'rxjs';
 import { AuthService } from './core/auth/auth.service';
 import { HasPermissionDirective } from './core/directives/has-permission.directive';
 import { TranslatePipe } from './core/pipes/translate.pipe';
@@ -38,6 +38,7 @@ export class App implements OnInit, OnDestroy {
   public showUserMenu = signal(false);
   public showChangePasswordModal = signal(false);
   public showCompanyMenu = signal(false);
+  public sidebarOpen = signal(false);
 
   // Global Search State
   public searchQuery = signal('');
@@ -46,6 +47,7 @@ export class App implements OnInit, OnDestroy {
   public searchGroups = signal<SearchGroup[]>([]);
   private searchSubject = new Subject<string>();
   private searchSub?: Subscription;
+  private routerSub?: Subscription;
 
   public userInitials = computed(() => {
     const name = this.authService.currentUser()?.fullName || 'U';
@@ -82,10 +84,30 @@ export class App implements OnInit, OnDestroy {
           this.searchGroups.set([]);
         }
       });
+
+    this.routerSub = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.closeSidebar();
+        this.closeOverlays();
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      });
   }
 
   ngOnDestroy(): void {
     this.searchSub?.unsubscribe();
+    this.routerSub?.unsubscribe();
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update(open => !open);
+    if (this.sidebarOpen()) {
+      this.closeOverlays();
+    }
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
   }
 
   onSearchInput(query: string): void {

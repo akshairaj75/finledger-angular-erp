@@ -12,6 +12,13 @@
   box-sizing: border-box;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #1e293b;
@@ -32,6 +39,203 @@ html[dir="rtl"] {
 
 .text-end {
   text-align: end !important;
+}
+
+/* Responsive Containers & Breakpoints */
+.page-container {
+  padding: 1.5rem;
+  max-width: 1440px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .page-container {
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .page-container {
+    padding: 0.75rem;
+  }
+}
+
+/* Responsive Table Wrapper */
+.table-responsive,
+.table-container,
+.table-wrapper,
+.lines-table-container,
+.journal-preview-table,
+.card-table-wrapper,
+.preview-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.table-responsive::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.table-wrapper::-webkit-scrollbar,
+.lines-table-container::-webkit-scrollbar,
+.journal-preview-table::-webkit-scrollbar,
+.card-table-wrapper::-webkit-scrollbar,
+.preview-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.table-wrapper::-webkit-scrollbar-thumb,
+.lines-table-container::-webkit-scrollbar-thumb,
+.journal-preview-table::-webkit-scrollbar-thumb,
+.card-table-wrapper::-webkit-scrollbar-thumb,
+.preview-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+
+/* Base Table & Content Containment */
+table,
+.table,
+.data-table,
+.report-table,
+.lines-table {
+  border-collapse: collapse;
+}
+
+.mono-val,
+.acc-code,
+.trn-number,
+.code-badge {
+  word-break: break-all;
+}
+
+/* Universal Responsive Grid & Form Stacking */
+@media (max-width: 1023px) {
+  .form-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .form-row {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  .col-md-3,
+  .col-md-4,
+  .col-md-6,
+  .col-md-12 {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .form-grid-3,
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .col-span-2 {
+    grid-column: span 1 !important;
+  }
+
+  /* Form header / page header responsive wrap */
+  .header-section,
+  .page-header,
+  .form-header,
+  .card-header-flex {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .header-actions {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .header-actions .btn {
+    flex: 1 1 auto !important;
+  }
+
+  /* Prevent auto-zooming in iOS Safari when focusing form inputs */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="tel"],
+  input[type="search"],
+  select,
+  textarea,
+  .form-control {
+    font-size: 16px !important;
+  }
+
+  /* Sane modal sizing on mobile */
+  .modal-dialog,
+  .modal-content,
+  .modal-container,
+  .modal-box {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 0.5rem auto !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Sticky Mobile Actions Bar for transactional forms */
+  .sticky-form-actions-mobile {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid #e2e8f0;
+    z-index: 900;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .has-sticky-actions {
+    padding-bottom: 5.5rem !important;
+  }
+}
+
+/* Visibility Utilities */
+.hide-desktop { display: none !important; }
+.show-desktop { display: block !important; }
+
+@media (max-width: 1023px) {
+  .hide-tablet { display: none !important; }
+  .show-tablet { display: block !important; }
+}
+
+@media (max-width: 767px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
+  .hide-desktop { display: block !important; }
+  .show-desktop { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .hide-desktop-up { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .hide-mobile { display: block !important; }
+  .show-mobile { display: none !important; }
+  .hide-desktop { display: none !important; }
+  .show-desktop { display: block !important; }
 }
 
 /* When templates use text-left / text-right, map to logical properties */
