@@ -1383,6 +1383,10 @@ export class ReportViewerComponent implements OnInit {
     if (ccId) params['costCenterId'] = ccId.toString();
     if (this.selectedAccountId()) params['accountId'] = this.selectedAccountId()!.toString();
     if (this.selectedItemId()) params['itemId'] = this.selectedItemId()!.toString();
+    if (this.selectedWarehouseId()) params['warehouseId'] = this.selectedWarehouseId()!.toString();
+    if (this.reportType() === 'expense-analysis' && this.expenseGroupBy()) {
+      params['groupBy'] = this.expenseGroupBy();
+    }
 
     const type = this.reportType();
     this.reportService.exportReport(type, format, params).subscribe({
