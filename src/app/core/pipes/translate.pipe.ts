@@ -9,7 +9,7 @@ import { LocaleService } from '../services/locale.service';
 export class TranslatePipe implements PipeTransform {
   private readonly localeService = inject(LocaleService);
 
-  transform(key: string, params?: Record<string, string | number>): string {
+  transform(key: string, params?: Record<string, any>): string {
     if (!key) return '';
     return this.localeService.t(key, params);
   }

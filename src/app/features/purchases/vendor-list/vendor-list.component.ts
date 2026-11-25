@@ -6,6 +6,7 @@ import { Account } from '../../../core/models/account.model';
 import { OpenBill } from '../../../core/models/bill.model';
 import { Page } from '../../../core/models/page.model';
 import { Vendor, VendorQuery, VendorRequest } from '../../../core/models/vendor.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AccountService } from '../../accounting/services/account.service';
 import { VendorService } from '../services/vendor.service';
@@ -13,7 +14,7 @@ import { VendorService } from '../services/vendor.service';
 @Component({
   selector: 'app-vendor-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './vendor-list.component.html',
   styleUrls: ['./vendor-list.component.css']
 })

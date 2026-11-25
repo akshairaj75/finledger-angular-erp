@@ -2,16 +2,16 @@
   <!-- Page Header -->
   <div class="page-header">
     <div class="header-titles">
-      <h1 class="page-title">New Stock Adjustment</h1>
-      <p class="page-subtitle">Reconcile physical inventory counts, write off damaged/expired stock, and post GL adjustments</p>
+      <h1 class="page-title">{{ 'inventory.newAdjustment' | translate }}</h1>
+      <p class="page-subtitle">{{ 'inventory.adjustmentsSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
-      <a routerLink="/inventory/items" class="btn btn-secondary">Cancel</a>
+      <a routerLink="/inventory/items" class="btn btn-secondary">{{ 'common.cancel' | translate }}</a>
       <button type="button" class="btn btn-secondary" [disabled]="saving() || posting()" (click)="saveDraft()">
-        {{ saving() ? 'Saving...' : 'Save Draft' }}
+        {{ saving() ? ('common.loading' | translate) : ('common.save' | translate) }}
       </button>
       <button type="button" class="btn btn-primary" [disabled]="saving() || posting()" (click)="saveAndPost()">
-        {{ posting() ? 'Posting to GL...' : 'Save & Post to GL' }}
+        {{ posting() ? ('common.loading' | translate) : ('accounting.postJournal' | translate) }}
       </button>
     </div>
   </div>
@@ -19,20 +19,20 @@
   <form [formGroup]="adjustmentForm">
     <!-- Header Card -->
     <div class="card form-card">
-      <h3 class="card-title">Adjustment Details</h3>
+      <h3 class="card-title">{{ 'inventory.adjustmentDetails' | translate }}</h3>
 
       <div class="form-grid">
         <!-- Adjustment Date -->
         <div class="form-group">
-          <label class="form-label">Adjustment Date <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.adjustmentDate' | translate }} <span class="required">*</span></label>
           <input type="date" class="form-control" formControlName="adjustmentDate" />
         </div>
 
         <!-- Warehouse Selection -->
         <div class="form-group">
-          <label class="form-label">Warehouse <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.warehouse' | translate }} <span class="required">*</span></label>
           <select class="form-control" formControlName="warehouseId">
-            <option [ngValue]="null" disabled>Select warehouse...</option>
+            <option [ngValue]="null" disabled>-- {{ 'inventory.selectWarehouse' | translate }} --</option>
             <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
@@ -41,17 +41,17 @@
 
         <!-- Reason -->
         <div class="form-group">
-          <label class="form-label">Adjustment Reason <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.reason' | translate }} <span class="required">*</span></label>
           <select class="form-control" formControlName="reason">
-            <option *ngFor="let r of reasons" [value]="r.value">{{ r.label }}</option>
+            <option *ngFor="let r of reasons" [value]="r.value">{{ 'inventory.' + r.labelKey | translate }}</option>
           </select>
         </div>
 
         <!-- Adjustment GL Account -->
         <div class="form-group">
-          <label class="form-label">Adjustment GL Account <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.adjustmentAccount' | translate }} <span class="required">*</span></label>
           <select class="form-control" formControlName="adjustmentAccountId">
-            <option [ngValue]="null" disabled>Select adjustment account...</option>
+            <option [ngValue]="null" disabled>-- {{ 'inventory.selectAdjustmentAccount' | translate }} --</option>
             <option *ngFor="let acc of expenseAccounts()" [ngValue]="acc.id">
               {{ acc.code }} - {{ acc.name }}
             </option>
@@ -60,11 +60,11 @@
       </div>
 
       <div class="form-group mt-3">
-        <label class="form-label">Notes / Justification</label>
+        <label class="form-label">{{ 'common.notes' | translate }}</label>
         <textarea
           class="form-control"
           rows="2"
-          placeholder="Reason for adjustment, physical audit notes, or discrepancy findings..."
+          [placeholder]="'inventory.adjustmentJustificationPlaceholder' | translate"
           formControlName="notes"
         ></textarea>
       </div>
@@ -79,25 +79,25 @@
           <input
             type="text"
             class="form-control"
-            placeholder="Scan barcode or type exact SKU..."
+            [placeholder]="'inventory.scanBarcodePlaceholder' | translate"
             [ngModel]="barcodeInput()"
             (ngModelChange)="barcodeInput.set($event)"
             [ngModelOptions]="{standalone: true}"
             (keyup.enter)="scanBarcode()"
           />
-          <button type="button" class="btn btn-secondary btn-sm" (click)="scanBarcode()">Scan</button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="scanBarcode()">{{ 'inventory.scan' | translate }}</button>
         </div>
 
         <!-- Search Item Catalog -->
         <div class="catalog-select-wrap">
           <select class="form-control" [ngModel]="selectedItemId()" (ngModelChange)="selectedItemId.set($event)" [ngModelOptions]="{standalone: true}">
-            <option [ngValue]="null">Select item to add...</option>
+            <option [ngValue]="null">-- {{ 'inventory.selectItemToAdd' | translate }} --</option>
             <option *ngFor="let item of catalogItems()" [ngValue]="item.id">
               {{ item.sku }} - {{ item.name }}
             </option>
           </select>
           <button type="button" class="btn btn-secondary btn-sm" [disabled]="!selectedItemId()" (click)="addItemFromSelect()">
-            Add Item
+            {{ 'sales.addLine' | translate }}
           </button>
         </div>
 
@@ -108,7 +108,7 @@
           [disabled]="loadingWarehouseStock()"
           (click)="loadEntireWarehouse()"
         >
-          {{ loadingWarehouseStock() ? 'Loading Warehouse...' : '📋 Load Entire Warehouse for Count' }}
+          {{ loadingWarehouseStock() ? ('common.loading' | translate) : ('📋 ' + ('inventory.loadEntireWarehouse' | translate)) }}
         </button>
       </div>
     </div>
@@ -116,20 +116,20 @@
     <!-- Lines Table Card -->
     <div class="card table-card">
       <div class="card-header-bar">
-        <h3 class="card-title">Counted Items & Discrepancies</h3>
-        <span class="items-count-badge">{{ linesArray.length }} Items</span>
+        <h3 class="card-title">{{ 'inventory.countedItemsTitle' | translate }}</h3>
+        <span class="items-count-badge">{{ linesArray.length }} {{ 'common.records' | translate }}</span>
       </div>
 
       <div class="table-responsive">
         <table class="table data-table" *ngIf="linesArray.length > 0; else noLinesTpl">
           <thead>
             <tr>
-              <th style="width: 25%">Item</th>
-              <th class="text-right" style="width: 15%">System Qty</th>
-              <th class="text-right" style="width: 18%">Counted Qty <span class="required">*</span></th>
-              <th class="text-right" style="width: 12%">Difference</th>
-              <th class="text-right" style="width: 15%">Unit Cost</th>
-              <th class="text-right" style="width: 15%">Value Impact</th>
+              <th style="width: 25%">{{ 'sales.item' | translate }}</th>
+              <th class="text-right" style="width: 15%">{{ 'inventory.systemQty' | translate }}</th>
+              <th class="text-right" style="width: 18%">{{ 'inventory.countedQty' | translate }} <span class="required">*</span></th>
+              <th class="text-right" style="width: 12%">{{ 'common.difference' | translate }}</th>
+              <th class="text-right" style="width: 15%">{{ 'common.unitPrice' | translate }}</th>
+              <th class="text-right" style="width: 15%">{{ 'inventory.valueImpact' | translate }}</th>
               <th style="width: 5%"></th>
             </tr>
           </thead>
@@ -184,7 +184,7 @@
         <ng-template #noLinesTpl>
           <div class="empty-state">
             <span class="empty-icon">📝</span>
-            <p class="text-muted">No items in this adjustment yet. Scan a barcode, search an item, or load the entire warehouse.</p>
+            <p class="text-muted">{{ 'inventory.noAdjustmentItems' | translate }}</p>
           </div>
         </ng-template>
       </div>
@@ -194,18 +194,18 @@
     <div class="preview-grid" *ngIf="linesArray.length > 0">
       <!-- Stock Effect Summary Card -->
       <div class="card preview-card">
-        <h4 class="preview-title">📊 Stock Effect Summary</h4>
+        <h4 class="preview-title">📊 {{ 'inventory.stockEffectSummary' | translate }}</h4>
         <div class="summary-rows">
           <div class="summary-row">
-            <span>Total Shortage (Loss):</span>
+            <span>{{ 'inventory.totalShortage' | translate }}:</span>
             <span class="text-red font-bold">- {{ totalShortageValue() | currency:'AED ':'symbol':'1.2-2' }}</span>
           </div>
           <div class="summary-row">
-            <span>Total Surplus (Gain):</span>
+            <span>{{ 'inventory.totalSurplus' | translate }}:</span>
             <span class="text-green font-bold">+ {{ totalSurplusValue() | currency:'AED ':'symbol':'1.2-2' }}</span>
           </div>
           <div class="summary-row summary-total">
-            <span>Net Financial Impact:</span>
+            <span>{{ 'inventory.netImpact' | translate }}:</span>
             <span
               class="font-bold"
               [class.text-red]="netValueImpact() < 0"
@@ -219,14 +219,14 @@
 
       <!-- Journal Entry Live Preview Card -->
       <div class="card preview-card">
-        <h4 class="preview-title">📖 Double-Entry GL Preview</h4>
+        <h4 class="preview-title">📖 {{ 'accounting.journalPreview' | translate }}</h4>
         <div class="table-responsive">
           <table class="table journal-table" *ngIf="journalPreview().length > 0; else noGlTpl">
             <thead>
               <tr>
-                <th>Account</th>
-                <th class="text-right">Debit (AED)</th>
-                <th class="text-right">Credit (AED)</th>
+                <th>{{ 'accounting.account' | translate }}</th>
+                <th class="text-right">{{ 'accounting.debit' | translate }} (AED)</th>
+                <th class="text-right">{{ 'accounting.credit' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
@@ -245,7 +245,7 @@
           </table>
         </div>
         <ng-template #noGlTpl>
-          <p class="text-muted text-sm mt-2">All counted quantities match system stock. No GL entry required.</p>
+          <p class="text-muted text-sm mt-2">{{ 'inventory.countedMatchSystem' | translate }}</p>
         </ng-template>
       </div>
     </div>

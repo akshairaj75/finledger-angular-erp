@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { HasPermissionDirective } from '../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { DashboardSummary } from '../../core/models/report.model';
 import { NotificationService } from '../../core/services/notification.service';
 import { ReportService } from '../reports/services/report.service';
@@ -9,79 +10,79 @@ import { ReportService } from '../reports/services/report.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, HasPermissionDirective],
+  imports: [CommonModule, RouterModule, HasPermissionDirective, TranslatePipe],
   template: `
     <div class="dashboard-page">
       <!-- Welcome & Action Bar -->
       <div class="dashboard-header">
         <div>
-          <h2>Executive Financial & Operational Dashboard</h2>
-          <p class="subtitle">Real-time consolidated view across Ledger, Sales, Purchases, CRM, and Inventory</p>
+          <h2>{{ 'dashboard.title' | translate }}</h2>
+          <p class="subtitle">{{ 'dashboard.subtitle' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-secondary" (click)="loadDashboardData()" [disabled]="loading()">
-            🔄 Refresh Metrics
+            🔄 {{ 'common.refresh' | translate }}
           </button>
           <a *appHasPermission="'REPORT_VIEW'" routerLink="/reports/profit-loss" class="btn btn-primary">
-            📈 View Full Reports
+            📈 {{ 'dashboard.viewAll' | translate }}
           </a>
         </div>
       </div>
 
       <div *ngIf="loading() && !summary()" class="loading-state">
         <div class="spinner"></div>
-        <span>Consolidating enterprise metrics...</span>
+        <span>{{ 'dashboard.consolidating' | translate }}</span>
       </div>
 
       <div *ngIf="summary() as s" class="dashboard-content">
         <!-- ROW 1: Financial KPI Cards (Hidden if user lacks financial visibility) -->
         <ng-container *appHasPermission="['REPORT_VIEW', 'LEDGER_VIEW', 'JOURNAL_VIEW']">
           <div class="section-title">
-            <span>Financial Performance (YTD)</span>
+            <span>{{ 'dashboard.financialPerformance' | translate }}</span>
           </div>
           <div class="kpi-grid financial-grid">
           <div class="kpi-card revenue-card">
             <div class="kpi-icon-box bg-blue">💰</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Total Revenue (YTD)</span>
+              <span class="kpi-label">{{ 'dashboard.totalRevenue' | translate }}</span>
               <span class="kpi-value">{{ s.totalRevenueYtd | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint text-success">↑ Operating Income</span>
+              <span class="kpi-hint text-success">↑ {{ 'reports.revenue' | translate }}</span>
             </div>
           </div>
 
           <div class="kpi-card expenses-card">
             <div class="kpi-icon-box bg-red">📉</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Total Expenses (YTD)</span>
+              <span class="kpi-label">{{ 'dashboard.operatingExpenses' | translate }}</span>
               <span class="kpi-value">{{ s.totalExpensesYtd | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint text-muted">Operating & Direct</span>
+              <span class="kpi-hint text-muted">{{ 'reports.operatingExpenses' | translate }}</span>
             </div>
           </div>
 
           <div class="kpi-card ar-card">
             <div class="kpi-icon-box bg-amber">🧾</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Accounts Receivable</span>
+              <span class="kpi-label">{{ 'sales.balanceDue' | translate }}</span>
               <span class="kpi-value">{{ s.accountsReceivable | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <a routerLink="/reports/ar-ageing" class="kpi-hint link-hint">Open Invoices →</a>
+              <a routerLink="/reports/ar-ageing" class="kpi-hint link-hint">{{ 'sales.invoices' | translate }} →</a>
             </div>
           </div>
 
           <div class="kpi-card cash-card">
             <div class="kpi-icon-box bg-green">🏦</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Cash & Bank Balances</span>
+              <span class="kpi-label">{{ 'dashboard.cashAtBank' | translate }}</span>
               <span class="kpi-value">{{ s.cashAndBank | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <a routerLink="/banking/reconciliation" class="kpi-hint link-hint">Reconciliation →</a>
+              <a routerLink="/banking/reconciliation" class="kpi-hint link-hint">{{ 'banking.reconTitle' | translate }} →</a>
             </div>
           </div>
 
           <div class="kpi-card ap-card">
             <div class="kpi-icon-box bg-purple">📥</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Accounts Payable</span>
+              <span class="kpi-label">{{ 'purchases.balanceDue' | translate }}</span>
               <span class="kpi-value">{{ s.accountsPayable | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <a routerLink="/reports/ap-ageing" class="kpi-hint link-hint">Vendor Bills →</a>
+              <a routerLink="/reports/ap-ageing" class="kpi-hint link-hint">{{ 'purchases.bills' | translate }} →</a>
             </div>
           </div>
         </div>
@@ -89,25 +90,25 @@ import { ReportService } from '../reports/services/report.service';
 
         <!-- ROW 2: Operational KPI Cards -->
         <div class="section-title mt-4" *appHasPermission="['OPPORTUNITY_VIEW', 'CRM_VIEW_ALL', 'ITEM_VIEW', 'EXPENSE_VIEW', 'EXPENSE_APPROVE']">
-          <span>Operational Efficiency & Pipeline</span>
+          <span>{{ 'dashboard.operationalEfficiency' | translate }}</span>
         </div>
         <div class="kpi-grid operational-grid">
           <div class="kpi-card pipeline-card" *appHasPermission="['OPPORTUNITY_VIEW', 'CRM_VIEW_ALL']">
             <div class="kpi-icon-box bg-indigo">🎯</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Open CRM Pipeline</span>
+              <span class="kpi-label">{{ 'dashboard.openCrmPipeline' | translate }}</span>
               <span class="kpi-value">{{ s.openPipelineValue | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint font-weight-bold">{{ s.openPipelineCount }} active opportunities</span>
+              <span class="kpi-hint font-weight-bold">{{ s.openPipelineCount }} {{ 'dashboard.activeOpportunities' | translate }}</span>
             </div>
           </div>
 
           <div class="kpi-card stock-card" *appHasPermission="'ITEM_VIEW'">
             <div class="kpi-icon-box bg-teal">📦</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Inventory Valuation</span>
+              <span class="kpi-label">{{ 'dashboard.inventoryValuation' | translate }}</span>
               <span class="kpi-value">{{ s.totalInventoryValue | number:'1.2-2' }} <span class="currency">AED</span></span>
               <span class="kpi-hint" [ngClass]="s.lowStockItemCount > 0 ? 'text-danger' : 'text-success'">
-                {{ s.lowStockItemCount > 0 ? '⚠ ' + s.lowStockItemCount + ' items below reorder' : '✓ Stock levels healthy' }}
+                {{ s.lowStockItemCount > 0 ? ('⚠ ' + s.lowStockItemCount + ' ' + ('dashboard.itemsBelowReorder' | translate)) : ('✓ ' + ('dashboard.stockHealthy' | translate)) }}
               </span>
             </div>
           </div>
@@ -115,18 +116,18 @@ import { ReportService } from '../reports/services/report.service';
           <div class="kpi-card approval-card" *appHasPermission="['EXPENSE_APPROVE', 'EXPENSE_VIEW']">
             <div class="kpi-icon-box bg-orange">⏳</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Awaiting Expense Approval</span>
+              <span class="kpi-label">{{ 'dashboard.awaitingExpenseApproval' | translate }}</span>
               <span class="kpi-value">{{ s.expensesAwaitingApprovalAmount | number:'1.2-2' }} <span class="currency">AED</span></span>
-              <span class="kpi-hint text-warning font-weight-bold">{{ s.expensesAwaitingApprovalCount }} pending claims</span>
+              <span class="kpi-hint text-warning font-weight-bold">{{ s.expensesAwaitingApprovalCount }} {{ 'dashboard.pendingClaims' | translate }}</span>
             </div>
           </div>
 
           <div class="kpi-card approval-card" *ngIf="(s.overdueActivitiesCount ?? 0) > 0">
             <div class="kpi-icon-box bg-red">⏰</div>
             <div class="kpi-meta">
-              <span class="kpi-label">Overdue CRM Tasks</span>
+              <span class="kpi-label">{{ 'dashboard.overdueTasks' | translate }}</span>
               <span class="kpi-value">{{ s.overdueActivitiesCount }}</span>
-              <span class="kpi-hint text-danger font-weight-bold">Require immediate follow-up</span>
+              <span class="kpi-hint text-danger font-weight-bold">{{ 'dashboard.requireFollowUp' | translate }}</span>
             </div>
           </div>
         </div>
@@ -136,8 +137,8 @@ import { ReportService } from '../reports/services/report.service';
           <!-- 6-Month Revenue vs Expenses Visual Chart -->
           <div class="card chart-card">
             <div class="card-header">
-              <h3>Monthly Revenue vs. Expenses</h3>
-              <span class="badge badge-light">Last 6 Months</span>
+              <h3>{{ 'dashboard.monthlyRevenueVsExpenses' | translate }}</h3>
+              <span class="badge badge-light">{{ 'dashboard.last6Months' | translate }}</span>
             </div>
             <div class="chart-container">
               <div class="chart-bars">
@@ -160,8 +161,8 @@ import { ReportService } from '../reports/services/report.service';
                 </div>
               </div>
               <div class="chart-legend">
-                <span class="legend-item"><span class="legend-color legend-revenue"></span> Revenue</span>
-                <span class="legend-item"><span class="legend-color legend-expense"></span> Expenses</span>
+                <span class="legend-item"><span class="legend-color legend-revenue"></span> {{ 'reports.revenue' | translate }}</span>
+                <span class="legend-item"><span class="legend-color legend-expense"></span> {{ 'reports.operatingExpenses' | translate }}</span>
               </div>
             </div>
           </div>
@@ -169,33 +170,33 @@ import { ReportService } from '../reports/services/report.service';
           <!-- Receivables Ageing Breakdown -->
           <div class="card ageing-card">
             <div class="card-header">
-              <h3>Receivables Ageing Buckets</h3>
-              <a routerLink="/reports/ar-ageing" class="view-link">View Report →</a>
+              <h3>{{ 'dashboard.receivablesAgeing' | translate }}</h3>
+              <a routerLink="/reports/ar-ageing" class="view-link">{{ 'dashboard.viewReport' | translate }} →</a>
             </div>
             <div class="ageing-content">
               <div class="ageing-total">
-                <span class="total-label">Total Outstanding AR</span>
+                <span class="total-label">{{ 'dashboard.totalOutstandingAr' | translate }}</span>
                 <span class="total-val">{{ s.receivablesAgeing.total | number:'1.2-2' }} AED</span>
               </div>
               <div class="ageing-buckets">
                 <div class="bucket-row">
-                  <span class="bucket-name">Current (Not Overdue)</span>
+                  <span class="bucket-name">{{ 'dashboard.currentNotOverdue' | translate }}</span>
                   <span class="bucket-val text-success">{{ s.receivablesAgeing.current | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
-                  <span class="bucket-name">1 — 30 Days Overdue</span>
+                  <span class="bucket-name">{{ 'dashboard.days1To30' | translate }}</span>
                   <span class="bucket-val">{{ s.receivablesAgeing.days1To30 | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
-                  <span class="bucket-name">31 — 60 Days Overdue</span>
+                  <span class="bucket-name">{{ 'dashboard.days31To60' | translate }}</span>
                   <span class="bucket-val text-warning">{{ s.receivablesAgeing.days31To60 | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
-                  <span class="bucket-name">61 — 90 Days Overdue</span>
+                  <span class="bucket-name">{{ 'dashboard.days61To90' | translate }}</span>
                   <span class="bucket-val text-orange">{{ s.receivablesAgeing.days61To90 | number:'1.2-2' }}</span>
                 </div>
                 <div class="bucket-row">
-                  <span class="bucket-name">> 90 Days (Critical)</span>
+                  <span class="bucket-name">{{ 'dashboard.over90Days' | translate }}</span>
                   <span class="bucket-val text-danger">{{ s.receivablesAgeing.over90 | number:'1.2-2' }}</span>
                 </div>
               </div>
@@ -206,19 +207,18 @@ import { ReportService } from '../reports/services/report.service';
         <!-- Recent Transactions Table -->
         <div class="card transactions-card mt-4" *appHasPermission="['JOURNAL_VIEW', 'LEDGER_VIEW', 'REPORT_VIEW']">
           <div class="card-header">
-            <h3>Recent Financial Transactions</h3>
-            <span class="badge badge-light">Latest 10 Journal & Voucher Postings</span>
+            <h3>{{ 'dashboard.recentTransactions' | translate }}</h3>
           </div>
           <div class="table-wrapper">
             <table class="table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Source / Type</th>
-                  <th>Reference #</th>
-                  <th>Narration / Details</th>
-                  <th class="text-right">Amount (AED)</th>
-                  <th>Status</th>
+                  <th>{{ 'common.date' | translate }}</th>
+                  <th>{{ 'common.type' | translate }}</th>
+                  <th>{{ 'common.reference' | translate }}</th>
+                  <th>{{ 'common.description' | translate }}</th>
+                  <th class="text-right">{{ 'common.amount' | translate }} (AED)</th>
+                  <th>{{ 'common.status' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,10 +228,10 @@ import { ReportService } from '../reports/services/report.service';
                   <td><strong>{{ tx.reference }}</strong></td>
                   <td>{{ tx.description || '-' }}</td>
                   <td class="text-right font-weight-bold">{{ tx.amount | number:'1.2-2' }}</td>
-                  <td><span class="status-pill status-posted">{{ tx.status }}</span></td>
+                  <td><span class="status-pill status-posted">{{ 'status.' + tx.status | translate }}</span></td>
                 </tr>
                 <tr *ngIf="s.recentTransactions.length === 0">
-                  <td colspan="6" class="text-center text-muted py-3">No posted transactions recorded yet.</td>
+                  <td colspan="6" class="text-center text-muted py-3">{{ 'dashboard.noRecentTransactions' | translate }}</td>
                 </tr>
               </tbody>
             </table>
@@ -280,8 +280,8 @@ import { ReportService } from '../reports/services/report.service';
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #475569;
-      border-left: 3px solid #2563eb;
-      padding-left: 0.5rem;
+      border-inline-start: 3px solid #2563eb;
+      padding-inline-start: 0.5rem;
     }
 
     .kpi-grid {

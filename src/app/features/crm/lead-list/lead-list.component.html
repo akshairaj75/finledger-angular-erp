@@ -2,15 +2,15 @@
   <!-- Header Section -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Leads Management</h1>
-      <p class="page-subtitle">Capture, qualify, and convert sales prospects into opportunities and customer accounts</p>
+      <h1 class="page-title">{{ 'crm.leadsTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'crm.leadsSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
       <button type="button" class="btn btn-outline" (click)="showImportModal.set(true)">
-        <span>📥 Import CSV</span>
+        <span>📥 {{ 'common.import' | translate }} CSV</span>
       </button>
       <button type="button" class="btn btn-primary" (click)="openNewLeadModal()">
-        <span>➕ New Lead</span>
+        <span>➕ {{ 'crm.newLead' | translate }}</span>
       </button>
     </div>
   </div>
@@ -68,15 +68,15 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Lead #</th>
-            <th>Contact Person</th>
-            <th>Company</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th class="text-right">Action</th>
+            <th>#</th>
+            <th>{{ 'crm.contactPerson' | translate }}</th>
+            <th>{{ 'crm.company' | translate }}</th>
+            <th>{{ 'common.email' | translate }}</th>
+            <th>{{ 'common.phone' | translate }}</th>
+            <th>{{ 'common.source' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th>{{ 'common.created' | translate }}</th>
+            <th class="text-right">{{ 'common.action' | translate }}</th>
           </tr>
         </thead>
         <tbody>

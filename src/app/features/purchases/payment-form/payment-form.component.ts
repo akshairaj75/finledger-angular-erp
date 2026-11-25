@@ -7,6 +7,7 @@ import { OpenBill } from '../../../core/models/bill.model';
 import { PaymentAllocationRequest, PaymentRequest } from '../../../core/models/payment.model';
 import { PaymentMethod } from '../../../core/models/receipt.model';
 import { Vendor } from '../../../core/models/vendor.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { BankAccountService } from '../../sales/services/bank-account.service';
 import { PaymentService } from '../services/payment.service';
@@ -19,7 +20,7 @@ interface EditableOpenBill extends OpenBill {
 @Component({
   selector: 'app-payment-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './payment-form.component.html',
   styleUrls: ['./payment-form.component.css']
 })

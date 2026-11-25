@@ -3,35 +3,35 @@
   <div class="page-header">
     <div>
       <div class="breadcrumb">
-        <a routerLink="/inventory/items">Inventory</a> /
-        <span>{{ isEditMode() ? 'Edit Item' : 'New Item' }}</span>
+        <a routerLink="/inventory/items">{{ 'nav.inventory' | translate }}</a> /
+        <span>{{ isEditMode() ? ('common.edit' | translate) : ('inventory.newItem' | translate) }}</span>
       </div>
-      <h2>{{ isEditMode() ? 'Edit Item: ' + itemForm.get('sku')?.value : 'Create Inventory Item' }}</h2>
+      <h2>{{ isEditMode() ? (('common.edit' | translate) + ': ' + itemForm.get('sku')?.value) : ('inventory.newItem' | translate) }}</h2>
     </div>
     <div class="header-actions">
-      <a routerLink="/inventory/items" class="btn btn-secondary">Cancel</a>
+      <a routerLink="/inventory/items" class="btn btn-secondary">{{ 'common.cancel' | translate }}</a>
       <button
         type="button"
         class="btn btn-primary"
         (click)="onSubmit()"
         [disabled]="saving() || loading()"
       >
-        {{ saving() ? 'Saving Item...' : (isEditMode() ? 'Update Item' : 'Create Item') }}
+        {{ saving() ? ('common.loading' | translate) : (isEditMode() ? ('common.edit' | translate) : ('common.create' | translate)) }}
       </button>
     </div>
   </div>
 
   <div *ngIf="loading()" class="loading-state card">
-    <p>Loading item details...</p>
+    <p>{{ 'common.loading' | translate }}</p>
   </div>
 
   <form [formGroup]="itemForm" (ngSubmit)="onSubmit()" *ngIf="!loading()">
     <!-- Card 1: Basic Information -->
     <div class="card form-section">
-      <h3 class="section-title">Item Identification</h3>
+      <h3 class="section-title">{{ 'inventory.itemIdentification' | translate }}</h3>
       <div class="form-grid-3">
         <div class="form-group">
-          <label>Item SKU *</label>
+          <label>{{ 'inventory.sku' | translate }} *</label>
           <input
             type="text"
             formControlName="sku"
@@ -39,19 +39,19 @@
             [class.invalid]="itemForm.get('sku')?.invalid && itemForm.get('sku')?.touched"
           />
           <span class="field-error" *ngIf="itemForm.get('sku')?.invalid && itemForm.get('sku')?.touched">
-            SKU is required (letters, numbers, dashes only).
+            {{ 'inventory.sku' | translate }} {{ 'common.required' | translate }}
           </span>
         </div>
 
         <div class="form-group">
-          <label>Barcode / UPC</label>
+          <label>{{ 'inventory.barcode' | translate }}</label>
           <input type="text" formControlName="barcode" placeholder="e.g. 6291040001234" />
         </div>
 
         <div class="form-group">
-          <label>Category</label>
+          <label>{{ 'common.category' | translate }}</label>
           <select formControlName="categoryId">
-            <option [ngValue]="null">Select Category</option>
+            <option [ngValue]="null">-- {{ 'inventory.selectCategory' | translate }} --</option>
             <option *ngFor="let c of categories()" [ngValue]="c.id">{{ c.name }}</option>
           </select>
         </div>
@@ -59,7 +59,7 @@
 
       <div class="form-grid-3 mt-3">
         <div class="form-group col-span-2">
-          <label>Item Name *</label>
+          <label>{{ 'common.name' | translate }} *</label>
           <input
             type="text"
             formControlName="name"
@@ -67,12 +67,12 @@
             [class.invalid]="itemForm.get('name')?.invalid && itemForm.get('name')?.touched"
           />
           <span class="field-error" *ngIf="itemForm.get('name')?.invalid && itemForm.get('name')?.touched">
-            Item name is required.
+            {{ 'common.name' | translate }} {{ 'common.required' | translate }}
           </span>
         </div>
 
         <div class="form-group">
-          <label>Unit of Measure *</label>
+          <label>{{ 'inventory.unitOfMeasure' | translate }} *</label>
           <select formControlName="unit">
             <option *ngFor="let u of units" [value]="u">{{ u }}</option>
           </select>
@@ -81,14 +81,14 @@
 
       <div class="form-grid-3 mt-3">
         <div class="form-group">
-          <label>Item Type *</label>
+          <label>{{ 'common.type' | translate }} *</label>
           <select formControlName="itemType">
             <option *ngFor="let t of itemTypes" [value]="t.value">{{ t.label }}</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label>Costing Method *</label>
+          <label>{{ 'inventory.valuationMethod' | translate }} *</label>
           <select formControlName="costingMethod">
             <option *ngFor="let m of costingMethods" [value]="m.value">{{ m.label }}</option>
           </select>
@@ -97,7 +97,7 @@
         <div class="form-group flex-checkbox">
           <label class="checkbox-label">
             <input type="checkbox" formControlName="isActive" />
-            <span>Active in Catalog & Sales</span>
+            <span>{{ 'inventory.activeCatalog' | translate }}</span>
           </label>
         </div>
       </div>
@@ -105,20 +105,20 @@
 
     <!-- Card 2: Pricing & Taxation -->
     <div class="card form-section mt-4">
-      <h3 class="section-title">Pricing & Taxation</h3>
+      <h3 class="section-title">{{ 'inventory.pricingTaxation' | translate }}</h3>
       <div class="form-grid-3">
         <div class="form-group">
-          <label>Standard Purchase / Cost Price (AED) *</label>
+          <label>{{ 'inventory.costPrice' | translate }} (AED) *</label>
           <input type="number" step="0.01" formControlName="purchasePrice" />
         </div>
 
         <div class="form-group">
-          <label>Standard Sales / Selling Price (AED) *</label>
+          <label>{{ 'inventory.sellingPrice' | translate }} (AED) *</label>
           <input type="number" step="0.01" formControlName="salesPrice" />
         </div>
 
         <div class="form-group">
-          <label>Default Tax Rate</label>
+          <label>{{ 'common.tax' | translate }}</label>
           <select formControlName="taxRateId">
             <option [ngValue]="null">Standard Default</option>
             <option *ngFor="let r of taxRates()" [ngValue]="r.id">{{ r.name }} ({{ r.rate }}%)</option>
@@ -129,15 +129,15 @@
 
     <!-- Card 3: Stock Reordering & General Ledger Accounts -->
     <div class="card form-section mt-4">
-      <h3 class="section-title">Reordering & General Ledger Mapping</h3>
+      <h3 class="section-title">{{ 'inventory.reorderingGlMapping' | translate }}</h3>
       <div class="form-grid-2">
         <div class="form-group">
-          <label>Reorder Level (Min Threshold)</label>
+          <label>{{ 'inventory.reorderLevel' | translate }}</label>
           <input type="number" formControlName="reorderLevel" placeholder="e.g. 5" />
         </div>
 
         <div class="form-group">
-          <label>Reorder Quantity</label>
+          <label>{{ 'inventory.reorderQuantity' | translate }}</label>
           <input type="number" formControlName="reorderQty" placeholder="e.g. 20" />
         </div>
       </div>
@@ -191,13 +191,13 @@
       <table class="table data-table" *ngIf="movements().length > 0; else noMovementsTpl">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Warehouse</th>
-            <th>Reference / Source</th>
-            <th class="text-right">Quantity In</th>
-            <th class="text-right">Quantity Out</th>
-            <th class="text-right">Unit Cost</th>
+            <th>{{ 'common.date' | translate }}</th>
+            <th>{{ 'common.type' | translate }}</th>
+            <th>{{ 'inventory.warehouse' | translate }}</th>
+            <th>{{ 'inventory.sourceRef' | translate }}</th>
+            <th class="text-right">{{ 'inventory.quantityIn' | translate }}</th>
+            <th class="text-right">{{ 'inventory.quantityOut' | translate }}</th>
+            <th class="text-right">{{ 'common.unitPrice' | translate }}</th>
           </tr>
         </thead>
         <tbody>

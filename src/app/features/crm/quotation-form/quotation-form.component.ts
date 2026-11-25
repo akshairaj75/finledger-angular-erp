@@ -20,6 +20,7 @@ import {
 import { Customer } from '../../../core/models/customer.model';
 import { Item } from '../../../core/models/inventory.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { CustomerService } from '../../sales/services/customer.service';
@@ -30,7 +31,7 @@ import { QuotationService } from '../services/quotation.service';
 @Component({
   selector: 'app-quotation-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './quotation-form.component.html',
   styleUrls: ['./quotation-form.component.css']
 })

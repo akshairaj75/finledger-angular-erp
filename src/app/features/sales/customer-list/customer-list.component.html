@@ -2,13 +2,13 @@
   <!-- Page Header -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Customers</h1>
-      <p class="page-subtitle">Manage customer master profiles, tax TRNs, payment terms, and open balances</p>
+      <h1 class="page-title">{{ 'sales.customersTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'sales.customersSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
       <button (click)="openCreateModal()" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        New Customer
+        {{ 'sales.newCustomer' | translate }}
       </button>
     </div>
   </div>
@@ -17,7 +17,7 @@
   <div class="filter-card">
     <div class="filter-grid">
       <div class="form-group search-group">
-        <label for="search">Search Customers</label>
+        <label for="search">{{ 'common.search' | translate }}</label>
         <div class="search-input-wrapper">
           <input
             type="text"
@@ -25,15 +25,15 @@
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
             (keyup.enter)="onSearch()"
-            placeholder="Search by code, customer name, TRN, or email..."
+            [placeholder]="'common.search' | translate"
             class="form-control"
           />
         </div>
       </div>
 
       <div class="filter-buttons">
-        <button (click)="onSearch()" class="btn btn-secondary">Search</button>
-        <button (click)="resetSearch()" class="btn btn-outline">Reset</button>
+        <button (click)="onSearch()" class="btn btn-secondary">{{ 'common.search' | translate }}</button>
+        <button (click)="resetSearch()" class="btn btn-outline">{{ 'common.reset' | translate }}</button>
       </div>
     </div>
   </div>
@@ -56,14 +56,14 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Customer Name</th>
-            <th>TRN</th>
-            <th>Contact & Email</th>
-            <th>Payment Terms</th>
-            <th>AR Account</th>
-            <th>Status</th>
-            <th class="text-right">Actions</th>
+            <th>{{ 'common.code' | translate }}</th>
+            <th>{{ 'sales.customerName' | translate }}</th>
+            <th>{{ 'sales.trn' | translate }}</th>
+            <th>{{ 'common.phone' | translate }} & {{ 'common.email' | translate }}</th>
+            <th>{{ 'sales.paymentTerms' | translate }}</th>
+            <th>{{ 'common.account' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th class="text-right">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -352,9 +352,9 @@
           </div>
 
           <div class="modal-footer">
-            <button type="button" (click)="closeCustomerModal()" class="btn btn-outline">Cancel</button>
+            <button type="button" (click)="closeCustomerModal()" class="btn btn-outline">{{ 'common.cancel' | translate }}</button>
             <button type="submit" class="btn btn-primary" [disabled]="customerForm.invalid">
-              {{ isEditMode() ? 'Update Customer' : 'Save Customer' }}
+              {{ isEditMode() ? ('common.edit' | translate) : ('common.save' | translate) }}
             </button>
           </div>
         </form>
@@ -388,12 +388,12 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Invoice No</th>
-                  <th>Date</th>
-                  <th>Due Date</th>
-                  <th class="text-right">Total</th>
-                  <th class="text-right">Amount Paid</th>
-                  <th class="text-right">Balance Due</th>
+                  <th>{{ 'sales.invoiceNumber' | translate }}</th>
+                  <th>{{ 'common.date' | translate }}</th>
+                  <th>{{ 'common.dueDate' | translate }}</th>
+                  <th class="text-right">{{ 'common.total' | translate }}</th>
+                  <th class="text-right">{{ 'sales.amountPaid' | translate }}</th>
+                  <th class="text-right">{{ 'sales.balanceDue' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -411,7 +411,7 @@
         </div>
 
         <div class="modal-footer">
-          <button (click)="closeOpenInvoicesModal()" class="btn btn-secondary">Close</button>
+          <button (click)="closeOpenInvoicesModal()" class="btn btn-secondary">{{ 'common.close' | translate }}</button>
         </div>
       </div>
     </div>

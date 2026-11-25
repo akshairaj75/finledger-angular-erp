@@ -2,46 +2,46 @@
   <!-- Page Header -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">New Customer Receipt</h1>
-      <p class="page-subtitle">Record customer settlement, allocate against open invoices (oldest first), and post to GL</p>
+      <h1 class="page-title">{{ 'sales.newReceipt' | translate }}</h1>
+      <p class="page-subtitle">{{ 'sales.receiptsSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
-      <a routerLink="/sales/invoices" class="btn btn-outline">Back to Invoices</a>
+      <a routerLink="/sales/invoices" class="btn btn-outline">{{ 'common.back' | translate }}</a>
     </div>
   </div>
 
   <form [formGroup]="receiptForm" (ngSubmit)="submitReceipt()">
     <!-- Receipt Header Card -->
     <div class="form-card">
-      <h3 class="card-title">Receipt Header</h3>
+      <h3 class="card-title">{{ 'sales.receiptHeader' | translate }}</h3>
 
       <div class="form-row">
         <!-- Customer Picker -->
         <div class="form-group col-md-6">
-          <label for="customerId" class="required">Customer</label>
+          <label for="customerId" class="required">{{ 'sales.customer' | translate }}</label>
           <select
             id="customerId"
             formControlName="customerId"
             (change)="onCustomerChange($event)"
             class="form-control"
           >
-            <option [ngValue]="null">-- Select Customer --</option>
+            <option [ngValue]="null">-- {{ 'sales.selectCustomer' | translate }} --</option>
             <option *ngFor="let c of customers()" [value]="c.id">
               {{ c.code }} - {{ c.name }}
             </option>
           </select>
           <span *ngIf="receiptForm.get('customerId')?.touched && receiptForm.get('customerId')?.invalid" class="field-error">
-            Please select a customer.
+            {{ 'sales.selectCustomer' | translate }}
           </span>
 
           <!-- Customer Info Callout -->
           <div *ngIf="selectedCustomer() as cust" class="customer-info-box mt-2">
             <div class="info-item">
-              <span class="info-label">TRN:</span>
-              <span class="info-value font-mono">{{ cust.trn || 'Non-registered' }}</span>
+              <span class="info-label">{{ 'sales.trn' | translate }}:</span>
+              <span class="info-value font-mono">{{ cust.trn || ('purchases.nonRegistered' | translate) }}</span>
             </div>
             <div class="info-item" *ngIf="cust.billingAddress">
-              <span class="info-label">Address:</span>
+              <span class="info-label">{{ 'sales.billingAddress' | translate }}:</span>
               <span class="info-value">{{ cust.billingAddress }}</span>
             </div>
           </div>
@@ -49,7 +49,7 @@
 
         <!-- Receipt Date -->
         <div class="form-group col-md-3">
-          <label for="receiptDate" class="required">Receipt Date</label>
+          <label for="receiptDate" class="required">{{ 'sales.receiptDate' | translate }}</label>
           <input
             type="date"
             id="receiptDate"
@@ -60,7 +60,7 @@
 
         <!-- Currency -->
         <div class="form-group col-md-3">
-          <label for="currencyCode" class="required">Currency</label>
+          <label for="currencyCode" class="required">{{ 'common.currency' | translate }}</label>
           <input
             type="text"
             id="currencyCode"
@@ -74,21 +74,21 @@
       <div class="form-row mt-2">
         <!-- Deposit Bank Account -->
         <div class="form-group col-md-4">
-          <label for="bankAccountId" class="required">Deposit Bank / Cash Account</label>
+          <label for="bankAccountId" class="required">{{ 'sales.depositAccount' | translate }}</label>
           <select id="bankAccountId" formControlName="bankAccountId" class="form-control">
-            <option [ngValue]="null">-- Select Bank Account --</option>
+            <option [ngValue]="null">-- {{ 'banking.selectBankAccount' | translate }} --</option>
             <option *ngFor="let b of bankAccounts()" [value]="b.id">
               {{ b.name }} ({{ b.accountNumber }}) - {{ b.currencyCode }}
             </option>
           </select>
           <span *ngIf="receiptForm.get('bankAccountId')?.touched && receiptForm.get('bankAccountId')?.invalid" class="field-error">
-            Deposit bank account is required.
+            {{ 'banking.selectBankAccount' | translate }}
           </span>
         </div>
 
         <!-- Payment Method -->
         <div class="form-group col-md-3">
-          <label for="paymentMethod" class="required">Payment Method</label>
+          <label for="paymentMethod" class="required">{{ 'sales.paymentMethod' | translate }}</label>
           <select id="paymentMethod" formControlName="paymentMethod" class="form-control">
             <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
           </select>
@@ -96,7 +96,7 @@
 
         <!-- Reference / Cheque No -->
         <div class="form-group col-md-2">
-          <label for="reference">Reference / Cheque #</label>
+          <label for="reference">{{ 'sales.referenceNumber' | translate }}</label>
           <input
             type="text"
             id="reference"
@@ -108,7 +108,7 @@
 
         <!-- Amount Received -->
         <div class="form-group col-md-3">
-          <label for="amount" class="required">Amount Received</label>
+          <label for="amount" class="required">{{ 'sales.amountReceived' | translate }}</label>
           <div class="input-with-currency">
             <input
               type="number"
@@ -133,33 +133,33 @@
     <div class="form-card mt-3">
       <div class="card-header-flex">
         <div>
-          <h3 class="card-title">Open Invoices & Settlement Allocation</h3>
-          <p class="card-subtitle">Oldest-first auto-allocation enabled. You can manually adjust allocation amounts per invoice.</p>
+          <h3 class="card-title">{{ 'sales.openInvoicesAllocation' | translate }}</h3>
+          <p class="card-subtitle">{{ 'sales.openInvoicesAllocationSubtitle' | translate }}</p>
         </div>
         <div class="alloc-buttons" *ngIf="openInvoices().length > 0">
           <button type="button" (click)="autoAllocateOldestFirst()" class="btn btn-outline btn-sm">
-            ⚡ Auto Allocate (Oldest First)
+            ⚡ {{ 'sales.autoAllocate' | translate }}
           </button>
           <button type="button" (click)="clearAllocations()" class="btn btn-outline btn-sm ml-1">
-            Clear Allocations
+            {{ 'sales.clearAllocations' | translate }}
           </button>
         </div>
       </div>
 
       <!-- State: No Customer Selected -->
       <div *ngIf="!selectedCustomer()" class="empty-state">
-        <p>Please select a customer above to view their open invoices.</p>
+        <p>{{ 'sales.selectCustomerPrompt' | translate }}</p>
       </div>
 
       <!-- State: Loading Invoices -->
       <div *ngIf="selectedCustomer() && loadingInvoices()" class="loading-state">
         <div class="spinner"></div>
-        <p>Loading customer open invoices...</p>
+        <p>{{ 'common.loading' | translate }}</p>
       </div>
 
       <!-- State: No Invoices Found -->
       <div *ngIf="selectedCustomer() && !loadingInvoices() && openInvoices().length === 0" class="empty-state">
-        <p>No open or unpaid invoices found for this customer. Any amount received will be recorded as an unapplied customer advance.</p>
+        <p>{{ 'sales.noOpenInvoices' | translate }}</p>
       </div>
 
       <!-- State: Invoices Table -->
@@ -167,13 +167,13 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Invoice #</th>
-              <th>Invoice Date</th>
-              <th>Due Date</th>
-              <th class="text-right">Total (AED)</th>
-              <th class="text-right">Balance Due (AED)</th>
-              <th class="text-right" style="width: 200px">Allocate Amount (AED)</th>
-              <th class="text-center" style="width: 120px">Action</th>
+              <th>{{ 'sales.invoiceNumber' | translate }}</th>
+              <th>{{ 'sales.issueDate' | translate }}</th>
+              <th>{{ 'common.dueDate' | translate }}</th>
+              <th class="text-right">{{ 'common.total' | translate }} (AED)</th>
+              <th class="text-right">{{ 'sales.balanceDue' | translate }} (AED)</th>
+              <th class="text-right" style="width: 200px">{{ 'sales.allocate' | translate }} {{ 'common.amount' | translate }} (AED)</th>
+              <th class="text-center" style="width: 120px">{{ 'common.action' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -206,7 +206,7 @@
                   class="btn btn-outline btn-xs"
                   [ngClass]="{'btn-success-active': inv.allocatedAmount === inv.balanceDue}"
                 >
-                  {{ inv.allocatedAmount === inv.balanceDue ? '✓ Paid Full' : 'Pay Full' }}
+                  {{ inv.allocatedAmount === inv.balanceDue ? '✓ ' + ('sales.allocated' | translate) : ('sales.applyFull' | translate) }}
                 </button>
               </td>
             </tr>
@@ -224,8 +224,8 @@
         <!-- Live Journal Entry Preview Panel -->
         <div class="journal-preview-card">
           <div class="preview-header">
-            <span class="preview-title">Auto-Generated Journal Entry Preview</span>
-            <span class="badge badge-info">GL Posting</span>
+            <span class="preview-title">{{ 'accounting.journalPreview' | translate }}</span>
+            <span class="badge badge-info">{{ 'accounting.glPosting' | translate }}</span>
           </div>
           <div class="preview-body">
             <div class="journal-line-preview">
@@ -257,21 +257,21 @@
         <!-- Receipt Settlement Totals -->
         <div class="totals-panel">
           <div class="totals-row">
-            <span class="totals-label">Total Received:</span>
+            <span class="totals-label">{{ 'sales.totalReceived' | translate }}:</span>
             <span class="totals-amount font-bold">{{ receivedAmount() | number:'1.2-2' }} AED</span>
           </div>
 
           <div class="totals-row">
-            <span class="totals-label">Applied to Invoices:</span>
+            <span class="totals-label">{{ 'sales.appliedToInvoices' | translate }}:</span>
             <span class="totals-amount text-success font-medium">{{ totalAllocated() | number:'1.2-2' }} AED</span>
           </div>
 
           <div class="totals-row totals-unapplied" [ngClass]="{'has-advance': unappliedAmount() > 0}">
-            <span class="totals-label">Unapplied (Advance):</span>
+            <span class="totals-label">{{ 'sales.unallocatedAmount' | translate }}:</span>
             <span class="totals-amount font-bold">{{ unappliedAmount() | number:'1.2-2' }} AED</span>
           </div>
           <p *ngIf="unappliedAmount() > 0" class="advance-subtext">
-            * Recorded as unapplied customer credit for future invoice settlements.
+            * {{ 'sales.unappliedCreditNote' | translate }}
           </p>
         </div>
       </div>
@@ -279,14 +279,14 @@
 
     <!-- Actions Bar -->
     <div class="actions-bar mt-4">
-      <a routerLink="/sales/invoices" class="btn btn-outline">Cancel</a>
+      <a routerLink="/sales/invoices" class="btn btn-outline">{{ 'common.cancel' | translate }}</a>
 
       <button
         type="submit"
         class="btn btn-primary"
         [disabled]="submitting() || receiptForm.invalid || isOverAllocated()"
       >
-        {{ submitting() ? 'Posting Receipt...' : 'Post Customer Receipt' }}
+        {{ submitting() ? ('common.loading' | translate) : ('sales.newReceipt' | translate) }}
       </button>
     </div>
   </form>

@@ -6,6 +6,7 @@ import { AccountKind, BankAccount } from '../../../core/models/bank-account.mode
 import { ExpenseCategory } from '../../../core/models/expense.model';
 import { Warehouse } from '../../../core/models/inventory.model';
 import { TaxRate, TaxType } from '../../../core/models/tax-rate.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import {
   AuditLogItem,
@@ -21,36 +22,34 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
 @Component({
   selector: 'app-master-setup',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="setup-page">
       <div class="page-header">
         <div>
-          <h2>Master Data &amp; Operational Setup</h2>
-          <p class="subtitle">
-            Configure Bank Accounts, Tax Rates, FX, Expense Policies, Warehouses, CRM Stages, Number Series &amp; Audit Trail
-          </p>
+          <h2>{{ 'settings.masterSetupTitle' | translate }}</h2>
+          <p class="subtitle">{{ 'settings.masterSetupSubtitle' | translate }}</p>
         </div>
       </div>
 
       <div class="tabs-bar">
-        <button [class.active]="tab() === 'banks'" (click)="tab.set('banks')">🏦 Bank Accounts</button>
-        <button [class.active]="tab() === 'taxes'" (click)="tab.set('taxes')">📑 Tax Rates</button>
-        <button [class.active]="tab() === 'currencies'" (click)="tab.set('currencies')">💱 Currencies &amp; FX</button>
-        <button [class.active]="tab() === 'categories'" (click)="tab.set('categories')">🧾 Expense Categories</button>
-        <button [class.active]="tab() === 'warehouses'" (click)="tab.set('warehouses')">🏭 Warehouses</button>
-        <button [class.active]="tab() === 'stages'" (click)="tab.set('stages')">🎯 CRM Stages</button>
-        <button [class.active]="tab() === 'series'" (click)="tab.set('series')">🔢 Number Series</button>
-        <button [class.active]="tab() === 'audit'" (click)="tab.set('audit'); loadAuditLogs()">📜 Audit Log</button>
+        <button [class.active]="tab() === 'banks'" (click)="tab.set('banks')">🏦 {{ 'settings.tabBanks' | translate }}</button>
+        <button [class.active]="tab() === 'taxes'" (click)="tab.set('taxes')">📑 {{ 'settings.tabTaxes' | translate }}</button>
+        <button [class.active]="tab() === 'currencies'" (click)="tab.set('currencies')">💱 {{ 'settings.tabCurrencies' | translate }}</button>
+        <button [class.active]="tab() === 'categories'" (click)="tab.set('categories')">🧾 {{ 'settings.tabCategories' | translate }}</button>
+        <button [class.active]="tab() === 'warehouses'" (click)="tab.set('warehouses')">🏭 {{ 'settings.tabWarehouses' | translate }}</button>
+        <button [class.active]="tab() === 'stages'" (click)="tab.set('stages')">🎯 {{ 'settings.tabStages' | translate }}</button>
+        <button [class.active]="tab() === 'series'" (click)="tab.set('series')">🔢 {{ 'settings.tabSeries' | translate }}</button>
+        <button [class.active]="tab() === 'audit'" (click)="tab.set('audit'); loadAuditLogs()">📜 {{ 'settings.tabAudit' | translate }}</button>
       </div>
 
       <!-- TAB 1: BANK ACCOUNTS -->
       <div class="tab-panel" *ngIf="tab() === 'banks'">
         <div class="panel-grid">
           <div class="card">
-            <h3>Active Bank &amp; Cash Accounts</h3>
+            <h3>{{ 'settings.activeBankAccounts' | translate }}</h3>
             <table class="data-table">
-              <thead><tr><th>Name</th><th>Bank</th><th>Currency</th><th>Kind</th><th>GL Account</th></tr></thead>
+              <thead><tr><th>{{ 'common.name' | translate }}</th><th>{{ 'settings.bankName' | translate }}</th><th>{{ 'common.currency' | translate }}</th><th>{{ 'common.type' | translate }}</th><th>{{ 'common.account' | translate }}</th></tr></thead>
               <tbody>
                 <tr *ngFor="let b of bankAccounts()">
                   <td class="font-medium">{{ b.name }}</td>
@@ -63,25 +62,25 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
             </table>
           </div>
           <div class="card form-card">
-            <h3>Add Bank Account</h3>
+            <h3>{{ 'settings.addBankAccount' | translate }}</h3>
             <form [formGroup]="bankForm" (ngSubmit)="saveBank()" class="stack-form">
-              <label>Account Name * <input type="text" formControlName="name" placeholder="ADCB Business Checking" /></label>
-              <label>Bank Name <input type="text" formControlName="bankName" placeholder="ADCB" /></label>
-              <label>IBAN <input type="text" formControlName="iban" placeholder="AE..." /></label>
-              <label>Currency * <input type="text" formControlName="currencyCode" maxlength="3" /></label>
-              <label>Account Kind *
+              <label>{{ 'settings.accountName' | translate }} * <input type="text" formControlName="name" [placeholder]="'settings.accountNamePlaceholder' | translate" /></label>
+              <label>{{ 'settings.bankName' | translate }} <input type="text" formControlName="bankName" [placeholder]="'settings.bankNamePlaceholder' | translate" /></label>
+              <label>{{ 'purchases.bankIban' | translate }} <input type="text" formControlName="iban" placeholder="AE..." /></label>
+              <label>{{ 'common.currency' | translate }} * <input type="text" formControlName="currencyCode" maxlength="3" /></label>
+              <label>{{ 'settings.accountKind' | translate }} *
                 <select formControlName="accountKind">
                   <option value="BANK">BANK</option>
                   <option value="CASH">CASH</option>
                   <option value="CARD">CARD</option>
                 </select>
               </label>
-              <label>Linked GL Account *
+              <label>{{ 'settings.linkedGlAccount' | translate }} *
                 <select formControlName="glAccountId">
                   <option *ngFor="let a of assetAccounts()" [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
                 </select>
               </label>
-              <button type="submit" class="btn-primary" [disabled]="bankForm.invalid">Add Bank Account</button>
+              <button type="submit" class="btn-primary" [disabled]="bankForm.invalid">{{ 'settings.addBankAccount' | translate }}</button>
             </form>
           </div>
         </div>
@@ -91,9 +90,9 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <div class="tab-panel" *ngIf="tab() === 'taxes'">
         <div class="panel-grid">
           <div class="card">
-            <h3>Configured Tax Rates</h3>
+            <h3>{{ 'settings.configuredTaxRates' | translate }}</h3>
             <table class="data-table">
-              <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Rate (%)</th></tr></thead>
+              <thead><tr><th>{{ 'common.code' | translate }}</th><th>{{ 'common.name' | translate }}</th><th>{{ 'common.type' | translate }}</th><th>{{ 'settings.rate' | translate }} (%)</th></tr></thead>
               <tbody>
                 <tr *ngFor="let t of taxRates()">
                   <td class="font-medium">{{ t.code }}</td>
@@ -105,11 +104,11 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
             </table>
           </div>
           <div class="card form-card">
-            <h3>Add Tax Rate</h3>
+            <h3>{{ 'settings.addTaxRate' | translate }}</h3>
             <form [formGroup]="taxForm" (ngSubmit)="saveTax()" class="stack-form">
-              <label>Tax Code * <input type="text" formControlName="code" placeholder="VAT5-NEW" /></label>
-              <label>Name * <input type="text" formControlName="name" placeholder="Standard 5%" /></label>
-              <label>Type *
+              <label>{{ 'settings.taxCode' | translate }} * <input type="text" formControlName="code" placeholder="VAT5-NEW" /></label>
+              <label>{{ 'common.name' | translate }} * <input type="text" formControlName="name" placeholder="Standard 5%" /></label>
+              <label>{{ 'common.type' | translate }} *
                 <select formControlName="taxType">
                   <option value="STANDARD">STANDARD</option>
                   <option value="ZERO">ZERO</option>
@@ -117,8 +116,8 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
                   <option value="OUT_OF_SCOPE">OUT_OF_SCOPE</option>
                 </select>
               </label>
-              <label>Rate % * <input type="number" step="0.01" formControlName="rate" /></label>
-              <button type="submit" class="btn-primary" [disabled]="taxForm.invalid">Save Tax Rate</button>
+              <label>{{ 'settings.rate' | translate }} % * <input type="number" step="0.01" formControlName="rate" /></label>
+              <button type="submit" class="btn-primary" [disabled]="taxForm.invalid">{{ 'settings.saveTaxRate' | translate }}</button>
             </form>
           </div>
         </div>
@@ -128,35 +127,35 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <div class="tab-panel" *ngIf="tab() === 'currencies'">
         <div class="panel-grid">
           <div class="card">
-            <h3>Exchange Rates</h3>
+            <h3>{{ 'settings.exchangeRates' | translate }}</h3>
             <table class="data-table">
-              <thead><tr><th>Pair</th><th>Effective Date</th><th>Rate</th></tr></thead>
+              <thead><tr><th>{{ 'common.currency' | translate }}</th><th>{{ 'common.date' | translate }}</th><th>{{ 'settings.rate' | translate }}</th></tr></thead>
               <tbody>
                 <tr *ngFor="let fx of exchangeRates()">
                   <td class="font-medium">{{ fx.fromCurrency }} → {{ fx.toCurrency }}</td>
                   <td>{{ fx.rateDate }}</td>
                   <td>{{ fx.rate }}</td>
                 </tr>
-                <tr *ngIf="!exchangeRates().length"><td colspan="3" class="text-muted">No custom exchange rates recorded yet.</td></tr>
+                <tr *ngIf="!exchangeRates().length"><td colspan="3" class="text-muted">{{ 'settings.noCustomRates' | translate }}</td></tr>
               </tbody>
             </table>
           </div>
           <div class="card form-card">
-            <h3>Record Exchange Rate</h3>
+            <h3>{{ 'settings.recordExchangeRate' | translate }}</h3>
             <form [formGroup]="fxForm" (ngSubmit)="saveFx()" class="stack-form">
-              <label>From Currency *
+              <label>{{ 'settings.fromCurrency' | translate }} *
                 <select formControlName="fromCurrency">
                   <option *ngFor="let c of currencies()" [value]="c.code">{{ c.code }} - {{ c.name }}</option>
                 </select>
               </label>
-              <label>To Currency *
+              <label>{{ 'settings.toCurrency' | translate }} *
                 <select formControlName="toCurrency">
                   <option *ngFor="let c of currencies()" [value]="c.code">{{ c.code }} - {{ c.name }}</option>
                 </select>
               </label>
-              <label>Effective Date * <input type="date" formControlName="rateDate" /></label>
-              <label>Rate * <input type="number" step="0.0001" formControlName="rate" /></label>
-              <button type="submit" class="btn-primary" [disabled]="fxForm.invalid">Set Rate</button>
+              <label>{{ 'settings.effectiveDate' | translate }} * <input type="date" formControlName="rateDate" /></label>
+              <label>{{ 'settings.rate' | translate }} * <input type="number" step="0.0001" formControlName="rate" /></label>
+              <button type="submit" class="btn-primary" [disabled]="fxForm.invalid">{{ 'settings.setRate' | translate }}</button>
             </form>
           </div>
         </div>
@@ -166,31 +165,31 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <div class="tab-panel" *ngIf="tab() === 'categories'">
         <div class="panel-grid">
           <div class="card">
-            <h3>Expense Policy Categories</h3>
+            <h3>{{ 'settings.expensePolicyCategories' | translate }}</h3>
             <table class="data-table">
-              <thead><tr><th>Name</th><th>GL Account</th><th>Limit / Claim</th><th>Receipt Required</th></tr></thead>
+              <thead><tr><th>{{ 'common.name' | translate }}</th><th>{{ 'common.account' | translate }}</th><th>{{ 'expenses.policyLimit' | translate }}</th><th>{{ 'expenses.receipt' | translate }}</th></tr></thead>
               <tbody>
                 <tr *ngFor="let c of categories()">
                   <td class="font-medium">{{ c.name }}</td>
                   <td>{{ getAccountLabel(c.accountId) }}</td>
-                  <td>{{ c.limitPerClaim ? (c.limitPerClaim | number:'1.2-2') : 'No Limit' }}</td>
-                  <td>{{ c.receiptRequired ? 'Yes' : 'Optional' }}</td>
+                  <td>{{ c.limitPerClaim ? (c.limitPerClaim | number:'1.2-2') : ('expenses.noLimit' | translate) }}</td>
+                  <td>{{ c.receiptRequired ? ('common.yes' | translate) : ('common.optional' | translate) }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="card form-card">
-            <h3>Add Expense Category</h3>
+            <h3>{{ 'settings.addExpenseCategory' | translate }}</h3>
             <form [formGroup]="catForm" (ngSubmit)="saveCategory()" class="stack-form">
-              <label>Category Name * <input type="text" formControlName="name" placeholder="Client Gifts" /></label>
-              <label>Expense GL Account *
+              <label>{{ 'settings.categoryName' | translate }} * <input type="text" formControlName="name" [placeholder]="'settings.categoryNamePlaceholder' | translate" /></label>
+              <label>{{ 'settings.expenseGlAccount' | translate }} *
                 <select formControlName="accountId">
                   <option *ngFor="let a of expenseAccounts()" [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
                 </select>
               </label>
-              <label>Per-Claim Limit (Optional) <input type="number" formControlName="limitPerClaim" /></label>
-              <label class="inline-check"><input type="checkbox" formControlName="receiptRequired" /> Require Receipt Upload</label>
-              <button type="submit" class="btn-primary" [disabled]="catForm.invalid">Add Category</button>
+              <label>{{ 'settings.perClaimLimit' | translate }} ({{ 'common.optional' | translate }}) <input type="number" formControlName="limitPerClaim" /></label>
+              <label class="inline-check"><input type="checkbox" formControlName="receiptRequired" /> {{ 'settings.requireReceiptUpload' | translate }}</label>
+              <button type="submit" class="btn-primary" [disabled]="catForm.invalid">{{ 'settings.addCategory' | translate }}</button>
             </form>
           </div>
         </div>
@@ -200,27 +199,27 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <div class="tab-panel" *ngIf="tab() === 'warehouses'">
         <div class="panel-grid">
           <div class="card">
-            <h3>Configured Warehouses</h3>
+            <h3>{{ 'settings.configuredWarehouses' | translate }}</h3>
             <table class="data-table">
-              <thead><tr><th>Code</th><th>Name</th><th>Address</th><th>Default</th></tr></thead>
+              <thead><tr><th>{{ 'common.code' | translate }}</th><th>{{ 'common.name' | translate }}</th><th>{{ 'common.address' | translate }}</th><th>{{ 'common.status' | translate }}</th></tr></thead>
               <tbody>
                 <tr *ngFor="let w of warehouses()">
                   <td class="font-medium">{{ w.code }}</td>
                   <td>{{ w.name }}</td>
                   <td>{{ w.address || '-' }}</td>
-                  <td>{{ w.isDefault ? '⭐ Default' : 'No' }}</td>
+                  <td>{{ w.isDefault ? ('⭐ ' + ('settings.defaultTag' | translate)) : ('common.no' | translate) }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="card form-card">
-            <h3>Add Warehouse</h3>
+            <h3>{{ 'settings.addWarehouse' | translate }}</h3>
             <form [formGroup]="whForm" (ngSubmit)="saveWarehouse()" class="stack-form">
-              <label>Warehouse Code * <input type="text" formControlName="code" placeholder="WH-SHJ" /></label>
-              <label>Warehouse Name * <input type="text" formControlName="name" placeholder="Sharjah Distribution Center" /></label>
-              <label>Address <input type="text" formControlName="address" /></label>
-              <label class="inline-check"><input type="checkbox" formControlName="isDefault" /> Mark as Default Warehouse</label>
-              <button type="submit" class="btn-primary" [disabled]="whForm.invalid">Create Warehouse</button>
+              <label>{{ 'settings.warehouseCode' | translate }} * <input type="text" formControlName="code" placeholder="WH-SHJ" /></label>
+              <label>{{ 'settings.warehouseName' | translate }} * <input type="text" formControlName="name" placeholder="Sharjah Distribution Center" /></label>
+              <label>{{ 'common.address' | translate }} <input type="text" formControlName="address" /></label>
+              <label class="inline-check"><input type="checkbox" formControlName="isDefault" /> {{ 'settings.markAsDefaultWarehouse' | translate }}</label>
+              <button type="submit" class="btn-primary" [disabled]="whForm.invalid">{{ 'settings.createWarehouse' | translate }}</button>
             </form>
           </div>
         </div>
@@ -230,9 +229,9 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <div class="tab-panel" *ngIf="tab() === 'stages'">
         <div class="panel-grid">
           <div class="card">
-            <h3>Sales Pipeline Stages</h3>
+            <h3>{{ 'settings.salesPipelineStages' | translate }}</h3>
             <table class="data-table">
-              <thead><tr><th>Order</th><th>Stage Name</th><th>Win Probability</th><th>Stage Type</th></tr></thead>
+              <thead><tr><th>{{ 'settings.order' | translate }}</th><th>{{ 'settings.stageName' | translate }}</th><th>{{ 'crm.winProbability' | translate }}</th><th>{{ 'settings.stageType' | translate }}</th></tr></thead>
               <tbody>
                 <tr *ngFor="let s of crmStages()">
                   <td>{{ s.sortOrder }}</td>
@@ -244,19 +243,19 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
             </table>
           </div>
           <div class="card form-card">
-            <h3>Add Pipeline Stage</h3>
+            <h3>{{ 'settings.addPipelineStage' | translate }}</h3>
             <form [formGroup]="stageForm" (ngSubmit)="saveStage()" class="stack-form">
-              <label>Stage Name * <input type="text" formControlName="name" placeholder="Technical Review" /></label>
-              <label>Sort Order * <input type="number" formControlName="sortOrder" min="1" /></label>
-              <label>Win Probability (%) * <input type="number" formControlName="probabilityPct" min="0" max="100" /></label>
-              <label>Stage Type *
+              <label>{{ 'settings.stageName' | translate }} * <input type="text" formControlName="name" placeholder="Technical Review" /></label>
+              <label>{{ 'settings.sortOrder' | translate }} * <input type="number" formControlName="sortOrder" min="1" /></label>
+              <label>{{ 'crm.winProbability' | translate }} (%) * <input type="number" formControlName="probabilityPct" min="0" max="100" /></label>
+              <label>{{ 'settings.stageType' | translate }} *
                 <select formControlName="stageType">
                   <option value="OPEN">OPEN</option>
                   <option value="WON">WON</option>
                   <option value="LOST">LOST</option>
                 </select>
               </label>
-              <button type="submit" class="btn-primary" [disabled]="stageForm.invalid">Create Stage</button>
+              <button type="submit" class="btn-primary" [disabled]="stageForm.invalid">{{ 'settings.createStage' | translate }}</button>
             </form>
           </div>
         </div>
@@ -265,15 +264,15 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <!-- TAB 7: NUMBER SERIES (Section 4.16) -->
       <div class="tab-panel" *ngIf="tab() === 'series'">
         <div class="card">
-          <h3>Document Number Series</h3>
+          <h3>{{ 'settings.docNumberSeries' | translate }}</h3>
           <table class="data-table">
             <thead>
               <tr>
-                <th>Document Type</th>
-                <th>Prefix</th>
-                <th>Next Sequence</th>
-                <th>Zero Padding</th>
-                <th class="text-right">Action</th>
+                <th>{{ 'common.type' | translate }}</th>
+                <th>{{ 'settings.prefix' | translate }}</th>
+                <th>{{ 'settings.nextSequence' | translate }}</th>
+                <th>{{ 'settings.zeroPadding' | translate }}</th>
+                <th class="text-right">{{ 'common.action' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -283,7 +282,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
                 <td><input type="number" [ngModel]="ns.nextNumber" (ngModelChange)="ns.nextNumber = $event" min="1" class="inline-input short" /></td>
                 <td><input type="number" [ngModel]="ns.padding" (ngModelChange)="ns.padding = $event" min="1" max="8" class="inline-input short" /></td>
                 <td class="text-right">
-                  <button type="button" class="btn-sm" (click)="saveSeries(ns)">Save</button>
+                  <button type="button" class="btn-sm" (click)="saveSeries(ns)">{{ 'common.save' | translate }}</button>
                 </td>
               </tr>
             </tbody>
@@ -295,24 +294,24 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
       <div class="tab-panel" *ngIf="tab() === 'audit'">
         <div class="card">
           <div class="audit-toolbar">
-            <h3>Immutable System Audit Trail</h3>
+            <h3>{{ 'settings.systemAuditTrail' | translate }}</h3>
             <div class="audit-filters">
-              <input type="text" [ngModel]="auditEntityFilter()" (ngModelChange)="auditEntityFilter.set($event)" placeholder="Filter by entity (Invoice, JournalEntry...)" class="inline-input" />
+              <input type="text" [ngModel]="auditEntityFilter()" (ngModelChange)="auditEntityFilter.set($event)" [placeholder]="'settings.filterByEntity' | translate" class="inline-input" />
               <input type="date" [ngModel]="auditFrom()" (ngModelChange)="auditFrom.set($event)" class="inline-input" />
               <input type="date" [ngModel]="auditTo()" (ngModelChange)="auditTo.set($event)" class="inline-input" />
-              <button type="button" class="btn-sm" (click)="loadAuditLogs(0)">Filter</button>
+              <button type="button" class="btn-sm" (click)="loadAuditLogs(0)">{{ 'common.filter' | translate }}</button>
             </div>
           </div>
 
           <table class="data-table">
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Entity</th>
-                <th>Record ID</th>
-                <th>Change Details</th>
+                <th>{{ 'settings.timestamp' | translate }}</th>
+                <th>{{ 'common.user' | translate }}</th>
+                <th>{{ 'common.action' | translate }}</th>
+                <th>{{ 'settings.entity' | translate }}</th>
+                <th>{{ 'settings.recordId' | translate }}</th>
+                <th>{{ 'settings.changeDetails' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -325,7 +324,7 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
                 <td class="audit-json">{{ log.newValues || log.oldValues || '-' }}</td>
               </tr>
               <tr *ngIf="!auditLogs().length">
-                <td colspan="6" class="text-muted">No audit entries matching the selected filters.</td>
+                <td colspan="6" class="text-muted">{{ 'settings.noAuditEntries' | translate }}</td>
               </tr>
             </tbody>
           </table>
@@ -355,10 +354,10 @@ type SetupTab = 'banks' | 'taxes' | 'currencies' | 'categories' | 'warehouses' |
     .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; overflow-x: auto; width: 100%; max-width: 100%; -webkit-overflow-scrolling: touch; }
     .card h3 { margin: 0 0 1rem; font-size: 1.05rem; color: #0f172a; }
     .data-table { width: 100%; min-width: 520px; border-collapse: collapse; }
-    .data-table th { text-align: left; padding: 0.6rem; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+    .data-table th { text-align: start; padding: 0.6rem; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #e2e8f0; }
     .data-table td { padding: 0.65rem 0.6rem; font-size: 0.86rem; border-bottom: 1px solid #f1f5f9; }
     .font-medium { font-weight: 600; }
-    .text-right { text-align: right; }
+    .text-right { text-align: end; }
     .text-muted { color: #94a3b8; text-align: center; }
     .stack-form { display: flex; flex-direction: column; gap: 0.85rem; }
     .stack-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; font-weight: 600; color: #334155; }

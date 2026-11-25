@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { FiscalYear } from '../models/settings.model';
 import { SettingsService } from '../services/settings.service';
@@ -9,16 +10,16 @@ import { SettingsService } from '../services/settings.service';
 @Component({
   selector: 'app-fiscal-years',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective],
+  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective, TranslatePipe],
   template: `
     <div class="fy-page">
       <div class="page-header">
         <div>
-          <h2>Fiscal Years & Accounting Periods</h2>
-          <p class="subtitle">Manage open/closed posting windows to protect historical accounting ledgers</p>
+          <h2>{{ 'settings.fiscalPeriodsTitle' | translate }}</h2>
+          <p class="subtitle">{{ 'settings.fiscalPeriodsSubtitle' | translate }}</p>
         </div>
         <button *appHasPermission="'SETTINGS_EDIT'" class="btn-primary" (click)="showModal.set(true)">
-          + New Fiscal Year
+          + {{ 'settings.newFiscalYear' | translate }}
         </button>
       </div>
 
@@ -26,25 +27,25 @@ import { SettingsService } from '../services/settings.service';
         <div class="fy-header">
           <div>
             <h3>{{ fy.name }}</h3>
-            <span class="dates">{{ fy.startDate }} to {{ fy.endDate }}</span>
+            <span class="dates">{{ fy.startDate }} - {{ fy.endDate }}</span>
           </div>
-          <span class="status-badge" [class.open]="fy.status === 'OPEN'">{{ fy.status }}</span>
+          <span class="status-badge" [class.open]="fy.status === 'OPEN'">{{ 'status.' + fy.status | translate }}</span>
         </div>
 
         <div class="table-responsive">
           <table class="periods-table">
             <thead>
               <tr>
-                <th>Period #</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Status</th>
-                <th class="text-right">Action</th>
+                <th>{{ 'settings.periodNumber' | translate }}</th>
+                <th>{{ 'settings.startDate' | translate }}</th>
+                <th>{{ 'settings.endDate' | translate }}</th>
+                <th>{{ 'common.status' | translate }}</th>
+                <th class="text-right">{{ 'common.action' | translate }}</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let p of fy.periods">
-                <td>Period {{ p.periodNo }}</td>
+                <td>{{ 'settings.period' | translate }} {{ p.periodNo }}</td>
                 <td>{{ p.startDate }}</td>
                 <td>{{ p.endDate }}</td>
                 <td>
@@ -54,7 +55,7 @@ import { SettingsService } from '../services/settings.service';
                     [class.closed]="p.status === 'CLOSED'"
                     [class.locked]="p.status === 'LOCKED'"
                   >
-                    {{ p.status }}
+                    {{ 'status.' + p.status | translate }}
                   </span>
                 </td>
                 <td class="text-right">
@@ -64,7 +65,7 @@ import { SettingsService } from '../services/settings.service';
                     (click)="closePeriod(p.id)"
                     [disabled]="!canEdit"
                   >
-                    Close Period
+                    {{ 'settings.closePeriod' | translate }}
                   </button>
                 </td>
               </tr>
@@ -76,30 +77,30 @@ import { SettingsService } from '../services/settings.service';
       <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>Create Fiscal Year</h3>
+            <h3>{{ 'settings.createFiscalYear' | translate }}</h3>
             <button class="close-btn" (click)="showModal.set(false)">&times;</button>
           </div>
           <form [formGroup]="form" (ngSubmit)="createFy()" class="modal-body">
             <div class="form-group">
-              <label>Year Code *</label>
+              <label>{{ 'settings.yearCode' | translate }} *</label>
               <input type="text" formControlName="name" placeholder="FY2027" />
             </div>
             <div class="form-group">
-              <label>Start Date *</label>
+              <label>{{ 'settings.startDate' | translate }} *</label>
               <input type="date" formControlName="startDate" />
             </div>
             <div class="form-group">
-              <label>End Date *</label>
+              <label>{{ 'settings.endDate' | translate }} *</label>
               <input type="date" formControlName="endDate" />
             </div>
             <label class="check-row">
               <input type="checkbox" formControlName="autoGeneratePeriods" />
-              <span>Auto-generate 12 monthly OPEN periods</span>
+              <span>{{ 'settings.autoGeneratePeriods' | translate }}</span>
             </label>
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showModal.set(false)">Cancel</button>
+              <button type="button" class="btn-outline" (click)="showModal.set(false)">{{ 'common.cancel' | translate }}</button>
               <button type="submit" class="btn-primary" [disabled]="form.invalid || saving()">
-                {{ saving() ? 'Creating...' : 'Create Fiscal Year' }}
+                {{ saving() ? ('common.loading' | translate) : ('settings.createFiscalYear' | translate) }}
               </button>
             </div>
           </form>
@@ -108,7 +109,8 @@ import { SettingsService } from '../services/settings.service';
     </div>
   `,
   styles: [`
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .fy-page { padding: 1.5rem; max-width: 1440px; margin-inline: auto; width: 100%; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
     .page-header h2 { margin: 0; font-size: 1.45rem; color: #0f172a; }
     .subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem; }
     .fy-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
@@ -123,9 +125,10 @@ import { SettingsService } from '../services/settings.service';
     .fy-header h3 { margin: 0; font-size: 1.1rem; }
     .dates { font-size: 0.82rem; color: #64748b; }
     .periods-table { width: 100%; border-collapse: collapse; }
-    .periods-table th { padding: 0.65rem 1.25rem; text-align: left; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+    .periods-table th { padding: 0.65rem 1.25rem; text-align: start; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #e2e8f0; }
     .periods-table td { padding: 0.65rem 1.25rem; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; }
-    .text-right { text-align: right; }
+    .text-right { text-align: end; }
+    @media (max-width: 767px) { .fy-page { padding: 0.75rem; } }
     .status-badge, .status-pill {
       padding: 0.2rem 0.65rem;
       border-radius: 999px;

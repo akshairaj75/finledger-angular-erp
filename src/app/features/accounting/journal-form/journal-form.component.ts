@@ -7,6 +7,7 @@ import { Account } from '../../../core/models/account.model';
 import { CostCenter } from '../../../core/models/cost-center.model';
 import { CreateJournalEntryRequest, JournalLineRequest, JournalSourceType } from '../../../core/models/journal.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { AccountService } from '../services/account.service';
 import { CostCenterService } from '../services/cost-center.service';
@@ -16,7 +17,7 @@ import { balancedLinesValidator } from '../validators/balanced-lines.validator';
 @Component({
   selector: 'app-journal-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './journal-form.component.html',
   styleUrls: ['./journal-form.component.css']
 })

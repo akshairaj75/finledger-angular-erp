@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { catchError, concatMap, from, of, tap } from 'rxjs';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { Account, AccountType, NormalBalance } from '../../../core/models/account.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SettingsService } from '../services/settings.service';
@@ -21,17 +22,17 @@ export interface ParsedAccountRow {
 @Component({
   selector: 'app-chart-of-accounts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective],
+  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective, TranslatePipe],
   template: `
     <div class="coa-page">
       <div class="page-header">
         <div>
-          <h2>Chart of Accounts</h2>
-          <p class="subtitle">Manage postable ledger accounts, parent groups, and normal balances</p>
+          <h2>{{ 'nav.chartOfAccounts' | translate }}</h2>
+          <p class="subtitle">{{ 'accounting.journalsSubtitle' | translate }}</p>
         </div>
         <div class="header-actions">
           <button type="button" class="btn-outline" (click)="exportCsv()" [disabled]="accounts().length === 0">
-            📊 Export CSV
+            📊 {{ 'common.exportCsv' | translate }}
           </button>
           <button
             *appHasPermission="['ACCOUNT_CREATE', 'ACCOUNT_EDIT']"
@@ -39,10 +40,10 @@ export interface ParsedAccountRow {
             class="btn-outline"
             (click)="openImportModal()"
           >
-            📥 Import Accounts
+            📥 {{ 'accounting.importAccounts' | translate }}
           </button>
           <button *appHasPermission="['ACCOUNT_CREATE', 'ACCOUNT_EDIT']" class="btn-primary" (click)="openNew()">
-            + New Account
+            + {{ 'accounting.newAccount' | translate }}
           </button>
         </div>
       </div>
@@ -52,13 +53,13 @@ export interface ParsedAccountRow {
           <table class="data-table">
             <thead>
               <tr>
-                <th>Code</th>
-                <th>Account Name</th>
-                <th>Type</th>
-                <th>Normal Balance</th>
-                <th>Classification</th>
-                <th>Status</th>
-                <th class="text-right">Actions</th>
+                <th>{{ 'common.code' | translate }}</th>
+                <th>{{ 'accounting.accountName' | translate }}</th>
+                <th>{{ 'common.type' | translate }}</th>
+                <th>{{ 'accounting.normalBalance' | translate }}</th>
+                <th>{{ 'accounting.classification' | translate }}</th>
+                <th>{{ 'common.status' | translate }}</th>
+                <th class="text-right">{{ 'common.actions' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -70,10 +71,10 @@ export interface ParsedAccountRow {
                   </span>
                 </td>
                 <td><span class="type-pill">{{ a.accountType }}</span></td>
-                <td>{{ a.normalBalance }}</td>
-                <td>{{ a.isGroup ? 'Header Group' : (a.subType || 'Transactional') }}</td>
+                <td>{{ a.normalBalance === 'DEBIT' ? ('accounting.debit' | translate) : ('accounting.credit' | translate) }}</td>
+                <td>{{ a.isGroup ? ('accounting.headerGroup' | translate) : (a.subType || ('accounting.transactional' | translate)) }}</td>
                 <td>
-                  <span class="badge" [class.active]="a.isActive">{{ a.isActive ? 'Active' : 'Inactive' }}</span>
+                  <span class="badge" [class.active]="a.isActive">{{ a.isActive ? ('status.ACTIVE' | translate) : ('status.INACTIVE' | translate) }}</span>
                 </td>
                 <td class="text-right">
                   <button
@@ -81,7 +82,7 @@ export interface ParsedAccountRow {
                     class="btn-sm btn-outline"
                     (click)="openEdit(a)"
                   >
-                    Edit
+                    {{ 'common.edit' | translate }}
                   </button>
                 </td>
               </tr>
@@ -94,63 +95,63 @@ export interface ParsedAccountRow {
       <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>{{ editing() ? 'Edit Account: ' + editing()!.code : 'New Ledger Account' }}</h3>
+            <h3>{{ editing() ? (('accounting.editAccount' | translate) + ': ' + editing()!.code) : ('accounting.newLedgerAccount' | translate) }}</h3>
             <button class="close-btn" (click)="showModal.set(false)">&times;</button>
           </div>
           <form [formGroup]="form" (ngSubmit)="save()" class="modal-body">
             <div class="row-2">
               <div class="form-group">
-                <label>Code *</label>
-                <input type="text" formControlName="code" placeholder="e.g. 5250" />
+                <label>{{ 'accounting.code' | translate }} *</label>
+                <input type="text" formControlName="code" [placeholder]="'accounting.codePlaceholder' | translate" />
               </div>
               <div class="form-group">
-                <label>Account Type *</label>
+                <label>{{ 'accounting.accountType' | translate }} *</label>
                 <select formControlName="accountType">
-                  <option value="ASSET">ASSET</option>
-                  <option value="LIABILITY">LIABILITY</option>
-                  <option value="EQUITY">EQUITY</option>
-                  <option value="INCOME">INCOME</option>
-                  <option value="EXPENSE">EXPENSE</option>
+                  <option value="ASSET">{{ 'accounting.asset' | translate }}</option>
+                  <option value="LIABILITY">{{ 'accounting.liability' | translate }}</option>
+                  <option value="EQUITY">{{ 'accounting.equity' | translate }}</option>
+                  <option value="INCOME">{{ 'accounting.income' | translate }}</option>
+                  <option value="EXPENSE">{{ 'accounting.expense' | translate }}</option>
                 </select>
               </div>
             </div>
 
             <div class="form-group">
-              <label>Account Name *</label>
-              <input type="text" formControlName="name" placeholder="Marketing & Advertising" />
+              <label>{{ 'accounting.accountName' | translate }} *</label>
+              <input type="text" formControlName="name" [placeholder]="'accounting.accountNamePlaceholder' | translate" />
             </div>
 
             <div class="row-2">
               <div class="form-group">
-                <label>Normal Balance *</label>
+                <label>{{ 'accounting.normalBalance' | translate }} *</label>
                 <select formControlName="normalBalance">
-                  <option value="DEBIT">DEBIT</option>
-                  <option value="CREDIT">CREDIT</option>
+                  <option value="DEBIT">{{ 'accounting.debit' | translate }}</option>
+                  <option value="CREDIT">{{ 'accounting.credit' | translate }}</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Sub-Type Tag</label>
-                <input type="text" formControlName="subType" placeholder="BANK, CASH, EXPENSE, TAX..." />
+                <label>{{ 'accounting.subTypeTag' | translate }}</label>
+                <input type="text" formControlName="subType" [placeholder]="'accounting.subTypePlaceholder' | translate" />
               </div>
             </div>
 
             <div class="form-group">
-              <label>Parent Group</label>
+              <label>{{ 'accounting.parentGroup' | translate }}</label>
               <select formControlName="parentId">
-                <option [ngValue]="null">None (Root Level)</option>
+                <option [ngValue]="null">{{ 'accounting.rootLevel' | translate }}</option>
                 <option *ngFor="let g of groupAccounts()" [ngValue]="g.id">{{ g.code }} - {{ g.name }}</option>
               </select>
             </div>
 
             <div class="checks-row">
-              <label><input type="checkbox" formControlName="isGroup" /> Is Header Group</label>
-              <label><input type="checkbox" formControlName="isActive" /> Active</label>
+              <label><input type="checkbox" formControlName="isGroup" /> {{ 'accounting.isHeaderGroup' | translate }}</label>
+              <label><input type="checkbox" formControlName="isActive" /> {{ 'status.ACTIVE' | translate }}</label>
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showModal.set(false)">Cancel</button>
+              <button type="button" class="btn-outline" (click)="showModal.set(false)">{{ 'common.cancel' | translate }}</button>
               <button type="submit" class="btn-primary" [disabled]="form.invalid || saving()">
-                {{ saving() ? 'Saving...' : 'Save Account' }}
+                {{ saving() ? ('accounting.savingAccount' | translate) : ('accounting.saveAccount' | translate) }}
               </button>
             </div>
           </form>
@@ -161,13 +162,13 @@ export interface ParsedAccountRow {
       <div class="modal-backdrop" *ngIf="showImportModal()">
         <div class="modal-card modal-wide">
           <div class="modal-header">
-            <h3>Import Chart of Accounts (CSV)</h3>
+            <h3>{{ 'accounting.importCoaTitle' | translate }}</h3>
             <button class="close-btn" (click)="showImportModal.set(false)">&times;</button>
           </div>
           <div class="modal-body">
             <p class="import-help">
-              Upload a standard CSV file with columns: <code>Code, Name, AccountType, NormalBalance, SubType</code>.
-              Allowed types: <strong>ASSET, LIABILITY, EQUITY, INCOME, EXPENSE</strong>.
+              {{ 'accounting.importCoaHelp' | translate }}
+              {{ 'accounting.allowedTypes' | translate }} <strong>ASSET, LIABILITY, EQUITY, INCOME, EXPENSE</strong>.
             </p>
 
             <div class="file-picker-row">
@@ -183,28 +184,28 @@ export interface ParsedAccountRow {
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Status</th>
-                    <th>Code</th>
-                    <th>Account Name</th>
-                    <th>Type</th>
-                    <th>Balance</th>
-                    <th>Validation Note</th>
+                    <th>{{ 'common.status' | translate }}</th>
+                    <th>{{ 'common.code' | translate }}</th>
+                    <th>{{ 'accounting.accountName' | translate }}</th>
+                    <th>{{ 'common.type' | translate }}</th>
+                    <th>{{ 'accounting.normalBalance' | translate }}</th>
+                    <th>{{ 'accounting.validationNote' | translate }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let r of parsedRows()">
                     <td>
-                      <span *ngIf="r.importStatus === 'SUCCESS'" class="badge active">Imported</span>
-                      <span *ngIf="r.importStatus === 'ERROR'" class="badge">Failed</span>
-                      <span *ngIf="!r.importStatus && r.isValid" class="badge active">Valid</span>
-                      <span *ngIf="!r.importStatus && !r.isValid" class="badge">Invalid</span>
+                      <span *ngIf="r.importStatus === 'SUCCESS'" class="badge active">{{ 'accounting.imported' | translate }}</span>
+                      <span *ngIf="r.importStatus === 'ERROR'" class="badge">{{ 'accounting.failed' | translate }}</span>
+                      <span *ngIf="!r.importStatus && r.isValid" class="badge active">{{ 'accounting.valid' | translate }}</span>
+                      <span *ngIf="!r.importStatus && !r.isValid" class="badge">{{ 'accounting.invalid' | translate }}</span>
                     </td>
                     <td class="mono font-bold">{{ r.code }}</td>
                     <td>{{ r.name }}</td>
                     <td>{{ r.accountType }}</td>
-                    <td>{{ r.normalBalance }}</td>
+                    <td>{{ r.normalBalance === 'DEBIT' ? ('accounting.debit' | translate) : ('accounting.credit' | translate) }}</td>
                     <td [class.text-danger]="!r.isValid" [class.text-muted]="r.isValid">
-                      {{ r.errorMessage || 'Ready for import' }}
+                      {{ r.errorMessage || ('accounting.readyForImport' | translate) }}
                     </td>
                   </tr>
                 </tbody>
@@ -212,14 +213,14 @@ export interface ParsedAccountRow {
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showImportModal.set(false)">Close</button>
+              <button type="button" class="btn-outline" (click)="showImportModal.set(false)">{{ 'common.close' | translate }}</button>
               <button
                 type="button"
                 class="btn-primary"
                 (click)="runImport()"
                 [disabled]="importing() || validRowCount() === 0"
               >
-                {{ importing() ? 'Importing Accounts...' : 'Import ' + validRowCount() + ' Valid Accounts' }}
+                {{ importing() ? ('accounting.importingAccounts' | translate) : (('accounting.importValidAccounts' | translate) + ' (' + validRowCount() + ')') }}
               </button>
             </div>
           </div>

@@ -2,8 +2,8 @@
   <!-- Header Section -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Sales Pipeline</h1>
-      <p class="page-subtitle">Track, forecast, and manage your sales opportunities across pipeline stages</p>
+      <h1 class="page-title">{{ 'crm.pipelineTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'crm.pipelineSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
       <!-- View Switcher -->
@@ -15,7 +15,7 @@
           (click)="viewMode.set('kanban')"
           title="Kanban Board"
         >
-          <span>📊 Kanban</span>
+          <span>📊 {{ 'crm.kanban' | translate }}</span>
         </button>
         <button
           type="button"
@@ -24,16 +24,16 @@
           (click)="viewMode.set('list')"
           title="List View"
         >
-          <span>📋 List</span>
+          <span>📋 {{ 'crm.list' | translate }}</span>
         </button>
       </div>
 
       <button type="button" class="btn btn-outline" (click)="showImportModal.set(true)">
-        <span>📥 Import Leads</span>
+        <span>📥 {{ 'common.import' | translate }}</span>
       </button>
 
       <button type="button" class="btn btn-primary" (click)="openNewDealModal()">
-        <span>➕ New Deal</span>
+        <span>➕ {{ 'crm.newLead' | translate }}</span>
       </button>
     </div>
   </div>

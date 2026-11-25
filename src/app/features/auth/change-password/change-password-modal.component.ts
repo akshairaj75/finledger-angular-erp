@@ -2,32 +2,33 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-change-password-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="modal-backdrop">
       <div class="modal-card">
         <div class="modal-header">
-          <h3>Change Password</h3>
+          <h3>{{ 'topbar.changePassword' | translate }}</h3>
           <button class="close-btn" (click)="closed.emit()">&times;</button>
         </div>
         <form [formGroup]="form" (ngSubmit)="submit()" class="modal-body">
           <div class="form-group">
-            <label>Current Password *</label>
+            <label>{{ 'login.password' | translate }} *</label>
             <input type="password" formControlName="currentPassword" />
           </div>
           <div class="form-group">
-            <label>New Password * (min 8 characters)</label>
+            <label>{{ 'login.password' | translate }} * (min 8 characters)</label>
             <input type="password" formControlName="newPassword" />
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn-outline" (click)="closed.emit()">Cancel</button>
+            <button type="button" class="btn-outline" (click)="closed.emit()">{{ 'common.cancel' | translate }}</button>
             <button type="submit" class="btn-primary" [disabled]="form.invalid || saving()">
-              {{ saving() ? 'Updating...' : 'Update Password' }}
+              {{ saving() ? ('common.loading' | translate) : ('common.save' | translate) }}
             </button>
           </div>
         </form>

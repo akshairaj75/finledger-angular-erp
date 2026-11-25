@@ -66,16 +66,31 @@ import { TranslatePipe } from '../../../core/pipes/translate.pipe';
       <!-- Right Sign-In Panel -->
       <section class="form-panel">
         <div class="login-top-bar">
-          <button
-            type="button"
-            class="lang-pill-btn"
-            (click)="localeService.toggleLocale()"
-            [attr.aria-label]="localeService.locale() === 'en' ? 'التبديل إلى العربية' : 'Switch to English'"
-          >
-            🌐 <span [class.active-lang]="localeService.locale() === 'en'">EN</span>
-            <span class="pill-divider">|</span>
-            <span [class.active-lang]="localeService.locale() === 'ar'">العربية</span>
-          </button>
+          <div class="login-lang-wrapper">
+            <button
+              type="button"
+              class="lang-pill-btn"
+              (click)="toggleLangMenu()"
+              [attr.aria-label]="'lang.selectLanguage' | translate"
+            >
+              🌐 <span>{{ localeService.currentConfig().nativeName }}</span>
+              <span class="caret">▾</span>
+            </button>
+
+            <div class="login-lang-dropdown" *ngIf="showLangMenu()">
+              <button
+                *ngFor="let loc of localeService.availableLocales()"
+                type="button"
+                class="login-lang-option"
+                [class.active]="loc.code === localeService.locale()"
+                (click)="selectLocale(loc.code)"
+              >
+                <span class="lang-opt-native">{{ loc.nativeName }}</span>
+                <span class="lang-opt-eng">({{ loc.name }})</span>
+                <span *ngIf="loc.code === localeService.locale()" class="lang-opt-check">✓</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="login-card">
@@ -292,6 +307,11 @@ import { TranslatePipe } from '../../../core/pipes/translate.pipe';
       position: absolute;
       inset-block-start: 1.5rem;
       inset-inline-end: 1.5rem;
+      z-index: 100;
+    }
+
+    .login-lang-wrapper {
+      position: relative;
     }
 
     .lang-pill-btn {
@@ -303,7 +323,8 @@ import { TranslatePipe } from '../../../core/pipes/translate.pipe';
       border: 1px solid #cbd5e1;
       border-radius: 20px;
       font-size: 0.8rem;
-      color: #475569;
+      color: #334155;
+      font-weight: 500;
       cursor: pointer;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
       transition: all 0.15s ease;
@@ -314,13 +335,65 @@ import { TranslatePipe } from '../../../core/pipes/translate.pipe';
       border-color: #94a3b8;
     }
 
-    .pill-divider {
-      color: #cbd5e1;
+    .lang-pill-btn .caret {
+      font-size: 0.7rem;
+      color: #64748b;
     }
 
-    .active-lang {
-      font-weight: 700;
-      color: #2563eb;
+    .login-lang-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      inset-inline-end: 0;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      min-width: 170px;
+      z-index: 1050;
+      overflow: hidden;
+      padding: 0.35rem;
+    }
+
+    .login-lang-option {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: start;
+      font-size: 0.85rem;
+      color: #334155;
+      transition: background 0.15s ease;
+    }
+
+    .login-lang-option:hover {
+      background: #f1f5f9;
+    }
+
+    .login-lang-option.active {
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
+    .lang-opt-native {
+      font-size: 0.85rem;
+    }
+
+    .lang-opt-eng {
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+
+    .lang-opt-check {
+      font-size: 0.85rem;
+      color: #1d4ed8;
+      font-weight: bold;
     }
 
     .login-card {
@@ -517,8 +590,18 @@ export class LoginComponent {
   public readonly isProduction = environment.production;
   public loading = signal(false);
   public showPassword = signal(false);
+  public showLangMenu = signal(false);
   public errorBanner = signal<string | null>(null);
   public isLocked = signal(false);
+
+  toggleLangMenu(): void {
+    this.showLangMenu.update(v => !v);
+  }
+
+  selectLocale(code: string): void {
+    this.localeService.setLocale(code);
+    this.showLangMenu.set(false);
+  }
 
   public loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

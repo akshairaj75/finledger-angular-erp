@@ -20,6 +20,7 @@ import {
   OpportunityStageColumn
 } from '../../../core/models/crm.model';
 import { Customer } from '../../../core/models/customer.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { CustomerService } from '../../sales/services/customer.service';
 import { LeadService } from '../services/lead.service';
@@ -44,6 +45,7 @@ export interface PendingDragMove {
     FormsModule,
     ReactiveFormsModule,
     RouterModule,
+    TranslatePipe,
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,

@@ -2,12 +2,12 @@
   <!-- Header Section -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Expenses & Approvals</h1>
-      <p class="page-subtitle">Track, approve, and reimburse employee claims and company-paid expenditures</p>
+      <h1 class="page-title">{{ 'expenses.claimsTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'expenses.claimsSubtitle' | translate }}</p>
     </div>
     <div class="header-actions" *appHasPermission="'EXPENSE_CREATE'">
       <a routerLink="/expenses/new" class="btn btn-primary">
-        <span>➕</span> New Expense Claim
+        <span>➕</span> {{ 'expenses.newClaim' | translate }}
       </a>
     </div>
   </div>
@@ -18,9 +18,9 @@
     <div class="summary-card card-posted">
       <div class="card-icon">💸</div>
       <div class="card-content">
-        <span class="card-label">Posted Spend</span>
+        <span class="card-label">{{ 'expenses.postedSpend' | translate }}</span>
         <span class="card-value">AED {{ summary().postedSpend | number:'1.2-2' }}</span>
-        <span class="card-subtext">Recognized GL expense</span>
+        <span class="card-subtext">{{ 'expenses.recognizedGl' | translate }}</span>
       </div>
     </div>
 
@@ -28,9 +28,9 @@
     <div class="summary-card card-awaiting">
       <div class="card-icon">⏳</div>
       <div class="card-content">
-        <span class="card-label">Awaiting Approval</span>
+        <span class="card-label">{{ 'expenses.awaitingApproval' | translate }}</span>
         <span class="card-value">AED {{ summary().awaitingApprovalAmount | number:'1.2-2' }}</span>
-        <span class="card-subtext">{{ summary().awaitingApprovalCount }} claim(s) pending review</span>
+        <span class="card-subtext">{{ summary().awaitingApprovalCount }} {{ 'expenses.claimsPendingReview' | translate }}</span>
       </div>
     </div>
 
@@ -38,9 +38,9 @@
     <div class="summary-card card-owed">
       <div class="card-icon">👥</div>
       <div class="card-content">
-        <span class="card-label">Owed to Employees</span>
+        <span class="card-label">{{ 'expenses.owedToEmployees' | translate }}</span>
         <span class="card-value">AED {{ summary().owedToEmployees | number:'1.2-2' }}</span>
-        <span class="card-subtext">{{ summary().owedToEmployeesCount }} approved claim(s)</span>
+        <span class="card-subtext">{{ summary().owedToEmployeesCount }} {{ 'expenses.approvedClaims' | translate }}</span>
       </div>
     </div>
 
@@ -48,9 +48,9 @@
     <div class="summary-card card-category">
       <div class="card-icon">🏷️</div>
       <div class="card-content">
-        <span class="card-label">Top Expense Category</span>
+        <span class="card-label">{{ 'expenses.topExpenseCategory' | translate }}</span>
         <span class="card-value category-name">{{ summary().topCategoryName }}</span>
-        <span class="card-subtext">AED {{ summary().topCategoryAmount | number:'1.2-2' }} total</span>
+        <span class="card-subtext">AED {{ summary().topCategoryAmount | number:'1.2-2' }} {{ 'expenses.total' | translate }}</span>
       </div>
     </div>
   </div>
@@ -143,7 +143,7 @@
         class="btn btn-sm btn-reimburse"
         (click)="promptReimburse()"
       >
-        <span>💳</span> Reimburse Selected
+        <span>💳</span> {{ 'expenses.reimburse' | translate }}
       </button>
     </div>
   </div>
@@ -161,17 +161,17 @@
               title="Select all"
             />
           </th>
-          <th>Expense #</th>
-          <th>Date</th>
-          <th>Paid By</th>
-          <th>Claimant / Payee</th>
-          <th>Category / Description</th>
-          <th class="th-receipt text-center" title="Paperclip / Receipt Status">📎 Receipt</th>
-          <th class="text-right">Net</th>
-          <th class="text-right">VAT</th>
-          <th class="text-right">Total (AED)</th>
-          <th class="text-center">Status</th>
-          <th class="text-center">Actions</th>
+          <th>#</th>
+          <th>{{ 'common.date' | translate }}</th>
+          <th>{{ 'expenses.paidBy' | translate }}</th>
+          <th>{{ 'expenses.claimant' | translate }}</th>
+          <th>{{ 'common.category' | translate }} / {{ 'common.description' | translate }}</th>
+          <th class="th-receipt text-center" title="Paperclip / Receipt Status">📎 {{ 'expenses.receipt' | translate }}</th>
+          <th class="text-right">{{ 'expenses.netAmount' | translate }}</th>
+          <th class="text-right">{{ 'common.vat' | translate }}</th>
+          <th class="text-right">{{ 'common.total' | translate }} (AED)</th>
+          <th class="text-center">{{ 'common.status' | translate }}</th>
+          <th class="text-center">{{ 'common.actions' | translate }}</th>
         </tr>
       </thead>
       <tbody>

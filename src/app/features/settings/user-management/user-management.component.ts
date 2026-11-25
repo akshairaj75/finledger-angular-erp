@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { User } from '../../../core/models/user.model';
 import { NotificationService } from '../../../core/services/notification.service';
 import { Role } from '../models/settings.model';
@@ -10,20 +11,20 @@ import { SettingsService } from '../services/settings.service';
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective],
+  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective, TranslatePipe],
   template: `
     <div class="users-page">
       <div class="page-header">
         <div>
-          <h2>User Directory & Access Control</h2>
-          <p class="subtitle">Manage staff accounts, assign RBAC roles, and unlock locked accounts</p>
+          <h2>{{ 'settings.usersTitle' | translate }}</h2>
+          <p class="subtitle">{{ 'settings.usersSubtitle' | translate }}</p>
         </div>
         <button
           *appHasPermission="['USER_CREATE', 'SETTINGS_EDIT']"
           class="btn-primary"
           (click)="openCreateModal()"
         >
-          + Add User
+          + {{ 'common.create' | translate }}
         </button>
       </div>
 
@@ -32,11 +33,11 @@ import { SettingsService } from '../services/settings.service';
           <table class="data-table">
             <thead>
               <tr>
-                <th>Full Name</th>
-                <th>Email Address</th>
-                <th>Assigned Roles</th>
-                <th>Status</th>
-                <th class="text-right">Actions</th>
+                <th>{{ 'settings.fullName' | translate }}</th>
+                <th>{{ 'settings.emailAddress' | translate }}</th>
+                <th>{{ 'settings.assignedRoles' | translate }}</th>
+                <th>{{ 'common.status' | translate }}</th>
+                <th class="text-right">{{ 'common.actions' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -45,7 +46,7 @@ import { SettingsService } from '../services/settings.service';
                 <td>{{ u.email }}</td>
                 <td>
                   <span class="role-badge" *ngFor="let r of (u.roles || [])">{{ r }}</span>
-                  <span class="text-muted" *ngIf="!u.roles?.length">No roles</span>
+                  <span class="text-muted" *ngIf="!u.roles?.length">{{ 'settings.noRoles' | translate }}</span>
                 </td>
                 <td>
                   <span
@@ -54,7 +55,7 @@ import { SettingsService } from '../services/settings.service';
                     [class.status-locked]="u.status === 'LOCKED'"
                     [class.status-disabled]="u.status === 'DISABLED'"
                   >
-                    {{ u.status || 'ACTIVE' }}
+                    {{ 'status.' + (u.status || 'ACTIVE') | translate }}
                   </span>
                 </td>
                 <td class="text-right">
@@ -64,9 +65,9 @@ import { SettingsService } from '../services/settings.service';
                       class="btn-sm btn-unlock"
                       (click)="unlockUser(u)"
                     >
-                      🔓 Unlock
+                      🔓 {{ 'settings.unlock' | translate }}
                     </button>
-                    <button class="btn-sm btn-outline" (click)="openEditModal(u)">Edit</button>
+                    <button class="btn-sm btn-outline" (click)="openEditModal(u)">{{ 'common.edit' | translate }}</button>
                   </div>
                 </td>
               </tr>
@@ -79,36 +80,36 @@ import { SettingsService } from '../services/settings.service';
       <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>{{ editingUser() ? 'Edit User: ' + editingUser()!.fullName : 'Create New User' }}</h3>
+            <h3>{{ editingUser() ? (('common.edit' | translate) + ': ' + editingUser()!.fullName) : ('settings.createUser' | translate) }}</h3>
             <button class="close-btn" (click)="closeModal()">&times;</button>
           </div>
           <form [formGroup]="userForm" (ngSubmit)="submitUser()" class="modal-body">
             <div class="form-group">
-              <label>Full Name *</label>
+              <label>{{ 'settings.fullName' | translate }} *</label>
               <input type="text" formControlName="fullName" />
             </div>
 
             <div class="form-group" *ngIf="!editingUser()">
-              <label>Work Email *</label>
+              <label>{{ 'settings.emailAddress' | translate }} *</label>
               <input type="email" formControlName="email" />
             </div>
 
             <div class="form-group" *ngIf="!editingUser()">
-              <label>Temporary Password * (min 6 chars)</label>
+              <label>{{ 'settings.tempPassword' | translate }} * ({{ 'settings.minChars' | translate }})</label>
               <input type="password" formControlName="password" />
             </div>
 
             <div class="form-group" *ngIf="editingUser()">
-              <label>Account Status</label>
+              <label>{{ 'common.status' | translate }}</label>
               <select formControlName="status">
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="LOCKED">LOCKED</option>
-                <option value="DISABLED">DISABLED</option>
+                <option value="ACTIVE">{{ 'status.ACTIVE' | translate }}</option>
+                <option value="LOCKED">{{ 'status.LOCKED' | translate }}</option>
+                <option value="DISABLED">{{ 'status.DISABLED' | translate }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label>Assigned Roles</label>
+              <label>{{ 'settings.assignedRoles' | translate }}</label>
               <div class="role-checkboxes">
                 <label class="checkbox-item" *ngFor="let role of roles()">
                   <input
@@ -125,9 +126,9 @@ import { SettingsService } from '../services/settings.service';
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="closeModal()">Cancel</button>
+              <button type="button" class="btn-outline" (click)="closeModal()">{{ 'common.cancel' | translate }}</button>
               <button type="submit" class="btn-primary" [disabled]="saving()">
-                {{ saving() ? 'Saving...' : 'Save User' }}
+                {{ saving() ? ('common.loading' | translate) : ('settings.saveUser' | translate) }}
               </button>
             </div>
           </form>
@@ -136,11 +137,14 @@ import { SettingsService } from '../services/settings.service';
     </div>
   `,
   styles: [`
+    .users-page { padding: 1.5rem; max-width: 1440px; margin-inline: auto; width: 100%; }
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
     .page-header h2 { margin: 0; font-size: 1.45rem; color: #0f172a; }
     .subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem; }
@@ -154,7 +158,7 @@ import { SettingsService } from '../services/settings.service';
     .data-table th {
       background: #f8fafc;
       padding: 0.85rem 1rem;
-      text-align: left;
+      text-align: start;
       font-size: 0.78rem;
       text-transform: uppercase;
       color: #64748b;
@@ -167,7 +171,7 @@ import { SettingsService } from '../services/settings.service';
       color: #1e293b;
     }
     .font-medium { font-weight: 600; }
-    .text-right { text-align: right; }
+    .text-right { text-align: end; }
     .role-badge {
       display: inline-block;
       background: #eff6ff;
@@ -176,7 +180,7 @@ import { SettingsService } from '../services/settings.service';
       font-weight: 600;
       padding: 0.15rem 0.5rem;
       border-radius: 999px;
-      margin-right: 0.35rem;
+      margin-inline-end: 0.35rem;
     }
     .status-pill {
       padding: 0.2rem 0.6rem;

@@ -14,6 +14,7 @@ import {
   LeadStatus
 } from '../../../core/models/crm.model';
 import { Page } from '../../../core/models/page.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { CrmActivityService } from '../services/crm-activity.service';
 import { LeadService } from '../services/lead.service';
@@ -21,7 +22,7 @@ import { LeadService } from '../services/lead.service';
 @Component({
   selector: 'app-lead-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './lead-list.component.html',
   styleUrls: ['./lead-list.component.css']
 })

@@ -2,13 +2,13 @@
   <!-- Page Header -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Sales Invoices</h1>
-      <p class="page-subtitle">Manage customer tax invoices, dispatch vouchers, credit notes, and payment statuses</p>
+      <h1 class="page-title">{{ 'sales.title' | translate }}</h1>
+      <p class="page-subtitle">{{ 'sales.subtitle' | translate }}</p>
     </div>
     <div class="header-actions" *appHasPermission="'INVOICE_CREATE'">
       <a routerLink="/sales/invoices/new" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        New Tax Invoice
+        {{ 'sales.newInvoice' | translate }}
       </a>
     </div>
   </div>
@@ -56,39 +56,39 @@
   <div class="filter-card">
     <div class="filter-grid">
       <div class="form-group search-group">
-        <label for="searchQuery">Search</label>
+        <label for="searchQuery">{{ 'common.search' | translate }}</label>
         <input
           type="text"
           id="searchQuery"
           [ngModel]="searchQuery()"
           (ngModelChange)="searchQuery.set($event)"
           (keyup.enter)="applyFilters()"
-          placeholder="Search by invoice # or customer..."
+          [placeholder]="'common.search' | translate"
           class="form-control"
         />
       </div>
 
       <div class="form-group">
-        <label for="filterStatus">Status</label>
+        <label for="filterStatus">{{ 'common.status' | translate }}</label>
         <select id="filterStatus" [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)" class="form-control">
-          <option value="">All Statuses</option>
-          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          <option value="">{{ 'common.all' | translate }}</option>
+          <option *ngFor="let s of statuses" [value]="s">{{ 'status.' + s | translate }}</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label for="filterFrom">From Date</label>
+        <label for="filterFrom">{{ 'accounting.fromDate' | translate }}</label>
         <input type="date" id="filterFrom" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
-        <label for="filterTo">To Date</label>
+        <label for="filterTo">{{ 'accounting.toDate' | translate }}</label>
         <input type="date" id="filterTo" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" class="form-control" />
       </div>
 
       <div class="filter-buttons">
-        <button (click)="applyFilters()" class="btn btn-secondary">Filter</button>
-        <button (click)="resetFilters()" class="btn btn-outline">Reset</button>
+        <button (click)="applyFilters()" class="btn btn-secondary">{{ 'common.filter' | translate }}</button>
+        <button (click)="resetFilters()" class="btn btn-outline">{{ 'common.reset' | translate }}</button>
       </div>
     </div>
   </div>
@@ -111,16 +111,16 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Invoice #</th>
-            <th>Type</th>
-            <th>Customer</th>
-            <th>Date</th>
-            <th>Due Date</th>
-            <th class="text-right">Total</th>
-            <th class="text-right">Paid</th>
-            <th class="text-right">Balance Due</th>
-            <th>Status</th>
-            <th class="text-right">Actions</th>
+            <th>{{ 'sales.invoiceNumber' | translate }}</th>
+            <th>{{ 'common.type' | translate }}</th>
+            <th>{{ 'sales.customer' | translate }}</th>
+            <th>{{ 'common.date' | translate }}</th>
+            <th>{{ 'common.dueDate' | translate }}</th>
+            <th class="text-right">{{ 'common.total' | translate }}</th>
+            <th class="text-right">{{ 'sales.amountPaid' | translate }}</th>
+            <th class="text-right">{{ 'sales.balanceDue' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th class="text-right">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -152,7 +152,7 @@
             </td>
             <td>
               <span class="chip" [ngClass]="getStatusClass(inv.status)">
-                {{ inv.status }}
+                {{ 'status.' + inv.status | translate }}
               </span>
             </td>
             <td class="text-right actions-col" (click)="$event.stopPropagation()">
@@ -208,7 +208,7 @@
             [disabled]="invoicesPage().page === 0"
             (click)="goToPage(invoicesPage().page - 1)"
           >
-            Previous
+            {{ 'common.previous' | translate }}
           </button>
           <span class="current-page-badge">Page {{ invoicesPage().page + 1 }} of {{ invoicesPage().totalPages || 1 }}</span>
           <button
@@ -216,7 +216,7 @@
             [disabled]="invoicesPage().page >= invoicesPage().totalPages - 1"
             (click)="goToPage(invoicesPage().page + 1)"
           >
-            Next
+            {{ 'common.next' | translate }}
           </button>
         </div>
       </div>
@@ -272,12 +272,12 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Description</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Unit Price</th>
-                  <th class="text-right">Discount %</th>
-                  <th class="text-right">VAT</th>
-                  <th class="text-right">Line Total</th>
+                  <th>{{ 'common.description' | translate }}</th>
+                  <th class="text-right">{{ 'common.quantity' | translate }}</th>
+                  <th class="text-right">{{ 'common.unitPrice' | translate }}</th>
+                  <th class="text-right">{{ 'common.discount' | translate }} %</th>
+                  <th class="text-right">{{ 'common.vat' | translate }}</th>
+                  <th class="text-right">{{ 'common.lineTotal' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -297,27 +297,27 @@
           <!-- Total Calculation Breakdown -->
           <div class="totals-breakdown">
             <div class="totals-row">
-              <span>Subtotal:</span>
+              <span>{{ 'common.subtotal' | translate }}:</span>
               <span>{{ selInv.subtotal | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row" *ngIf="selInv.discountTotal > 0">
-              <span>Discount Total:</span>
+              <span>{{ 'common.discount' | translate }}:</span>
               <span class="text-danger">-{{ selInv.discountTotal | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row">
-              <span>VAT Total:</span>
+              <span>{{ 'sales.totalVat' | translate }}:</span>
               <span>{{ selInv.taxTotal | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row totals-grand">
-              <span>Grand Total:</span>
+              <span>{{ 'sales.grandTotal' | translate }}:</span>
               <span>{{ selInv.total | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row text-success">
-              <span>Amount Paid:</span>
+              <span>{{ 'sales.amountPaid' | translate }}:</span>
               <span>{{ selInv.amountPaid | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
             <div class="totals-row totals-balance text-danger font-bold">
-              <span>Balance Due:</span>
+              <span>{{ 'sales.balanceDue' | translate }}:</span>
               <span>{{ selInv.balanceDue | number:'1.2-2' }} {{ selInv.currencyCode }}</span>
             </div>
           </div>
@@ -336,24 +336,24 @@
               class="btn btn-primary"
               [disabled]="sendingId() === selInv.id"
             >
-              {{ sendingId() === selInv.id ? 'Posting...' : 'Save & Send to GL' }}
+              {{ sendingId() === selInv.id ? ('common.loading' | translate) : ('sales.postInvoice' | translate) }}
             </button>
             <button
               (click)="downloadPdf(selInv)"
               class="btn btn-outline ml-1"
               [disabled]="pdfLoadingId() === selInv.id"
             >
-              {{ pdfLoadingId() === selInv.id ? 'Generating...' : 'Download PDF' }}
+              {{ pdfLoadingId() === selInv.id ? ('common.loading' | translate) : ('sales.downloadPdf' | translate) }}
             </button>
             <button
               *ngIf="selInv.status !== 'VOID'"
               (click)="openVoidModal(selInv)"
               class="btn btn-outline btn-danger-hover ml-1"
             >
-              Void Invoice
+              {{ 'sales.voidInvoice' | translate }}
             </button>
           </div>
-          <button (click)="closeDetailModal()" class="btn btn-secondary">Close</button>
+          <button (click)="closeDetailModal()" class="btn btn-secondary">{{ 'common.close' | translate }}</button>
         </div>
       </div>
     </div>

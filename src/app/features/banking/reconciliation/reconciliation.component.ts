@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { BankingService } from '../services/banking.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { BankAccount } from '../../../core/models/bank-account.model';
@@ -14,32 +15,32 @@ import {
 @Component({
   selector: 'app-reconciliation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="reconciliation-page">
       <!-- Page Header -->
       <div class="page-header">
         <div>
-          <h2>Bank Account Reconciliation</h2>
-          <p class="subtitle">Match statement lines with book transactions and clear outstanding entries</p>
+          <h2>{{ 'banking.reconTitle' | translate }}</h2>
+          <p class="subtitle">{{ 'banking.reconSubtitle' | translate }}</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-secondary" (click)="openUploadModal()">
-            <span class="icon">📤</span> Import Statement (CSV)
+            <span class="icon">📤</span> CSV
           </button>
           <button
             class="btn btn-primary"
             (click)="handleAutoMatch()"
             [disabled]="!currentReconciliation() || currentReconciliation()?.status === 'COMPLETED' || loading()"
           >
-            <span class="icon">⚡</span> Auto-Match Pairs
+            <span class="icon">⚡</span> {{ 'banking.autoMatch' | translate }}
           </button>
           <button
             class="btn btn-success"
             (click)="handleComplete()"
             [disabled]="!canComplete() || loading()"
           >
-            <span class="icon">✓</span> Finish Reconciliation
+            <span class="icon">✓</span> {{ 'banking.confirmRecon' | translate }}
           </button>
         </div>
       </div>
@@ -144,9 +145,9 @@ import {
             *ngIf="selectedStmtLineId() && selectedBookLineId()"
             (click)="handleManualMatch()"
           >
-            Confirm Match
+            {{ 'banking.confirmMatch' | translate }}
           </button>
-          <button class="btn btn-sm btn-light" (click)="clearSelection()">Cancel</button>
+          <button class="btn btn-sm btn-light" (click)="clearSelection()">{{ 'common.cancel' | translate }}</button>
         </div>
       </div>
 
@@ -155,8 +156,8 @@ import {
         <!-- Left Panel: Statement Lines (Imported CSV) -->
         <div class="recon-panel left-panel">
           <div class="panel-header">
-            <h3>Bank Statement Transactions</h3>
-            <span class="count-badge">{{ recon.statementLines.length }} lines</span>
+            <h3>{{ 'banking.statementTransactions' | translate }}</h3>
+            <span class="count-badge">{{ recon.statementLines.length }} {{ 'common.records' | translate }}</span>
           </div>
 
           <div class="table-wrapper">
@@ -164,11 +165,11 @@ import {
               <thead>
                 <tr>
                   <th style="width: 32px"></th>
-                  <th>Date</th>
-                  <th>Description & Ref</th>
-                  <th class="text-right">Amount</th>
-                  <th>Status</th>
-                  <th>Action</th>
+                  <th>{{ 'common.date' | translate }}</th>
+                  <th>{{ 'common.description' | translate }} & {{ 'common.reference' | translate }}</th>
+                  <th class="text-right">{{ 'common.amount' | translate }}</th>
+                  <th>{{ 'common.status' | translate }}</th>
+                  <th>{{ 'common.action' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -216,7 +217,7 @@ import {
                       (click)="handleUnmatch(line.id)"
                       title="Unmatch this statement line"
                     >
-                      Unmatch
+                      {{ 'banking.clearMatch' | translate }}
                     </button>
                     <button
                       *ngIf="line.matchStatus !== 'MATCHED' && line.amount < 0 && recon.status === 'IN_PROGRESS'"
@@ -224,13 +225,13 @@ import {
                       (click)="openBankChargeModal(line)"
                       title="Convert fee directly to journal entry"
                     >
-                      + Bank Fee
+                      + {{ 'banking.bankFee' | translate }}
                     </button>
                   </td>
                 </tr>
                 <tr *ngIf="recon.statementLines.length === 0">
                   <td colspan="6" class="text-center text-muted py-4">
-                    No statement lines found. Click "Import Statement (CSV)" to upload bank statement.
+                    {{ 'common.noRecordsFound' | translate }}
                   </td>
                 </tr>
               </tbody>
@@ -241,8 +242,8 @@ import {
         <!-- Right Panel: Unreconciled Book Transactions -->
         <div class="recon-panel right-panel">
           <div class="panel-header">
-            <h3>Book Transactions (General Ledger)</h3>
-            <span class="count-badge">{{ recon.bookTransactions.length }} lines</span>
+            <h3>{{ 'banking.bookTransactions' | translate }}</h3>
+            <span class="count-badge">{{ recon.bookTransactions.length }} {{ 'common.records' | translate }}</span>
           </div>
 
           <div class="table-wrapper">
@@ -250,11 +251,11 @@ import {
               <thead>
                 <tr>
                   <th style="width: 32px"></th>
-                  <th>Date</th>
-                  <th>Entry / Reference</th>
-                  <th class="text-right">Debit</th>
-                  <th class="text-right">Credit</th>
-                  <th>Status</th>
+                  <th>{{ 'common.date' | translate }}</th>
+                  <th>{{ 'accounting.voucherNo' | translate }} / {{ 'common.reference' | translate }}</th>
+                  <th class="text-right">{{ 'accounting.debit' | translate }}</th>
+                  <th class="text-right">{{ 'accounting.credit' | translate }}</th>
+                  <th>{{ 'common.status' | translate }}</th>
                 </tr>
               </thead>
               <tbody>

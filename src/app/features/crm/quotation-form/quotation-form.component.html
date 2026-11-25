@@ -4,7 +4,7 @@
     <div>
       <div class="title-with-status">
         <h1 class="page-title">
-          {{ currentQuotation() ? ('Quotation ' + currentQuotation()!.quotationNo) : 'New Sales Quotation' }}
+          {{ currentQuotation() ? ('Quotation ' + currentQuotation()!.quotationNo) : ('crm.newQuote' | translate) }}
         </h1>
         <span
           class="status-chip"
@@ -14,7 +14,7 @@
           {{ quote.status }}
         </span>
       </div>
-      <p class="page-subtitle">Draft commercial proposals, reserve inventory on acceptance, and convert to sales invoices</p>
+      <p class="page-subtitle">{{ 'crm.quotesSubtitle' | translate }}</p>
     </div>
 
     <div class="header-actions">
@@ -24,7 +24,7 @@
         class="btn btn-outline"
         (click)="showRecentQuotes.set(!showRecentQuotes())"
       >
-        <span>📑 Quotations List</span>
+        <span>📑 {{ 'crm.quotesTitle' | translate }}</span>
       </button>
 
       <!-- PDF Download -->
@@ -35,7 +35,7 @@
         (click)="downloadPdf()"
         title="Download official quotation PDF"
       >
-        <span>📄 PDF</span>
+        <span>📄 {{ 'common.exportPdf' | translate }}</span>
       </button>
 
       <!-- Send Action -->
@@ -46,7 +46,7 @@
         [disabled]="actionInProgress()"
         (click)="sendQuotation()"
       >
-        <span>✉️ Send</span>
+        <span>✉️ {{ 'crm.send' | translate }}</span>
       </button>
 
       <!-- Accept Action -->
@@ -58,7 +58,7 @@
         (click)="acceptQuotation()"
         title="Mark quotation accepted and reserve stock"
       >
-        <span>✓ Accept (Reserve Stock)</span>
+        <span>✓ {{ 'crm.acceptQuote' | translate }}</span>
       </button>
 
       <!-- Convert to Invoice Action (Section 3.2, 4.3, 4.4) -->
@@ -70,7 +70,7 @@
         (click)="convertToInvoice()"
         title="Convert accepted quote to a draft sales invoice"
       >
-        <span>⚡ Convert to Invoice</span>
+        <span>⚡ {{ 'crm.convertToInvoice' | translate }}</span>
       </button>
 
       <!-- Save Button -->
@@ -81,8 +81,8 @@
         [disabled]="saving()"
         (click)="saveQuotation()"
       >
-        <span *ngIf="!saving()">💾 Save Quotation</span>
-        <span *ngIf="saving()">Saving...</span>
+        <span *ngIf="!saving()">💾 {{ 'common.save' | translate }}</span>
+        <span *ngIf="saving()">{{ 'common.loading' | translate }}</span>
       </button>
     </div>
   </div>
@@ -101,12 +101,12 @@
   <form [formGroup]="quotationForm" (ngSubmit)="saveQuotation()">
     <!-- Header Details Card -->
     <div class="form-card mb-4">
-      <h2 class="card-title">Quotation Details</h2>
+      <h2 class="card-title">{{ 'crm.quoteDetails' | translate }}</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label required">Customer / Prospect Account</label>
+          <label class="form-label required">{{ 'sales.customer' | translate }}</label>
           <select formControlName="customerId" class="form-control">
-            <option [ngValue]="null">-- Select Customer --</option>
+            <option [ngValue]="null">-- {{ 'sales.selectCustomer' | translate }} --</option>
             <option *ngFor="let c of customers()" [ngValue]="c.id">
               {{ c.name }} ({{ c.code }})
             </option>
@@ -114,7 +114,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Linked Sales Opportunity</label>
+          <label class="form-label">{{ 'crm.linkedOpportunity' | translate }}</label>
           <select formControlName="opportunityId" class="form-control">
             <option [ngValue]="null">-- No Opportunity Linked --</option>
             <option *ngFor="let opp of opportunities()" [ngValue]="opp.id">
@@ -124,17 +124,17 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label required">Quotation Date</label>
+          <label class="form-label required">{{ 'crm.quoteDate' | translate }}</label>
           <input type="date" formControlName="quoteDate" class="form-control" />
         </div>
 
         <div class="form-group">
-          <label class="form-label required">Valid Until (Expiry)</label>
+          <label class="form-label required">{{ 'crm.quotationExpiry' | translate }}</label>
           <input type="date" formControlName="validUntil" class="form-control" />
         </div>
 
         <div class="form-group">
-          <label class="form-label required">Currency</label>
+          <label class="form-label required">{{ 'common.currency' | translate }}</label>
           <input type="text" formControlName="currencyCode" class="form-control" readonly />
         </div>
       </div>
@@ -143,9 +143,9 @@
     <!-- Line Items Table Card -->
     <div class="form-card mb-4">
       <div class="card-title-row">
-        <h2 class="card-title">Quotation Line Items</h2>
+        <h2 class="card-title">{{ 'sales.lineItems' | translate }}</h2>
         <button type="button" class="btn btn-sm btn-outline" (click)="addLine()">
-          <span>➕ Add Line Item</span>
+          <span>➕ {{ 'sales.addLine' | translate }}</span>
         </button>
       </div>
 
@@ -154,13 +154,13 @@
           <thead>
             <tr>
               <th style="width: 45px;">#</th>
-              <th style="width: 250px;">Item / Product</th>
-              <th>Description</th>
-              <th style="width: 90px;">Qty</th>
-              <th style="width: 120px;">Unit Price (AED)</th>
-              <th style="width: 90px;">Disc %</th>
-              <th style="width: 110px;">Tax (VAT)</th>
-              <th style="width: 130px;" class="text-right">Line Total (AED)</th>
+              <th style="width: 250px;">{{ 'sales.item' | translate }}</th>
+              <th>{{ 'common.description' | translate }}</th>
+              <th style="width: 90px;">{{ 'common.quantity' | translate }}</th>
+              <th style="width: 120px;">{{ 'common.unitPrice' | translate }} (AED)</th>
+              <th style="width: 90px;">{{ 'common.discount' | translate }} %</th>
+              <th style="width: 110px;">{{ 'common.vat' | translate }}</th>
+              <th style="width: 130px;" class="text-right">{{ 'common.lineTotal' | translate }} (AED)</th>
               <th style="width: 50px;"></th>
             </tr>
           </thead>
@@ -276,13 +276,13 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Quotation #</th>
-            <th>Customer</th>
-            <th>Date</th>
-            <th>Valid Until</th>
-            <th>Status</th>
-            <th>Total Value</th>
-            <th class="text-right">Action</th>
+            <th>#</th>
+            <th>{{ 'sales.customer' | translate }}</th>
+            <th>{{ 'common.date' | translate }}</th>
+            <th>{{ 'crm.quotationExpiry' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th>{{ 'common.total' | translate }}</th>
+            <th class="text-right">{{ 'common.action' | translate }}</th>
           </tr>
         </thead>
         <tbody>

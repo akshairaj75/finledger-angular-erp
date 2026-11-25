@@ -7,6 +7,7 @@ import { Customer } from '../../../core/models/customer.model';
 import { Item, Warehouse } from '../../../core/models/inventory.model';
 import { InvoiceDocType, InvoiceLineRequest, InvoiceRequest } from '../../../core/models/invoice.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { AccountService } from '../../accounting/services/account.service';
@@ -19,7 +20,7 @@ import { InvoiceCalculationSummary, LineCalculationResult, LineTotalsCalculator 
 @Component({
   selector: 'app-invoice-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './invoice-form.component.html',
   styleUrls: ['./invoice-form.component.css']
 })

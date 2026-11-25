@@ -10,6 +10,7 @@ import {
   Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { BankAccount } from '../../../core/models/bank-account.model';
 import { CostCenter } from '../../../core/models/cost-center.model';
 import { Customer } from '../../../core/models/customer.model';
@@ -59,7 +60,7 @@ export interface JournalPreviewLine {
 @Component({
   selector: 'app-expense-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './expense-form.component.html',
   styleUrls: ['./expense-form.component.css']
 })

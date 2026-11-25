@@ -126,4 +126,61 @@ describe('LocaleService & RTL Localization (FinLedger v2.0 SDS Section 3.3 & 8)'
     service.setLocale('ar');
     expect(pipe.transform('nav.invoices')).toBe('فواتير المبيعات');
   });
+
+  it('10. should dynamically register a 3rd language (French) and support seamless switching & fallback', () => {
+    service.registerLocale(
+      { code: 'fr', name: 'French', nativeName: 'Français', direction: 'ltr', numberLocale: 'fr-FR' },
+      {
+        common: { save: 'Enregistrer' },
+        nav: { dashboard: 'Tableau de bord exécutif' }
+      }
+    );
+
+    expect(service.availableLocales().some(l => l.code === 'fr')).toBe(true);
+
+    service.setLocale('fr');
+    TestBed.flushEffects();
+
+    expect(service.locale()).toBe('fr');
+    expect(service.direction()).toBe('ltr');
+    expect(service.isRtl()).toBe(false);
+    expect(document.documentElement.lang).toBe('fr');
+    expect(document.documentElement.dir).toBe('ltr');
+
+    // Translated key in French
+    expect(service.t('common.save')).toBe('Enregistrer');
+    expect(service.t('nav.dashboard')).toBe('Tableau de bord exécutif');
+
+    // Missing key in French falls back to English
+    expect(service.t('nav.vatReturn')).toBe('VAT 201 Return');
+  });
+
+  it('11. should dynamically register an RTL language (Urdu) and apply dir="rtl"', () => {
+    service.registerLocale(
+      { code: 'ur', name: 'Urdu', nativeName: 'اردو', direction: 'rtl', numberLocale: 'ur-PK' },
+      {
+        common: { save: 'محفوظ کریں' }
+      }
+    );
+
+    service.setLocale('ur');
+    TestBed.flushEffects();
+
+    expect(service.locale()).toBe('ur');
+    expect(service.direction()).toBe('rtl');
+    expect(service.isRtl()).toBe(true);
+    expect(document.documentElement.lang).toBe('ur');
+    expect(document.documentElement.dir).toBe('rtl');
+
+    expect(service.t('common.save')).toBe('محفوظ کریں');
+  });
+
+  it('12. should interpolate parameters in both {param} and {{param}} formats', () => {
+    service.setLocale('en');
+    const withSingleBrace = service.t('search.noResults', { query: 'INV-100' });
+    expect(withSingleBrace).toBe('No matching records found for "INV-100"');
+
+    const withDoubleBrace = service.t('common.recordsFound', { count: 42 });
+    expect(withDoubleBrace).toBe('42 records found');
+  });
 });

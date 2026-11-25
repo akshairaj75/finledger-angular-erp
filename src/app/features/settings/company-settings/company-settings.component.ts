@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { CompanyUpdateRequest } from '../models/settings.model';
 import { SettingsService } from '../services/settings.service';
@@ -10,13 +11,13 @@ import { SettingsService } from '../services/settings.service';
 @Component({
   selector: 'app-company-settings',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective],
+  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective, TranslatePipe],
   template: `
     <div class="settings-page">
       <div class="page-header">
         <div>
-          <h2>Company Profile & Tax Settings</h2>
-          <p class="subtitle">Configure tenant legal entity identity, TRN, base currency, and fiscal calendar</p>
+          <h2>{{ 'settings.companyTitle' | translate }}</h2>
+          <p class="subtitle">{{ 'settings.companySubtitle' | translate }}</p>
         </div>
       </div>
 
@@ -27,12 +28,12 @@ import { SettingsService } from '../services/settings.service';
           <div class="logo-section full-width">
             <div class="logo-preview">
               <img *ngIf="logoPreviewUrl()" [src]="logoPreviewUrl()" alt="Company Logo" class="logo-img" />
-              <div *ngIf="!logoPreviewUrl()" class="logo-placeholder">No Logo</div>
+              <div *ngIf="!logoPreviewUrl()" class="logo-placeholder">{{ 'settings.noLogo' | translate }}</div>
             </div>
 
             <div class="logo-details">
-              <label class="logo-title">Company Logo</label>
-              <p class="logo-hint">Upload PNG or JPEG (max 2 MB)</p>
+              <label class="logo-title">{{ 'settings.companyLogo' | translate }}</label>
+              <p class="logo-hint">{{ 'settings.logoHint' | translate }}</p>
 
               <div class="logo-buttons">
                 <input #fileInput
@@ -42,14 +43,14 @@ import { SettingsService } from '../services/settings.service';
                        style="display: none;" />
 
                 <button type="button" class="btn-secondary" (click)="fileInput.click()">
-                  {{ logoPreviewUrl() ? 'Change Logo' : 'Upload Logo' }}
+                  {{ logoPreviewUrl() ? ('settings.changeLogo' | translate) : ('settings.uploadLogo' | translate) }}
                 </button>
 
                 <button type="button"
                         class="btn-danger"
                         *ngIf="logoPreviewUrl()"
                         (click)="onRemoveLogo(fileInput)">
-                  Remove Logo
+                  {{ 'settings.removeLogo' | translate }}
                 </button>
               </div>
             </div>
@@ -57,68 +58,68 @@ import { SettingsService } from '../services/settings.service';
 
           <!-- Existing Form Fields -->
           <div class="form-group">
-            <label>Legal Entity Name *</label>
+            <label>{{ 'settings.legalName' | translate }} *</label>
             <input type="text" formControlName="legalName" />
           </div>
 
           <div class="form-group">
-            <label>TRN / VAT Registration No.</label>
+            <label>{{ 'settings.trnVat' | translate }}</label>
             <input type="text" formControlName="trn" placeholder="100xxxxxxxxxxxx" />
           </div>
 
           <div class="form-group">
-            <label>Country Code *</label>
+            <label>{{ 'settings.countryCode' | translate }} *</label>
             <select formControlName="countryCode">
-              <option value="AE">United Arab Emirates (AE)</option>
-              <option value="SA">Saudi Arabia (SA)</option>
-              <option value="US">United States (US)</option>
-              <option value="GB">United Kingdom (GB)</option>
+              <option value="AE">{{ 'settings.countries.AE' | translate }}</option>
+              <option value="SA">{{ 'settings.countries.SA' | translate }}</option>
+              <option value="US">{{ 'settings.countries.US' | translate }}</option>
+              <option value="GB">{{ 'settings.countries.GB' | translate }}</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>Base Currency *</label>
+            <label>{{ 'settings.baseCurrency' | translate }} *</label>
             <select formControlName="baseCurrency">
-              <option value="AED">AED - UAE Dirham</option>
-              <option value="SAR">SAR - Saudi Riyal</option>
-              <option value="USD">USD - US Dollar</option>
-              <option value="EUR">EUR - Euro</option>
-              <option value="GBP">GBP - British Pound</option>
+              <option value="AED">{{ 'settings.currencies.AED' | translate }}</option>
+              <option value="SAR">{{ 'settings.currencies.SAR' | translate }}</option>
+              <option value="USD">{{ 'settings.currencies.USD' | translate }}</option>
+              <option value="EUR">{{ 'settings.currencies.EUR' | translate }}</option>
+              <option value="GBP">{{ 'settings.currencies.GBP' | translate }}</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>Fiscal Year Start Month *</label>
+            <label>{{ 'settings.fiscalYearStartMonth' | translate }} *</label>
             <select formControlName="fiscalYearStartMonth">
-              <option *ngFor="let m of months" [value]="m.val">{{ m.label }}</option>
+              <option *ngFor="let m of months" [value]="m.val">{{ 'settings.months.' + m.val | translate }}</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>Corporate Email</label>
+            <label>{{ 'settings.corporateEmail' | translate }}</label>
             <input type="email" formControlName="email" />
           </div>
 
           <div class="form-group">
-            <label>Phone Number</label>
+            <label>{{ 'settings.phoneNumber' | translate }}</label>
             <input type="text" formControlName="phone" />
           </div>
 
           <div class="form-group full-width">
-            <label>Registered Office Address</label>
+            <label>{{ 'settings.registeredAddress' | translate }}</label>
             <textarea rows="2" formControlName="address"></textarea>
           </div>
 
           <div class="form-group full-width">
             <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:500;">
               <input type="checkbox" formControlName="allowNegativeStock" style="width:auto;" />
-              <span>Allow negative stock balances on outbound movements &amp; invoices</span>
+              <span>{{ 'settings.allowNegativeStock' | translate }}</span>
             </label>
           </div>
 
           <div class="form-actions full-width" *appHasPermission="['COMPANY_EDIT', 'SETTINGS_EDIT']">
             <button type="submit" class="btn-primary" [disabled]="saving() || form.invalid">
-              {{ saving() ? 'Saving...' : 'Save Company Profile' }}
+              {{ saving() ? ('settings.savingCompanyProfile' | translate) : ('settings.saveCompanyProfile' | translate) }}
             </button>
           </div>
         </form>
@@ -126,7 +127,7 @@ import { SettingsService } from '../services/settings.service';
     </div>
   `,
   styles: [`
-    .settings-page { max-width: 900px; }
+    .settings-page { padding: 1.5rem; max-width: 940px; }
     .page-header { margin-bottom: 1.5rem; }
     .page-header h2 { margin: 0; font-size: 1.45rem; color: #0f172a; }
     .subtitle { margin: 0.25rem 0 0; color: #64748b; font-size: 0.875rem; }

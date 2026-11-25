@@ -3,6 +3,7 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import {
   Item,
   StockBalance,
@@ -28,7 +29,7 @@ export interface TransferLineSummary {
 @Component({
   selector: 'app-stock-transfer-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './stock-transfer-form.component.html',
   styleUrls: ['./stock-transfer-form.component.css']
 })

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PermissionItem, Role } from '../models/settings.model';
 import { SettingsService } from '../services/settings.service';
@@ -9,20 +10,20 @@ import { SettingsService } from '../services/settings.service';
 @Component({
   selector: 'app-role-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective],
+  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective, TranslatePipe],
   template: `
     <div class="roles-page">
       <div class="page-header">
         <div>
-          <h2>Roles & Permission Matrix</h2>
-          <p class="subtitle">Define granular module authorities and enforce least-privilege access</p>
+          <h2>{{ 'settings.rolesTitle' | translate }}</h2>
+          <p class="subtitle">{{ 'settings.rolesSubtitle' | translate }}</p>
         </div>
         <button
           *appHasPermission="['ROLE_EDIT', 'SETTINGS_EDIT']"
           class="btn-primary"
           (click)="openNewRole()"
         >
-          + New Role
+          + {{ 'settings.newRole' | translate }}
         </button>
       </div>
 
@@ -38,7 +39,7 @@ import { SettingsService } from '../services/settings.service';
               class="btn-outline"
               (click)="openEditRole(role)"
             >
-              Configure
+              {{ 'settings.configure' | translate }}
             </button>
           </div>
           <div class="perm-count">
@@ -57,24 +58,24 @@ import { SettingsService } from '../services/settings.service';
       <div class="modal-backdrop" *ngIf="showModal()">
         <div class="modal-card modal-lg">
           <div class="modal-header">
-            <h3>{{ editingRole() ? 'Edit Role: ' + editingRole()!.name : 'Create RBAC Role' }}</h3>
+            <h3>{{ editingRole() ? (('settings.editRole' | translate) + ': ' + editingRole()!.name) : ('settings.createRole' | translate) }}</h3>
             <button class="close-btn" (click)="showModal.set(false)">&times;</button>
           </div>
 
           <form [formGroup]="form" (ngSubmit)="saveRole()" class="modal-body">
             <div class="row-2">
               <div class="form-group">
-                <label>Role Code / Name *</label>
-                <input type="text" formControlName="name" placeholder="e.g., FINANCE_ANALYST" />
+                <label>{{ 'settings.roleCodeName' | translate }} *</label>
+                <input type="text" formControlName="name" [placeholder]="'settings.rolePlaceholder' | translate" />
               </div>
               <div class="form-group">
-                <label>Description</label>
-                <input type="text" formControlName="description" placeholder="Role responsibilities" />
+                <label>{{ 'common.description' | translate }}</label>
+                <input type="text" formControlName="description" [placeholder]="'settings.roleDescPlaceholder' | translate" />
               </div>
             </div>
 
             <div class="matrix-section">
-              <h4>Permissions by Module ({{ selectedPermissions().size }} selected)</h4>
+              <h4>{{ 'settings.permissionsByModule' | translate }} ({{ selectedPermissions().size }} {{ 'settings.selected' | translate }})</h4>
               <div class="modules-grid">
                 <div class="module-box" *ngFor="let mod of moduleGroups()">
                   <div class="module-title">{{ mod.module }}</div>
@@ -94,9 +95,9 @@ import { SettingsService } from '../services/settings.service';
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn-outline" (click)="showModal.set(false)">Cancel</button>
+              <button type="button" class="btn-outline" (click)="showModal.set(false)">{{ 'common.cancel' | translate }}</button>
               <button type="submit" class="btn-primary" [disabled]="saving() || form.invalid">
-                {{ saving() ? 'Saving...' : 'Save Role & Permissions' }}
+                {{ saving() ? ('common.loading' | translate) : ('settings.saveRolePermissions' | translate) }}
               </button>
             </div>
           </form>
@@ -105,6 +106,7 @@ import { SettingsService } from '../services/settings.service';
     </div>
   `,
   styles: [`
+    .roles-page { padding: 1.5rem; max-width: 1440px; margin-inline: auto; width: 100%; }
     .page-header {
       display: flex;
       justify-content: space-between;

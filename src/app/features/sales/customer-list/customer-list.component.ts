@@ -6,6 +6,7 @@ import { Account } from '../../../core/models/account.model';
 import { Customer, CustomerQuery, CustomerRequest } from '../../../core/models/customer.model';
 import { OpenInvoice } from '../../../core/models/invoice.model';
 import { Page } from '../../../core/models/page.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import {
   ParsedApiError,
@@ -18,7 +19,7 @@ import { CustomerService } from '../services/customer.service';
 @Component({
   selector: 'app-customer-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './customer-list.component.html',
   styleUrls: ['./customer-list.component.css']
 })

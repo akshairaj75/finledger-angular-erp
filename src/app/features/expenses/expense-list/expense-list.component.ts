@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { BankAccount } from '../../../core/models/bank-account.model';
 import {
   Attachment,
@@ -25,7 +26,7 @@ export type ExpenseTab = 'all' | 'mine' | 'approvals' | 'reimburse';
 @Component({
   selector: 'app-expense-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HasPermissionDirective],
+  imports: [CommonModule, FormsModule, RouterModule, HasPermissionDirective, TranslatePipe],
   templateUrl: './expense-list.component.html',
   styleUrls: ['./expense-list.component.css']
 })

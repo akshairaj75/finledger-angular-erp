@@ -1,24 +1,24 @@
 <div class="page-container">
   <div class="header-section">
     <div>
-      <h1 class="page-title">{{ isEditMode() ? 'Edit Journal Entry' : 'New Journal Entry' }} {{ entryNumber() ? '(' + entryNumber() + ')' : '' }}</h1>
-      <p class="page-subtitle">{{ isEditMode() ? 'Update draft double-entry voucher before GL posting' : 'Record manual double-entry financial voucher' }}</p>
+      <h1 class="page-title">{{ isEditMode() ? ('common.edit' | translate) : ('accounting.newJournal' | translate) }} {{ entryNumber() ? '(' + entryNumber() + ')' : '' }}</h1>
+      <p class="page-subtitle">{{ 'accounting.journalsSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
-      <a routerLink="/accounting/journals" class="btn btn-outline">Cancel</a>
+      <a routerLink="/accounting/journals" class="btn btn-outline">{{ 'common.cancel' | translate }}</a>
     </div>
   </div>
 
   <form [formGroup]="journalForm">
     <!-- Header Details Card -->
     <div class="card">
-      <h2 class="card-title">Voucher Header</h2>
+      <h2 class="card-title">{{ 'accounting.voucherHeader' | translate }}</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label for="entryDate">Entry Date *</label>
+          <label for="entryDate">{{ 'accounting.entryDate' | translate }} *</label>
           <input type="date" id="entryDate" formControlName="entryDate" class="form-control" />
           <span *ngIf="journalForm.get('entryDate')?.touched && journalForm.get('entryDate')?.invalid" class="field-error">
-            Date is required
+            {{ 'accounting.entryDate' | translate }} {{ 'common.required' | translate }}
           </span>
           <span *ngIf="backendFieldErrors()['entryDate']" class="field-error">
             {{ backendFieldErrors()['entryDate'] }}
@@ -26,25 +26,25 @@
         </div>
 
         <div class="form-group">
-          <label for="reference">Reference</label>
-          <input type="text" id="reference" formControlName="reference" placeholder="e.g. INV-902, Bank Adv" class="form-control" />
+          <label for="reference">{{ 'common.reference' | translate }}</label>
+          <input type="text" id="reference" formControlName="reference" [placeholder]="'accounting.referencePlaceholder' | translate" class="form-control" />
         </div>
 
         <div class="form-group">
-          <label for="currencyCode">Currency *</label>
+          <label for="currencyCode">{{ 'common.currency' | translate }} *</label>
           <select id="currencyCode" formControlName="currencyCode" class="form-control">
             <option *ngFor="let cur of currencies" [value]="cur">{{ cur }}</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="exchangeRate">Exchange Rate</label>
+          <label for="exchangeRate">{{ 'settings.exchangeRate' | translate }}</label>
           <input type="number" id="exchangeRate" formControlName="exchangeRate" step="0.000001" min="0.000001" class="form-control" />
         </div>
 
         <div class="form-group full-width">
-          <label for="narration">Narration / Memo</label>
-          <input type="text" id="narration" formControlName="narration" placeholder="Explain the business purpose of this entry" class="form-control" />
+          <label for="narration">{{ 'accounting.narration' | translate }}</label>
+          <input type="text" id="narration" formControlName="narration" [placeholder]="'accounting.narration' | translate" class="form-control" />
         </div>
       </div>
     </div>
@@ -52,9 +52,9 @@
     <!-- Lines Grid Card -->
     <div class="card">
       <div class="card-header-flex">
-        <h2 class="card-title">Journal Lines (Debits & Credits)</h2>
+        <h2 class="card-title">{{ 'accounting.journalLines' | translate }}</h2>
         <button type="button" (click)="addLine()" class="btn btn-sm btn-outline">
-          + Add Line
+          + {{ 'accounting.addEntryLine' | translate }}
         </button>
       </div>
 
@@ -63,11 +63,11 @@
           <thead>
             <tr>
               <th style="width: 5%">#</th>
-              <th style="width: 35%">Account *</th>
-              <th style="width: 20%">Cost Center</th>
-              <th style="width: 15%" class="text-right">Debit</th>
-              <th style="width: 15%" class="text-right">Credit</th>
-              <th style="width: 10%">Action</th>
+              <th style="width: 35%">{{ 'common.account' | translate }} *</th>
+              <th style="width: 20%">{{ 'accounting.costCenter' | translate }}</th>
+              <th style="width: 15%" class="text-right">{{ 'accounting.debit' | translate }}</th>
+              <th style="width: 15%" class="text-right">{{ 'accounting.credit' | translate }}</th>
+              <th style="width: 10%">{{ 'common.action' | translate }}</th>
             </tr>
           </thead>
           <tbody formArrayName="lines">
@@ -75,18 +75,18 @@
               <td class="text-center font-mono">{{ i + 1 }}</td>
               <td>
                 <select formControlName="accountId" class="form-control">
-                  <option [ngValue]="null" disabled>Select Account...</option>
+                  <option [ngValue]="null" disabled>-- {{ 'accounting.selectAccount' | translate }} --</option>
                   <option *ngFor="let acc of accounts()" [value]="acc.id">
                     {{ acc.code }} - {{ acc.name }} ({{ acc.accountType }})
                   </option>
                 </select>
                 <span *ngIf="line.get('accountId')?.touched && line.get('accountId')?.invalid" class="field-error">
-                  Account is required
+                  {{ 'common.account' | translate }} {{ 'common.required' | translate }}
                 </span>
               </td>
               <td>
                 <select formControlName="costCenterId" class="form-control">
-                  <option [ngValue]="null">None</option>
+                  <option [ngValue]="null">-- {{ 'common.all' | translate }} --</option>
                   <option *ngFor="let cc of costCenters()" [value]="cc.id">
                     {{ cc.code }} - {{ cc.name }}
                   </option>
@@ -119,7 +119,7 @@
                   type="button"
                   (click)="removeLine(i)"
                   class="btn-icon text-danger"
-                  title="Remove Line"
+                  [title]="'accounting.removeLine' | translate"
                   [disabled]="lines.length <= 2"
                 >
                   ✕
@@ -134,30 +134,30 @@
       <div class="balance-summary-bar">
         <div class="status-indicator">
           <div *ngIf="isBalanced()" class="indicator-badge badge-balanced">
-            ✓ Balanced (Total: {{ totalDebit() | number:'1.2-2' }})
+            ✓ {{ 'accounting.balancedWithTotal' | translate:{ total: (totalDebit() | number:'1.2-2') } }}
           </div>
           <div *ngIf="!isBalanced() && lines.length < 2" class="indicator-badge badge-unbalanced">
-            ⚠ Minimum 2 lines required
+            ⚠️ {{ 'accounting.minLinesRequired' | translate }}
           </div>
           <div *ngIf="!isBalanced() && lines.length >= 2 && difference() > 0" class="indicator-badge badge-unbalanced">
-            ⚠ Out of balance by {{ difference() | number:'1.2-2' }}
+            ⚠️ {{ 'accounting.outOfBalanceBy' | translate:{ diff: (difference() | number:'1.2-2') } }}
           </div>
           <div *ngIf="!isBalanced() && lines.length >= 2 && totalDebit() === 0 && totalCredit() === 0" class="indicator-badge badge-unbalanced">
-            ⚠ Enter debit and credit amounts
+            ⚠️ {{ 'accounting.enterDebitCredit' | translate }}
           </div>
         </div>
 
         <div class="totals-display">
           <div class="total-item">
-            <span class="total-label">Total Debit:</span>
+            <span class="total-label">{{ 'accounting.debitTotal' | translate }}:</span>
             <span class="total-val font-mono">{{ totalDebit() | number:'1.2-2' }}</span>
           </div>
           <div class="total-item">
-            <span class="total-label">Total Credit:</span>
+            <span class="total-label">{{ 'accounting.creditTotal' | translate }}:</span>
             <span class="total-val font-mono">{{ totalCredit() | number:'1.2-2' }}</span>
           </div>
           <div class="total-item">
-            <span class="total-label">Difference:</span>
+            <span class="total-label">{{ 'accounting.difference' | translate }}:</span>
             <span class="total-val font-mono" [class.text-danger]="difference() > 0">
               {{ difference() | number:'1.2-2' }}
             </span>
@@ -174,7 +174,7 @@
         [disabled]="!canSubmit()"
         class="btn btn-secondary"
       >
-        Save as Draft
+        {{ 'common.save' | translate }}
       </button>
 
       <button
@@ -184,7 +184,7 @@
         class="btn btn-primary"
       >
         <span *ngIf="submitting()" class="spinner-sm"></span>
-        Post Entry
+        {{ 'accounting.postThisEntry' | translate }}
       </button>
     </div>
   </form>

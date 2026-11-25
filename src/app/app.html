@@ -236,21 +236,21 @@
           <div class="company-dropdown" *ngIf="showCompanyMenu()">
             <div class="company-dropdown-header">
               <h4>{{ authService.currentCompany()?.legalName || 'Not set' }}</h4>
-              <span class="company-trn">TRN: {{ authService.currentCompany()?.trn || '—' }}</span>
+              <span class="company-trn">{{ 'topbar.trn' | translate }}: {{ authService.currentCompany()?.trn || '—' }}</span>
             </div>
             <div class="company-dropdown-body">
               <div class="company-meta-item">
-                <span class="meta-label">Country & Currency:</span>
+                <span class="meta-label">{{ 'topbar.countryAndCurrency' | translate }}:</span>
                 <span class="meta-val">{{ authService.currentCompany()?.countryCode || 'AE' }} • {{ authService.currentCompany()?.baseCurrency || 'AED' }}</span>
               </div>
               <div class="company-meta-item">
-                <span class="meta-label">Status:</span>
-                <span class="meta-status active">Active Primary Entity</span>
+                <span class="meta-label">{{ 'topbar.status' | translate }}:</span>
+                <span class="meta-status active">{{ 'topbar.activePrimaryEntity' | translate }}</span>
               </div>
               <div class="company-list-section">
-                <span class="section-hint">Accessible Entities:</span>
+                <span class="section-hint">{{ 'topbar.accessibleEntities' | translate }}:</span>
                 <div class="active-company-chip">
-                  <span>✓ {{ authService.currentCompany()?.legalName || 'Not set' }} (Current)</span>
+                  <span>✓ {{ authService.currentCompany()?.legalName || 'Not set' }} ({{ 'topbar.current' | translate }})</span>
                 </div>
               </div>
             </div>
@@ -265,19 +265,19 @@
           <input
             type="text"
             class="global-search-input"
-            [placeholder]="localeService.locale() === 'ar' ? 'بحث عام (فواتير، عملاء، مخزون)...' : 'Search invoices, customers, items, leads...'"
+            [placeholder]="'search.placeholder' | translate"
             [ngModel]="searchQuery()"
             (ngModelChange)="onSearchInput($event)"
             (focus)="showSearchResults.set(true)"
           />
           <span *ngIf="searchLoading()" class="search-spinner-sm"></span>
-          <button *ngIf="searchQuery()" type="button" class="clear-search-btn" (click)="clearSearch()">&times;</button>
+          <button *ngIf="searchQuery()" type="button" class="clear-search-btn" (click)="clearSearch()" [attr.aria-label]="'search.clear' | translate">&times;</button>
         </div>
 
         <!-- Grouped Search Results Dropdown -->
         <div class="search-results-dropdown" *ngIf="showSearchResults() && (searchGroups().length > 0 || (searchQuery().length >= 2 && !searchLoading()))">
           <div *ngIf="searchGroups().length === 0 && !searchLoading()" class="no-search-results">
-            No matching records found for "{{ searchQuery() }}"
+            {{ 'search.noResults' | translate:{ query: searchQuery() } }}
           </div>
 
           <div class="search-category-group" *ngFor="let g of searchGroups()">
@@ -300,19 +300,36 @@
       </div>
 
       <div class="topbar-actions">
-        <!-- Language Switcher EN | العربية -->
-        <button
-          type="button"
-          class="lang-toggle-btn"
-          (click)="localeService.toggleLocale()"
-          [attr.aria-label]="localeService.locale() === 'en' ? 'التبديل إلى العربية' : 'Switch to English'"
-          [title]="localeService.locale() === 'en' ? 'التبديل إلى العربية' : 'Switch to English'"
-        >
-          <span class="lang-icon">🌐</span>
-          <span class="lang-choice" [class.active-lang]="localeService.locale() === 'en'">EN</span>
-          <span class="lang-sep">|</span>
-          <span class="lang-choice" [class.active-lang]="localeService.locale() === 'ar'">العربية</span>
-        </button>
+        <!-- Multi-Language Selector Dropdown (N-Languages) -->
+        <div class="lang-selector-wrapper">
+          <button
+            type="button"
+            class="lang-menu-btn"
+            (click)="toggleLangMenu()"
+            [attr.aria-label]="'topbar.language' | translate"
+            [title]="'topbar.language' | translate"
+          >
+            <span class="lang-icon">🌐</span>
+            <span class="lang-current-name">{{ localeService.currentConfig().nativeName }}</span>
+            <span class="caret">▾</span>
+          </button>
+
+          <div class="lang-dropdown-menu" *ngIf="showLangMenu()">
+            <button
+              *ngFor="let loc of localeService.availableLocales()"
+              type="button"
+              class="lang-option-item"
+              [class.active]="loc.code === localeService.locale()"
+              (click)="selectLocale(loc.code)"
+            >
+              <div class="lang-option-text">
+                <span class="lang-native-name">{{ loc.nativeName }}</span>
+                <span class="lang-english-name">({{ loc.name }})</span>
+              </div>
+              <span *ngIf="loc.code === localeService.locale()" class="lang-check">✓</span>
+            </button>
+          </div>
+        </div>
 
         <div class="user-menu-wrapper">
           <button type="button" class="user-profile-btn" (click)="toggleUserMenu()">

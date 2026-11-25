@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
+import { LocaleService } from './locale.service';
 
 export interface SearchResultItem {
   id: number;
@@ -25,6 +26,7 @@ export interface SearchGroup {
 export class GlobalSearchService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private localeService = inject(LocaleService);
   private api = environment.apiBaseUrl;
 
   search(term: string): Observable<SearchGroup[]> {
@@ -122,16 +124,16 @@ export class GlobalSearchService {
         const groups: SearchGroup[] = [];
 
         if (results['invoices'] && results['invoices'].length > 0) {
-          groups.push({ category: 'Tax Invoices', icon: '🧾', items: results['invoices'] });
+          groups.push({ category: this.localeService.t('search.invoices'), icon: '🧾', items: results['invoices'] });
         }
         if (results['customers'] && results['customers'].length > 0) {
-          groups.push({ category: 'Customers', icon: '👥', items: results['customers'] });
+          groups.push({ category: this.localeService.t('search.customers'), icon: '👥', items: results['customers'] });
         }
         if (results['items'] && results['items'].length > 0) {
-          groups.push({ category: 'Inventory Items', icon: '📦', items: results['items'] });
+          groups.push({ category: this.localeService.t('search.items'), icon: '📦', items: results['items'] });
         }
         if (results['leads'] && results['leads'].length > 0) {
-          groups.push({ category: 'CRM Leads', icon: '🎯', items: results['leads'] });
+          groups.push({ category: this.localeService.t('search.leads'), icon: '🎯', items: results['leads'] });
         }
 
         return groups;

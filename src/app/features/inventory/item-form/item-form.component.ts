@@ -14,6 +14,7 @@ import {
 } from '../../../core/models/inventory.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { AccountService } from '../../accounting/services/account.service';
 import { SettingsService } from '../../settings/services/settings.service';
 import { InventoryService } from '../services/inventory.service';
@@ -21,7 +22,7 @@ import { InventoryService } from '../services/inventory.service';
 @Component({
   selector: 'app-item-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './item-form.component.html',
   styleUrls: ['./item-form.component.css']
 })

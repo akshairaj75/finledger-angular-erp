@@ -2,13 +2,13 @@
   <!-- Page Header -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Vendors & Suppliers</h1>
-      <p class="page-subtitle">Manage supplier profiles, payment terms, IBANs, and outstanding balances</p>
+      <h1 class="page-title">{{ 'purchases.vendorsTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'purchases.vendorsSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
       <button (click)="openCreateModal()" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        New Vendor
+        {{ 'purchases.newVendor' | translate }}
       </button>
     </div>
   </div>
@@ -56,14 +56,14 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Vendor Name</th>
-            <th>TRN</th>
-            <th>Bank IBAN</th>
-            <th>Payment Terms</th>
-            <th>AP GL Account</th>
-            <th>Status</th>
-            <th class="text-right">Actions</th>
+            <th>{{ 'common.code' | translate }}</th>
+            <th>{{ 'purchases.vendorName' | translate }}</th>
+            <th>{{ 'purchases.trn' | translate }}</th>
+            <th>{{ 'purchases.bankIban' | translate }}</th>
+            <th>{{ 'sales.paymentTerms' | translate }}</th>
+            <th>{{ 'common.account' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th class="text-right">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -324,13 +324,13 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Bill #</th>
-                  <th>Vendor Inv #</th>
-                  <th>Bill Date</th>
-                  <th>Due Date</th>
-                  <th class="text-right">Total</th>
-                  <th class="text-right">Paid</th>
-                  <th class="text-right">Balance Due</th>
+                  <th>{{ 'purchases.billNumber' | translate }}</th>
+                  <th>{{ 'purchases.vendorInvNo' | translate }}</th>
+                  <th>{{ 'purchases.billDate' | translate }}</th>
+                  <th>{{ 'common.dueDate' | translate }}</th>
+                  <th class="text-right">{{ 'common.total' | translate }}</th>
+                  <th class="text-right">{{ 'purchases.amountPaid' | translate }}</th>
+                  <th class="text-right">{{ 'purchases.balanceDue' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,7 +349,7 @@
         </div>
 
         <div class="modal-footer">
-          <button (click)="closeOpenBillsModal()" class="btn btn-secondary">Close</button>
+          <button (click)="closeOpenBillsModal()" class="btn btn-secondary">{{ 'common.close' | translate }}</button>
         </div>
       </div>
     </div>

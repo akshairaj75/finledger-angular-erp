@@ -2,18 +2,18 @@
   <!-- Header Bar -->
   <div class="page-header">
     <div class="header-titles">
-      <h1 class="page-title">Inventory & Stock Overview</h1>
-      <p class="page-subtitle">Real-time stock valuation, multi-warehouse on-hand levels, and movements ledger</p>
+      <h1 class="page-title">{{ 'inventory.stockOverviewTitle' | translate }}</h1>
+      <p class="page-subtitle">{{ 'inventory.stockOverviewSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
       <a *appHasPermission="['ITEM_CREATE', 'ITEM_EDIT']" routerLink="/inventory/items/new" class="btn btn-primary">
-        <span class="btn-icon">➕</span> New Item
+        <span class="btn-icon">➕</span> {{ 'inventory.newItem' | translate }}
       </a>
       <a routerLink="/inventory/transfers/new" class="btn btn-secondary">
-        <span class="btn-icon">⇄</span> Stock Transfer
+        <span class="btn-icon">⇄</span> {{ 'inventory.newTransfer' | translate }}
       </a>
       <a routerLink="/inventory/adjustments/new" class="btn btn-secondary">
-        <span class="btn-icon">⚖️</span> Stock Adjustment
+        <span class="btn-icon">⚖️</span> {{ 'inventory.newAdjustment' | translate }}
       </a>
     </div>
   </div>
@@ -23,36 +23,36 @@
     <div class="kpi-card">
       <div class="kpi-icon-wrap bg-blue">💰</div>
       <div class="kpi-content">
-        <span class="kpi-label">Total Stock Value</span>
+        <span class="kpi-label">{{ 'inventory.totalStockValue' | translate }}</span>
         <span class="kpi-value">{{ kpis().totalStockValue | currency:'AED ':'symbol':'1.2-2' }}</span>
-        <span class="kpi-sub">Across all warehouses</span>
+        <span class="kpi-sub">{{ 'inventory.acrossAllWarehouses' | translate }}</span>
       </div>
     </div>
 
     <div class="kpi-card">
       <div class="kpi-icon-wrap bg-indigo">📦</div>
       <div class="kpi-content">
-        <span class="kpi-label">Active SKUs</span>
+        <span class="kpi-label">{{ 'inventory.totalSkus' | translate }}</span>
         <span class="kpi-value">{{ kpis().activeSkus }}</span>
-        <span class="kpi-sub">Catalog inventory items</span>
+        <span class="kpi-sub">{{ 'inventory.catalogInventoryItems' | translate }}</span>
       </div>
     </div>
 
     <div class="kpi-card" [class.highlight-warning]="kpis().lowStockCount > 0">
       <div class="kpi-icon-wrap bg-orange">⚠️</div>
       <div class="kpi-content">
-        <span class="kpi-label">Below Reorder Level</span>
+        <span class="kpi-label">{{ 'inventory.belowReorderLevel' | translate }}</span>
         <span class="kpi-value text-orange">{{ kpis().lowStockCount }}</span>
-        <span class="kpi-sub">Needs replenishment</span>
+        <span class="kpi-sub">{{ 'inventory.needsReplenishment' | translate }}</span>
       </div>
     </div>
 
     <div class="kpi-card" [class.highlight-danger]="kpis().outOfStockCount > 0">
       <div class="kpi-icon-wrap bg-red">🚫</div>
       <div class="kpi-content">
-        <span class="kpi-label">Out of Stock</span>
+        <span class="kpi-label">{{ 'inventory.outOfStock' | translate }}</span>
         <span class="kpi-value text-red">{{ kpis().outOfStockCount }}</span>
-        <span class="kpi-sub">Zero available quantity</span>
+        <span class="kpi-sub">{{ 'inventory.zeroAvailableQty' | translate }}</span>
       </div>
     </div>
   </div>
@@ -66,7 +66,7 @@
         <input
           type="text"
           class="form-control"
-          placeholder="Search by SKU, barcode, or item name..."
+          [placeholder]="'inventory.searchInventoryPlaceholder' | translate"
           [ngModel]="searchTerm()"
           (ngModelChange)="searchTerm.set($event); onSearch()"
         />
@@ -75,7 +75,7 @@
       <!-- Warehouse Filter -->
       <div class="filter-select-wrap">
         <select class="form-control" [ngModel]="selectedWarehouseId()" (ngModelChange)="selectedWarehouseId.set($event); onFilterChange()">
-          <option [ngValue]="null">All Warehouses</option>
+          <option [ngValue]="null">{{ 'reports.allWarehouses' | translate }}</option>
           <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">{{ wh.code }} - {{ wh.name }}</option>
         </select>
       </div>
@@ -83,7 +83,7 @@
       <!-- Category Filter -->
       <div class="filter-select-wrap">
         <select class="form-control" [ngModel]="selectedCategoryId()" (ngModelChange)="selectedCategoryId.set($event); onFilterChange()">
-          <option [ngValue]="null">All Categories</option>
+          <option [ngValue]="null">{{ 'inventory.allCategories' | translate }}</option>
           <option *ngFor="let cat of categories()" [ngValue]="cat.id">{{ cat.name }}</option>
         </select>
       </div>
@@ -96,7 +96,7 @@
           [class.active]="selectedStatus() === 'ALL'"
           (click)="onStatusFilter('ALL')"
         >
-          All
+          {{ 'inventory.allStock' | translate }}
         </button>
         <button
           type="button"
@@ -104,7 +104,7 @@
           [class.active]="selectedStatus() === 'IN_STOCK'"
           (click)="onStatusFilter('IN_STOCK')"
         >
-          In Stock
+          {{ 'inventory.inStock' | translate }}
         </button>
         <button
           type="button"
@@ -112,7 +112,7 @@
           [class.active]="selectedStatus() === 'LOW_STOCK'"
           (click)="onStatusFilter('LOW_STOCK')"
         >
-          Low Stock
+          {{ 'inventory.lowStock' | translate }}
         </button>
         <button
           type="button"
@@ -120,7 +120,7 @@
           [class.active]="selectedStatus() === 'OUT_OF_STOCK'"
           (click)="onStatusFilter('OUT_OF_STOCK')"
         >
-          Out of Stock
+          {{ 'inventory.outOfStock' | translate }}
         </button>
       </div>
     </div>
@@ -132,17 +132,17 @@
       <table class="table data-table" *ngIf="filteredList().length > 0; else emptyTpl">
         <thead>
           <tr>
-            <th>SKU</th>
-            <th>Item Name</th>
-            <th>Category</th>
-            <th>Warehouses</th>
-            <th class="text-right">On Hand</th>
-            <th class="text-right">Reorder Lvl</th>
-            <th class="text-right">Avg Cost</th>
-            <th class="text-right">Stock Value</th>
-            <th class="text-center">Status</th>
-            <th class="text-center">Ledger</th>
-            <th class="text-center">Actions</th>
+            <th>{{ 'inventory.sku' | translate }}</th>
+            <th>{{ 'common.name' | translate }}</th>
+            <th>{{ 'common.category' | translate }}</th>
+            <th>{{ 'inventory.warehouses' | translate }}</th>
+            <th class="text-right">{{ 'inventory.onHand' | translate }}</th>
+            <th class="text-right">{{ 'inventory.reorderLevel' | translate }}</th>
+            <th class="text-right">{{ 'inventory.costPrice' | translate }}</th>
+            <th class="text-right">{{ 'inventory.stockValue' | translate }}</th>
+            <th class="text-center">{{ 'common.status' | translate }}</th>
+            <th class="text-center">{{ 'accounting.ledgerTitle' | translate }}</th>
+            <th class="text-center">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>

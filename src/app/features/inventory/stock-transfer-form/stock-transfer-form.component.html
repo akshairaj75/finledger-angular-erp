@@ -2,18 +2,18 @@
   <!-- Page Header -->
   <div class="page-header">
     <div class="header-titles">
-      <h1 class="page-title">New Stock Transfer</h1>
-      <p class="page-subtitle">Transfer inventory between warehouses with in-transit tracking and live balance validation</p>
+      <h1 class="page-title">{{ 'inventory.newTransfer' | translate }}</h1>
+      <p class="page-subtitle">{{ 'inventory.transfersSubtitle' | translate }}</p>
     </div>
     <div class="header-actions">
-      <a routerLink="/inventory/items" class="btn btn-secondary">Cancel</a>
+      <a routerLink="/inventory/items" class="btn btn-secondary">{{ 'common.cancel' | translate }}</a>
       <button
         type="button"
         class="btn btn-secondary"
         [disabled]="loading() || saving() || dispatching()"
         (click)="saveDraft()"
       >
-        {{ saving() ? 'Saving Draft...' : 'Save Draft' }}
+        {{ saving() ? ('inventory.savingDraft' | translate) : ('inventory.saveDraft' | translate) }}
       </button>
       <button
         type="button"
@@ -21,7 +21,7 @@
         [disabled]="loading() || saving() || dispatching()"
         (click)="saveAndDispatch()"
       >
-        {{ dispatching() ? 'Dispatching...' : 'Save & Dispatch' }}
+        {{ dispatching() ? ('inventory.dispatching' | translate) : ('inventory.saveAndDispatch' | translate) }}
       </button>
     </div>
   </div>
@@ -29,18 +29,18 @@
   <!-- Loading State -->
   <div class="card loading-card" *ngIf="loading()">
     <div class="spinner"></div>
-    <p class="loading-text">Loading warehouses and inventory catalog...</p>
+    <p class="loading-text">{{ 'inventory.loadingCatalog' | translate }}</p>
   </div>
 
   <form [formGroup]="transferForm" *ngIf="!loading()">
     <!-- Header Card -->
     <div class="card form-card">
-      <h3 class="card-title">Transfer Locations</h3>
+      <h3 class="card-title">{{ 'inventory.transferLocations' | translate }}</h3>
 
       <div class="form-grid">
         <!-- Transfer Date -->
         <div class="form-group">
-          <label class="form-label">Transfer Date <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.transferDate' | translate }} <span class="required">*</span></label>
           <input
             type="date"
             class="form-control"
@@ -48,60 +48,60 @@
             [class.is-invalid]="transferForm.get('transferDate')?.touched && transferForm.get('transferDate')?.invalid"
           />
           <span class="field-error" *ngIf="transferForm.get('transferDate')?.touched && transferForm.get('transferDate')?.invalid">
-            Transfer date is required.
+            {{ 'inventory.transferDateRequired' | translate }}
           </span>
         </div>
 
         <!-- Source Warehouse -->
         <div class="form-group">
-          <label class="form-label">From Warehouse (Source) <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.fromWarehouse' | translate }} <span class="required">*</span></label>
           <select
             class="form-control"
             formControlName="fromWarehouseId"
             [class.is-invalid]="transferForm.get('fromWarehouseId')?.touched && transferForm.get('fromWarehouseId')?.invalid"
           >
-            <option [ngValue]="null" disabled>Select source warehouse...</option>
+            <option [ngValue]="null" disabled>{{ 'inventory.selectSourceWarehouse' | translate }}</option>
             <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
           </select>
           <span class="field-error" *ngIf="transferForm.get('fromWarehouseId')?.touched && transferForm.get('fromWarehouseId')?.invalid">
-            Source warehouse is required.
+            {{ 'inventory.sourceWarehouseRequired' | translate }}
           </span>
         </div>
 
         <!-- Destination Warehouse -->
         <div class="form-group">
-          <label class="form-label">To Warehouse (Destination) <span class="required">*</span></label>
+          <label class="form-label">{{ 'inventory.toWarehouse' | translate }} <span class="required">*</span></label>
           <select
             class="form-control"
             formControlName="toWarehouseId"
             [class.is-invalid]="transferForm.get('toWarehouseId')?.touched && (transferForm.get('toWarehouseId')?.invalid || transferForm.get('fromWarehouseId')?.value === transferForm.get('toWarehouseId')?.value)"
           >
-            <option [ngValue]="null" disabled>Select destination warehouse...</option>
+            <option [ngValue]="null" disabled>{{ 'inventory.selectDestinationWarehouse' | translate }}</option>
             <option
               *ngFor="let wh of warehouses()"
               [ngValue]="wh.id"
               [disabled]="wh.id === transferForm.get('fromWarehouseId')?.value"
             >
-              {{ wh.code }} - {{ wh.name }}{{ wh.id === transferForm.get('fromWarehouseId')?.value ? ' (Source)' : '' }}
+              {{ wh.code }} - {{ wh.name }}{{ wh.id === transferForm.get('fromWarehouseId')?.value ? (' ' + ('inventory.sourceTag' | translate)) : '' }}
             </option>
           </select>
           <span class="field-error" *ngIf="transferForm.get('toWarehouseId')?.touched && transferForm.get('toWarehouseId')?.invalid">
-            Destination warehouse is required.
+            {{ 'inventory.destinationWarehouseRequired' | translate }}
           </span>
           <span class="field-error" *ngIf="transferForm.get('fromWarehouseId')?.value && transferForm.get('toWarehouseId')?.value && transferForm.get('fromWarehouseId')?.value === transferForm.get('toWarehouseId')?.value">
-            Destination cannot be identical to source warehouse.
+            {{ 'inventory.destinationDifferent' | translate }}
           </span>
         </div>
       </div>
 
       <div class="form-group mt-3">
-        <label class="form-label">Transfer Notes / Shipment Reference</label>
+        <label class="form-label">{{ 'inventory.transferNotes' | translate }}</label>
         <textarea
           class="form-control"
           rows="2"
-          placeholder="Waybill number, driver details, or internal transfer justification..."
+          [placeholder]="'inventory.transferNotesPlaceholder' | translate"
           formControlName="notes"
         ></textarea>
       </div>
@@ -110,9 +110,9 @@
     <!-- Lines Table Card -->
     <div class="card table-card">
       <div class="card-header-bar">
-        <h3 class="card-title">Items to Transfer</h3>
+        <h3 class="card-title">{{ 'inventory.itemsToTransfer' | translate }}</h3>
         <button type="button" class="btn btn-secondary btn-sm" (click)="addLine()">
-          + Add Item Line
+          + {{ 'inventory.addItemLine' | translate }}
         </button>
       </div>
 
@@ -120,11 +120,11 @@
         <table class="table data-table">
           <thead>
             <tr>
-              <th style="width: 35%">Item <span class="required">*</span></th>
-              <th class="text-right" style="width: 15%">Source Available</th>
-              <th class="text-right" style="width: 18%">Transfer Qty <span class="required">*</span></th>
-              <th class="text-right" style="width: 15%">Unit Cost ({{ currencyCode() }})</th>
-              <th class="text-right" style="width: 12%">Total Value ({{ currencyCode() }})</th>
+              <th style="width: 35%">{{ 'common.item' | translate }} <span class="required">*</span></th>
+              <th class="text-right" style="width: 15%">{{ 'inventory.sourceAvailable' | translate }}</th>
+              <th class="text-right" style="width: 18%">{{ 'inventory.transferQty' | translate }} <span class="required">*</span></th>
+              <th class="text-right" style="width: 15%">{{ 'inventory.unitCost' | translate }} ({{ currencyCode() }})</th>
+              <th class="text-right" style="width: 12%">{{ 'inventory.totalValue' | translate }} ({{ currencyCode() }})</th>
               <th style="width: 5%"></th>
             </tr>
           </thead>
@@ -137,13 +137,13 @@
                   (change)="onItemSelect(i)"
                   [class.is-invalid]="line.get('itemId')?.touched && line.get('itemId')?.invalid"
                 >
-                  <option [ngValue]="null" disabled>Select item...</option>
+                  <option [ngValue]="null" disabled>{{ 'inventory.selectItemPrompt' | translate }}</option>
                   <option *ngFor="let item of catalogItems()" [ngValue]="item.id">
                     {{ item.sku }} - {{ item.name }} ({{ item.unit }})
                   </option>
                 </select>
                 <span class="field-error" *ngIf="line.get('itemId')?.touched && line.get('itemId')?.invalid">
-                  Item is required.
+                  {{ 'inventory.itemRequired' | translate }}
                 </span>
               </td>
               <td class="text-right font-medium text-muted">
@@ -159,7 +159,7 @@
                   [class.is-invalid]="line.get('quantity')?.touched && line.get('quantity')?.invalid"
                 />
                 <div *ngIf="isLineOverAvailable(i)" class="stock-warning">
-                  ⚠️ Exceeds available stock ({{ getLineAvailableQty(i) }} {{ getLineItemUnit(i) }})
+                  ⚠️ {{ 'inventory.exceedsAvailableStock' | translate }} ({{ getLineAvailableQty(i) }} {{ getLineItemUnit(i) }})
                 </div>
               </td>
               <td class="text-right text-muted">
@@ -173,7 +173,7 @@
                   type="button"
                   class="btn-remove"
                   (click)="removeLine(i)"
-                  title="Remove transfer line"
+                  [title]="'inventory.removeLine' | translate"
                 >&times;</button>
               </td>
             </tr>
@@ -186,22 +186,22 @@
     <div class="card summary-card" *ngIf="linesArray.length > 0">
       <div class="summary-columns">
         <div class="summary-col">
-          <span class="summary-label">Total SKUs</span>
+          <span class="summary-label">{{ 'inventory.totalSkus' | translate }}</span>
           <span class="summary-val">{{ linesArray.length }}</span>
         </div>
         <div class="summary-col">
-          <span class="summary-label">Total Units</span>
+          <span class="summary-label">{{ 'inventory.totalUnits' | translate }}</span>
           <span class="summary-val">{{ totalItemsCount() | number:'1.0-2' }}</span>
         </div>
         <div class="summary-col">
-          <span class="summary-label">Total Transfer Value</span>
+          <span class="summary-label">{{ 'inventory.totalTransferValue' | translate }}</span>
           <span class="summary-val font-bold text-blue">
             {{ totalTransferValue() | number:'1.2-2' }} {{ currencyCode() }}
           </span>
         </div>
       </div>
       <div class="stock-impact-note">
-        ℹ️ Stock will be credited out of source warehouse upon dispatch (in-transit status) and added to destination warehouse upon confirmation of delivery receipt.
+        ℹ️ {{ 'inventory.stockImpactNote' | translate }}
       </div>
     </div>
   </form>

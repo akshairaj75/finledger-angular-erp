@@ -7,6 +7,7 @@ import { BillDocType, BillLineRequest, BillRequest } from '../../../core/models/
 import { Item, Warehouse } from '../../../core/models/inventory.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { Vendor } from '../../../core/models/vendor.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { applyServerFieldErrors, clearServerFieldErrors } from '../../../core/utils/api-error.util';
 import { AccountService } from '../../accounting/services/account.service';
@@ -19,7 +20,7 @@ import { VendorService } from '../services/vendor.service';
 @Component({
   selector: 'app-bill-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './bill-form.component.html',
   styleUrls: ['./bill-form.component.css']
 })

@@ -12,6 +12,7 @@ import {
   Warehouse
 } from '../../../core/models/inventory.model';
 import { NotificationService } from '../../../core/services/notification.service';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { AccountService } from '../../accounting/services/account.service';
 import { InventoryService } from '../services/inventory.service';
 
@@ -36,7 +37,7 @@ export interface JournalPreviewLine {
 @Component({
   selector: 'app-stock-adjustment-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './stock-adjustment-form.component.html',
   styleUrls: ['./stock-adjustment-form.component.css']
 })
@@ -69,13 +70,13 @@ export class StockAdjustmentFormComponent implements OnInit {
   netValueImpact = signal(0);
   journalPreview = signal<JournalPreviewLine[]>([]);
 
-  reasons: { value: AdjustmentReason; label: string }[] = [
-    { value: 'STOCK_COUNT', label: 'Stock Count Variance' },
-    { value: 'DAMAGED', label: 'Damaged Goods' },
-    { value: 'EXPIRED', label: 'Expired Stock' },
-    { value: 'THEFT', label: 'Shrinkage / Theft' },
-    { value: 'OPENING', label: 'Opening Balance Setup' },
-    { value: 'OTHER', label: 'Other Reason' }
+  reasons: { value: AdjustmentReason; labelKey: string }[] = [
+    { value: 'STOCK_COUNT', labelKey: 'reasonStockCount' },
+    { value: 'DAMAGED', labelKey: 'reasonDamaged' },
+    { value: 'EXPIRED', labelKey: 'reasonExpired' },
+    { value: 'THEFT', labelKey: 'reasonTheft' },
+    { value: 'OPENING', labelKey: 'reasonOpening' },
+    { value: 'OTHER', labelKey: 'reasonOther' }
   ];
 
   ngOnInit(): void {

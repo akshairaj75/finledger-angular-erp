@@ -2,50 +2,50 @@
   <!-- Page Header -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">New Sales Invoice / Credit Note</h1>
-      <p class="page-subtitle">Generate compliant FTA tax invoices, apply VAT rates, and post directly to the General Ledger</p>
+      <h1 class="page-title">{{ 'sales.newInvoice' | translate }}</h1>
+      <p class="page-subtitle">{{ 'sales.subtitle' | translate }}</p>
     </div>
     <div class="header-actions">
-      <a routerLink="/sales/invoices" class="btn btn-outline">Back to Invoices</a>
+      <a routerLink="/sales/invoices" class="btn btn-outline">{{ 'common.back' | translate }}</a>
     </div>
   </div>
 
   <form [formGroup]="invoiceForm">
     <!-- Invoice Header Card -->
     <div class="form-card">
-      <h3 class="card-title">Invoice Details</h3>
+      <h3 class="card-title">{{ 'sales.invoiceDetails' | translate }}</h3>
 
       <div class="form-row">
         <!-- Customer Picker -->
         <div class="form-group col-md-6">
-          <label for="customerId" class="required">Customer</label>
+          <label for="customerId" class="required">{{ 'sales.customer' | translate }}</label>
           <select
             id="customerId"
             formControlName="customerId"
             (change)="onCustomerSelect($event)"
             class="form-control"
           >
-            <option [ngValue]="null">-- Select Customer --</option>
+            <option [ngValue]="null">-- {{ 'sales.selectCustomer' | translate }} --</option>
             <option *ngFor="let c of customers()" [value]="c.id">
               {{ c.code }} - {{ c.name }}
             </option>
           </select>
           <span *ngIf="invoiceForm.get('customerId')?.touched && invoiceForm.get('customerId')?.invalid" class="field-error">
-            Customer selection is required.
+            {{ 'sales.selectCustomer' | translate }}
           </span>
 
           <!-- Customer Info Callout -->
           <div *ngIf="selectedCustomer() as cust" class="customer-info-box mt-2">
             <div class="info-item">
-              <span class="info-label">TRN:</span>
-              <span class="info-value font-mono">{{ cust.trn || 'Non-registered' }}</span>
+              <span class="info-label">{{ 'sales.trn' | translate }}:</span>
+              <span class="info-value font-mono">{{ cust.trn || ('purchases.nonRegistered' | translate) }}</span>
             </div>
             <div class="info-item" *ngIf="cust.billingAddress">
-              <span class="info-label">Billing Address:</span>
+              <span class="info-label">{{ 'sales.billingAddress' | translate }}:</span>
               <span class="info-value">{{ cust.billingAddress }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Terms & Limit:</span>
+              <span class="info-label">{{ 'sales.paymentTerms' | translate }} & {{ 'sales.creditLimit' | translate }}:</span>
               <span class="info-value">{{ cust.paymentTermsDays ?? 30 }} Days (Limit: {{ cust.creditLimit | number:'1.2-2' }} AED)</span>
             </div>
           </div>
@@ -53,16 +53,16 @@
 
         <!-- Document Type -->
         <div class="form-group col-md-3">
-          <label for="docType" class="required">Document Type</label>
+          <label for="docType" class="required">{{ 'common.type' | translate }}</label>
           <select id="docType" formControlName="docType" class="form-control">
-            <option value="INVOICE">Tax Invoice</option>
+            <option value="INVOICE">{{ 'sales.newInvoice' | translate }}</option>
             <option value="CREDIT_NOTE">Credit Note</option>
           </select>
         </div>
 
         <!-- Currency -->
         <div class="form-group col-md-3">
-          <label for="currencyCode" class="required">Currency</label>
+          <label for="currencyCode" class="required">{{ 'common.currency' | translate }}</label>
           <select id="currencyCode" formControlName="currencyCode" class="form-control">
             <option value="AED">AED - UAE Dirham</option>
             <option value="USD">USD - US Dollar</option>
@@ -76,7 +76,7 @@
       <div class="form-row mt-2">
         <!-- Invoice Date -->
         <div class="form-group col-md-3">
-          <label for="invoiceDate" class="required">Invoice Date</label>
+          <label for="invoiceDate" class="required">{{ 'sales.issueDate' | translate }}</label>
           <input
             type="date"
             id="invoiceDate"
@@ -88,7 +88,7 @@
 
         <!-- Payment Terms Days -->
         <div class="form-group col-md-3">
-          <label for="paymentTermsDays" class="required">Payment Terms (Days)</label>
+          <label for="paymentTermsDays" class="required">{{ 'sales.paymentTerms' | translate }}</label>
           <input
             type="number"
             id="paymentTermsDays"
@@ -101,7 +101,7 @@
 
         <!-- Due Date -->
         <div class="form-group col-md-3">
-          <label for="dueDate" class="required">Due Date</label>
+          <label for="dueDate" class="required">{{ 'common.dueDate' | translate }}</label>
           <input
             type="date"
             id="dueDate"
@@ -112,7 +112,7 @@
 
         <!-- Exchange Rate -->
         <div class="form-group col-md-3">
-          <label for="exchangeRate" class="required">Exchange Rate</label>
+          <label for="exchangeRate" class="required">{{ 'settings.exchangeRate' | translate }}</label>
           <input
             type="number"
             step="0.0001"
@@ -125,9 +125,9 @@
 
         <!-- Issue Warehouse -->
         <div class="form-group col-md-3">
-          <label for="warehouseId">Issue Warehouse</label>
+          <label for="warehouseId">{{ 'inventory.issueWarehouse' | translate }}</label>
           <select id="warehouseId" formControlName="warehouseId" class="form-control">
-            <option [ngValue]="null">Default Company Warehouse</option>
+            <option [ngValue]="null">{{ 'inventory.defaultWarehouse' | translate }}</option>
             <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
               {{ wh.code }} - {{ wh.name }}
             </option>
@@ -139,9 +139,9 @@
     <!-- Line Items Card -->
     <div class="form-card mt-3">
       <div class="card-header-flex">
-        <h3 class="card-title">Line Items & Tax Allocation</h3>
+        <h3 class="card-title">{{ 'sales.lineItems' | translate }}</h3>
         <button type="button" (click)="addLine()" class="btn btn-outline btn-sm">
-          + Add Item Line
+          + {{ 'sales.addLine' | translate }}
         </button>
       </div>
 
@@ -150,14 +150,14 @@
           <thead>
             <tr>
               <th style="width: 40px">#</th>
-              <th style="width: 25%">Item / Description *</th>
-              <th style="width: 20%">Revenue Account *</th>
-              <th style="width: 9%" class="text-right">Qty *</th>
-              <th style="width: 12%" class="text-right">Unit Price *</th>
-              <th style="width: 8%" class="text-right">Disc %</th>
-              <th style="width: 14%">Tax Rate</th>
-              <th style="width: 10%" class="text-right">VAT Amount</th>
-              <th style="width: 12%" class="text-right">Total</th>
+              <th style="width: 25%">{{ 'sales.item' | translate }} / {{ 'common.description' | translate }} *</th>
+              <th style="width: 20%">{{ 'sales.revenueAccount' | translate }} *</th>
+              <th style="width: 9%" class="text-right">{{ 'common.quantity' | translate }} *</th>
+              <th style="width: 12%" class="text-right">{{ 'common.unitPrice' | translate }} *</th>
+              <th style="width: 8%" class="text-right">{{ 'common.discount' | translate }} %</th>
+              <th style="width: 14%">{{ 'common.tax' | translate }}</th>
+              <th style="width: 10%" class="text-right">{{ 'sales.vatAmount' | translate }}</th>
+              <th style="width: 12%" class="text-right">{{ 'common.total' | translate }}</th>
               <th style="width: 40px"></th>
             </tr>
           </thead>
@@ -172,7 +172,7 @@
                   (change)="onItemSelect(i, $event)"
                   class="form-control mb-1 text-sm"
                 >
-                  <option [ngValue]="null">-- Select Catalog Item (Optional) --</option>
+                  <option [ngValue]="null">-- {{ 'inventory.selectCatalogItem' | translate }} --</option>
                   <option *ngFor="let it of catalogItems()" [ngValue]="it.id">
                     {{ it.sku }} - {{ it.name }}
                   </option>
@@ -180,7 +180,7 @@
                 <input
                   type="text"
                   formControlName="description"
-                  placeholder="Service or product description"
+                  [placeholder]="'common.description' | translate"
                   class="form-control"
                   [ngClass]="{'is-invalid': line.get('description')?.touched && line.get('description')?.invalid}"
                 />
@@ -193,7 +193,7 @@
                   class="form-control"
                   [ngClass]="{'is-invalid': line.get('accountId')?.touched && line.get('accountId')?.invalid}"
                 >
-                  <option [ngValue]="null">-- Select Account --</option>
+                  <option [ngValue]="null">-- {{ 'accounting.selectAccount' | translate }} --</option>
                   <option *ngFor="let acc of accounts()" [value]="acc.id">
                     {{ acc.code }} - {{ acc.name }}
                   </option>
@@ -294,22 +294,22 @@
 
         <div class="totals-panel">
           <div class="totals-row">
-            <span class="totals-label">Subtotal:</span>
+            <span class="totals-label">{{ 'common.subtotal' | translate }}:</span>
             <span class="totals-amount">{{ totals().subtotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
 
           <div class="totals-row" *ngIf="totals().discountTotal > 0">
-            <span class="totals-label">Discount Total:</span>
+            <span class="totals-label">{{ 'common.discount' | translate }}:</span>
             <span class="totals-amount text-danger">-{{ totals().discountTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
 
           <div class="totals-row">
-            <span class="totals-label">VAT Output:</span>
+            <span class="totals-label">{{ 'common.vat' | translate }}:</span>
             <span class="totals-amount">{{ totals().taxTotal | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
 
           <div class="totals-row totals-grand-total">
-            <span class="totals-label">Total Amount:</span>
+            <span class="totals-label">{{ 'common.total' | translate }}:</span>
             <span class="totals-amount font-bold">{{ totals().total | number:'1.2-2' }} {{ invoiceForm.get('currencyCode')?.value }}</span>
           </div>
         </div>
@@ -318,7 +318,7 @@
 
     <!-- Bottom Actions Bar -->
     <div class="actions-bar mt-4">
-      <a routerLink="/sales/invoices" class="btn btn-outline">Cancel</a>
+      <a routerLink="/sales/invoices" class="btn btn-outline">{{ 'common.cancel' | translate }}</a>
 
       <div class="action-buttons-right">
         <button
@@ -327,7 +327,7 @@
           class="btn btn-secondary"
           [disabled]="saving() || previewingPdf()"
         >
-          Save Draft
+          {{ 'sales.saveInvoice' | translate }}
         </button>
 
         <button
@@ -336,7 +336,7 @@
           class="btn btn-outline"
           [disabled]="saving() || previewingPdf()"
         >
-          {{ previewingPdf() ? 'Generating PDF...' : 'Preview PDF' }}
+          {{ previewingPdf() ? ('common.loading' | translate) : ('sales.downloadPdf' | translate) }}
         </button>
 
         <button
@@ -345,7 +345,7 @@
           class="btn btn-primary"
           [disabled]="saving() || previewingPdf()"
         >
-          {{ saving() ? 'Posting to GL...' : 'Save & Send' }}
+          {{ saving() ? ('common.loading' | translate) : ('sales.postInvoice' | translate) }}
         </button>
       </div>
     </div>

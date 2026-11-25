@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { ReportService } from './services/report.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AccountService } from '../accounting/services/account.service';
@@ -27,39 +28,39 @@ import {
 @Component({
   selector: 'app-report-viewer',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
   template: `
     <div class="report-viewer-page">
       <!-- Header -->
       <div class="page-header">
         <div>
           <div class="breadcrumb">
-            <a routerLink="/dashboard">Dashboard</a> / <span>Reports</span> /
-            <span class="active">{{ reportTitle() }}</span>
+            <a routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</a> / <span>{{ 'nav.reports' | translate }}</span> /
+            <span class="active">{{ reportTitleKey() | translate }}</span>
           </div>
-          <h2>{{ reportTitle() }}</h2>
+          <h2>{{ reportTitleKey() | translate }}</h2>
         </div>
         <div class="header-actions">
           <div class="report-switcher">
             <select [ngModel]="reportType()" (ngModelChange)="switchReportType($event)" class="form-control select-type">
-              <option value="profit-loss">Profit & Loss Statement</option>
-              <option value="balance-sheet">Balance Sheet</option>
-              <option value="general-ledger">General Ledger</option>
-              <option value="trial-balance">Trial Balance</option>
-              <option value="ar-ageing">AR Ageing (Receivables)</option>
-              <option value="ap-ageing">AP Ageing (Payables)</option>
-              <option value="vat-return">VAT Return (FTA UAE)</option>
-              <option value="stock-valuation">Stock Valuation</option>
-              <option value="stock-movement">Stock Movement</option>
-              <option value="pipeline-forecast">CRM Pipeline Forecast</option>
-              <option value="expense-analysis">Expense Analysis</option>
+              <option value="profit-loss">{{ 'reports.profitLossTitle' | translate }}</option>
+              <option value="balance-sheet">{{ 'reports.balanceSheetTitle' | translate }}</option>
+              <option value="general-ledger">{{ 'reports.generalLedgerTitle' | translate }}</option>
+              <option value="trial-balance">{{ 'reports.trialBalanceTitle' | translate }}</option>
+              <option value="ar-ageing">{{ 'reports.arAgeingTitle' | translate }}</option>
+              <option value="ap-ageing">{{ 'reports.apAgeingTitle' | translate }}</option>
+              <option value="vat-return">{{ 'reports.vatReturnTitle' | translate }}</option>
+              <option value="stock-valuation">{{ 'reports.stockValuationTitle' | translate }}</option>
+              <option value="stock-movement">{{ 'reports.stockMovementTitle' | translate }}</option>
+              <option value="pipeline-forecast">{{ 'reports.pipelineForecastTitle' | translate }}</option>
+              <option value="expense-analysis">{{ 'reports.expenseAnalysisTitle' | translate }}</option>
             </select>
           </div>
           <button class="btn btn-secondary" (click)="handleExport('pdf')" [disabled]="loading()">
-            📄 Export PDF
+            📄 {{ 'common.exportPdf' | translate }}
           </button>
           <button class="btn btn-success" (click)="handleExport('xlsx')" [disabled]="loading()">
-            📊 Export Excel
+            📊 {{ 'common.exportExcel' | translate }}
           </button>
         </div>
       </div>
@@ -69,35 +70,35 @@ import {
         <div class="filter-grid">
           <!-- Date range (for P&L, VAT, GL, Stock Movement, Pipeline, Expense) -->
           <div class="form-group" *ngIf="usesDateRange()">
-            <label>From Date</label>
+            <label>{{ 'reports.fromDate' | translate }}</label>
             <input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" class="form-control" />
           </div>
           <div class="form-group" *ngIf="usesDateRange()">
-            <label>To Date</label>
+            <label>{{ 'reports.toDate' | translate }}</label>
             <input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" class="form-control" />
           </div>
 
           <!-- As Of Date (for Balance Sheet, Trial Balance, Ageing, Stock Valuation) -->
           <div class="form-group" *ngIf="usesAsOfDate()">
-            <label>As Of Date</label>
+            <label>{{ 'reports.asOfDate' | translate }}</label>
             <input type="date" [ngModel]="asOfDate()" (ngModelChange)="asOfDate.set($event)" class="form-control" />
           </div>
 
           <!-- Compare options (for P&L and Balance Sheet) -->
           <div class="form-group" *ngIf="reportType() === 'profit-loss' || reportType() === 'balance-sheet'">
-            <label>Compare Period</label>
+            <label>{{ 'reports.comparePeriod' | translate }}</label>
             <select [ngModel]="comparePeriod()" (ngModelChange)="comparePeriod.set($event)" class="form-control">
-              <option value="">None</option>
-              <option value="PRIOR_YEAR">Prior Year</option>
-              <option value="PRIOR_PERIOD">Prior Period</option>
+              <option value="">{{ 'reports.none' | translate }}</option>
+              <option value="PRIOR_YEAR">{{ 'reports.priorYear' | translate }}</option>
+              <option value="PRIOR_PERIOD">{{ 'reports.priorPeriod' | translate }}</option>
             </select>
           </div>
 
           <!-- Cost Center filter (for P&L) -->
           <div class="form-group" *ngIf="reportType() === 'profit-loss'">
-            <label>Cost Center</label>
+            <label>{{ 'reports.costCenter' | translate }}</label>
             <select [ngModel]="selectedCostCenterId()" (ngModelChange)="selectedCostCenterId.set($event)" class="form-control">
-              <option [ngValue]="null">All Cost Centers</option>
+              <option [ngValue]="null">{{ 'reports.allCostCenters' | translate }}</option>
               <option *ngFor="let cc of costCenters()" [ngValue]="cc.id">
                 {{ cc.code }} - {{ cc.name }}
               </option>
@@ -106,7 +107,7 @@ import {
 
           <!-- Account selector (for GL) -->
           <div class="form-group" *ngIf="reportType() === 'general-ledger'">
-            <label>Select Account</label>
+            <label>{{ 'reports.selectAccount' | translate }}</label>
             <select [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event)" class="form-control">
               <option *ngFor="let acc of accounts()" [ngValue]="acc.id">
                 {{ acc.code }} - {{ acc.name }}
@@ -116,7 +117,7 @@ import {
 
           <!-- Item selector (for Stock Movement) -->
           <div class="form-group" *ngIf="reportType() === 'stock-movement'">
-            <label>Select Product / Item</label>
+            <label>{{ 'reports.selectItem' | translate }}</label>
             <select [ngModel]="selectedItemId()" (ngModelChange)="selectedItemId.set($event)" class="form-control">
               <option *ngFor="let item of items()" [ngValue]="item.id">
                 {{ item.sku }} - {{ item.name }}
@@ -126,9 +127,9 @@ import {
 
           <!-- Warehouse filter (for Stock Valuation) -->
           <div class="form-group" *ngIf="reportType() === 'stock-valuation'">
-            <label>Warehouse</label>
+            <label>{{ 'reports.warehouse' | translate }}</label>
             <select [ngModel]="selectedWarehouseId()" (ngModelChange)="selectedWarehouseId.set($event)" class="form-control">
-              <option [ngValue]="null">All Warehouses</option>
+              <option [ngValue]="null">{{ 'reports.allWarehouses' | translate }}</option>
               <option *ngFor="let wh of warehouses()" [ngValue]="wh.id">
                 {{ wh.name }}
               </option>
@@ -137,16 +138,16 @@ import {
 
           <!-- Group By (for Expense Analysis) -->
           <div class="form-group" *ngIf="reportType() === 'expense-analysis'">
-            <label>Group By</label>
+            <label>{{ 'reports.groupBy' | translate }}</label>
             <select [ngModel]="expenseGroupBy()" (ngModelChange)="expenseGroupBy.set($event)" class="form-control">
-              <option value="category">Category</option>
-              <option value="employee">Employee</option>
+              <option value="category">{{ 'reports.category' | translate }}</option>
+              <option value="employee">{{ 'reports.employee' | translate }}</option>
             </select>
           </div>
 
           <div class="form-group align-end">
             <button class="btn btn-primary w-100" (click)="loadReport()" [disabled]="loading()">
-              {{ loading() ? 'Generating...' : 'Run Report' }}
+              {{ loading() ? ('reports.generating' | translate) : ('reports.runReport' | translate) }}
             </button>
           </div>
         </div>
@@ -157,22 +158,22 @@ import {
         <!-- 1. PROFIT & LOSS -->
         <div *ngIf="reportType() === 'profit-loss' && profitLossData() as pl" class="report-content">
           <div class="report-heading">
-            <h3>Profit & Loss Statement</h3>
-            <p>For the period {{ pl.fromDate }} to {{ pl.toDate }} (AED)</p>
+            <h3>{{ 'reports.profitLossTitle' | translate }}</h3>
+            <p>{{ 'reports.forThePeriod' | translate:{ from: pl.fromDate, to: pl.toDate } }}</p>
           </div>
 
           <table class="report-table">
             <thead>
               <tr>
-                <th>Account</th>
-                <th class="text-right">Current Period</th>
-                <th class="text-right" *ngIf="comparePeriod()">Comparative Period</th>
-                <th class="text-right" *ngIf="comparePeriod()">% Change</th>
+                <th>{{ 'common.account' | translate }}</th>
+                <th class="text-right">{{ 'reports.currentPeriod' | translate }}</th>
+                <th class="text-right" *ngIf="comparePeriod()">{{ 'reports.comparativePeriod' | translate }}</th>
+                <th class="text-right" *ngIf="comparePeriod()">{{ 'reports.percentChange' | translate }}</th>
               </tr>
             </thead>
             <tbody>
               <!-- Revenue -->
-              <tr class="section-row"><td [attr.colspan]="comparePeriod() ? 4 : 2">OPERATING REVENUE</td></tr>
+              <tr class="section-row"><td [attr.colspan]="comparePeriod() ? 4 : 2">{{ 'reports.operatingRevenue' | translate }}</td></tr>
               <tr *ngFor="let line of pl.revenueLines" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1">
                   <span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}
@@ -184,14 +185,14 @@ import {
                 </td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Revenue</td>
+                <td>{{ 'reports.totalRevenue' | translate }}</td>
                 <td class="text-right">{{ pl.totalRevenue | number:'1.2-2' }}</td>
                 <td class="text-right" *ngIf="comparePeriod()">{{ (pl.totalRevenueCompare || 0) | number:'1.2-2' }}</td>
                 <td *ngIf="comparePeriod()"></td>
               </tr>
 
               <!-- COGS -->
-              <tr class="section-row mt-2"><td [attr.colspan]="comparePeriod() ? 4 : 2">COST OF GOODS SOLD</td></tr>
+              <tr class="section-row mt-2"><td [attr.colspan]="comparePeriod() ? 4 : 2">{{ 'reports.cogs' | translate }}</td></tr>
               <tr *ngFor="let line of pl.cogsLines" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1">
                   <span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}
@@ -201,7 +202,7 @@ import {
                 <td class="text-right" *ngIf="comparePeriod()">{{ line.changePct != null ? (line.changePct | number:'1.1-1') + '%' : '-' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Cost of Goods Sold</td>
+                <td>{{ 'reports.totalCogs' | translate }}</td>
                 <td class="text-right">{{ pl.totalCogs | number:'1.2-2' }}</td>
                 <td class="text-right" *ngIf="comparePeriod()">{{ (pl.totalCogsCompare || 0) | number:'1.2-2' }}</td>
                 <td *ngIf="comparePeriod()"></td>
@@ -209,14 +210,14 @@ import {
 
               <!-- Gross Profit -->
               <tr class="major-row">
-                <td>GROSS PROFIT</td>
+                <td>{{ 'reports.grossProfit' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ pl.grossProfit | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold" *ngIf="comparePeriod()">{{ (pl.grossProfitCompare || 0) | number:'1.2-2' }}</td>
                 <td *ngIf="comparePeriod()"></td>
               </tr>
 
               <!-- Operating Expenses -->
-              <tr class="section-row"><td [attr.colspan]="comparePeriod() ? 4 : 2">OPERATING EXPENSES</td></tr>
+              <tr class="section-row"><td [attr.colspan]="comparePeriod() ? 4 : 2">{{ 'reports.operatingExpenses' | translate }}</td></tr>
               <tr *ngFor="let line of pl.expenseLines" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1">
                   <span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}
@@ -226,7 +227,7 @@ import {
                 <td class="text-right" *ngIf="comparePeriod()">{{ line.changePct != null ? (line.changePct | number:'1.1-1') + '%' : '-' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Operating Expenses</td>
+                <td>{{ 'reports.totalOperatingExpenses' | translate }}</td>
                 <td class="text-right">{{ pl.totalExpenses | number:'1.2-2' }}</td>
                 <td class="text-right" *ngIf="comparePeriod()">{{ (pl.totalExpensesCompare || 0) | number:'1.2-2' }}</td>
                 <td *ngIf="comparePeriod()"></td>
@@ -234,7 +235,7 @@ import {
 
               <!-- Net Profit -->
               <tr class="grandtotal-row">
-                <td>NET PROFIT / (LOSS)</td>
+                <td>{{ 'reports.netProfitLoss' | translate }}</td>
                 <td class="text-right font-weight-bold" [ngClass]="pl.netProfit >= 0 ? 'text-success' : 'text-danger'">
                   {{ pl.netProfit | number:'1.2-2' }}
                 </td>
@@ -250,153 +251,153 @@ import {
         <!-- 2. BALANCE SHEET -->
         <div *ngIf="reportType() === 'balance-sheet' && balanceSheetData() as bs" class="report-content">
           <div class="report-heading">
-            <h3>Statement of Financial Position (Balance Sheet)</h3>
-            <p>As of {{ bs.asOfDate }} (AED)</p>
+            <h3>{{ 'reports.balanceSheetTitle' | translate }}</h3>
+            <p>{{ 'reports.asOfDate' | translate }}: {{ bs.asOfDate }} (AED)</p>
           </div>
 
           <table class="report-table">
             <thead>
               <tr>
-                <th>Classification & Account</th>
-                <th class="text-right">Balance (AED)</th>
+                <th>{{ 'reports.classificationAccount' | translate }}</th>
+                <th class="text-right">{{ 'reports.balance' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
               <!-- Assets -->
-              <tr class="section-row"><td colspan="2">CURRENT ASSETS</td></tr>
+              <tr class="section-row"><td colspan="2">{{ 'reports.currentAssets' | translate }}</td></tr>
               <tr *ngFor="let line of bs.currentAssets" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1"><span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}</td>
                 <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Current Assets</td>
+                <td>{{ 'reports.totalCurrentAssets' | translate }}</td>
                 <td class="text-right">{{ bs.totalCurrentAssets | number:'1.2-2' }}</td>
               </tr>
 
-              <tr class="section-row"><td colspan="2">NON-CURRENT ASSETS</td></tr>
+              <tr class="section-row"><td colspan="2">{{ 'reports.nonCurrentAssets' | translate }}</td></tr>
               <tr *ngFor="let line of bs.nonCurrentAssets" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1"><span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}</td>
                 <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Non-Current Assets</td>
+                <td>{{ 'reports.totalNonCurrentAssets' | translate }}</td>
                 <td class="text-right">{{ bs.totalNonCurrentAssets | number:'1.2-2' }}</td>
               </tr>
 
               <tr class="major-row">
-                <td>TOTAL ASSETS</td>
+                <td>{{ 'reports.totalAssets' | translate }}</td>
                 <td class="text-right">{{ bs.totalAssets | number:'1.2-2' }}</td>
               </tr>
 
               <!-- Liabilities -->
-              <tr class="section-row"><td colspan="2">CURRENT LIABILITIES</td></tr>
+              <tr class="section-row"><td colspan="2">{{ 'reports.currentLiabilities' | translate }}</td></tr>
               <tr *ngFor="let line of bs.currentLiabilities" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1"><span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}</td>
                 <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Current Liabilities</td>
+                <td>{{ 'reports.totalCurrentLiabilities' | translate }}</td>
                 <td class="text-right">{{ bs.totalCurrentLiabilities | number:'1.2-2' }}</td>
               </tr>
 
-              <tr class="section-row"><td colspan="2">NON-CURRENT LIABILITIES</td></tr>
+              <tr class="section-row"><td colspan="2">{{ 'reports.nonCurrentLiabilities' | translate }}</td></tr>
               <tr *ngFor="let line of bs.nonCurrentLiabilities" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1"><span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}</td>
                 <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Non-Current Liabilities</td>
+                <td>{{ 'reports.totalNonCurrentLiabilities' | translate }}</td>
                 <td class="text-right">{{ bs.totalNonCurrentLiabilities | number:'1.2-2' }}</td>
               </tr>
 
               <!-- Equity -->
-              <tr class="section-row"><td colspan="2">EQUITY & RESERVES</td></tr>
+              <tr class="section-row"><td colspan="2">{{ 'reports.equityReserves' | translate }}</td></tr>
               <tr *ngFor="let line of bs.equityLines" class="clickable-row" (click)="drillDownGl(line.accountId)">
                 <td class="indent-1"><span class="acc-code">{{ line.accountCode }}</span> {{ line.accountName }}</td>
                 <td class="text-right">{{ line.amount | number:'1.2-2' }}</td>
               </tr>
               <tr>
-                <td class="indent-1">Net Income Year-To-Date</td>
+                <td class="indent-1">{{ 'reports.netIncomeYtd' | translate }}</td>
                 <td class="text-right">{{ bs.netIncomeYearToDate | number:'1.2-2' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td>Total Equity</td>
+                <td>{{ 'reports.totalEquity' | translate }}</td>
                 <td class="text-right">{{ bs.totalEquity | number:'1.2-2' }}</td>
               </tr>
 
               <tr class="grandtotal-row">
-                <td>TOTAL LIABILITIES AND EQUITY</td>
+                <td>{{ 'reports.totalLiabilitiesAndEquity' | translate }}</td>
                 <td class="text-right">{{ bs.totalLiabilitiesAndEquity | number:'1.2-2' }}</td>
               </tr>
             </tbody>
           </table>
 
           <div class="balance-badge" [ngClass]="bs.balanced ? 'badge-success' : 'badge-danger'">
-            {{ bs.balanced ? '✓ Statement of Financial Position is balanced (Assets = Liabilities + Equity)' : '⚠ Imbalance detected in Balance Sheet' }}
+            {{ bs.balanced ? ('reports.balanceSheetBalanced' | translate) : ('reports.balanceSheetImbalance' | translate) }}
           </div>
         </div>
 
         <!-- 3. VAT RETURN (FTA UAE) -->
         <div *ngIf="reportType() === 'vat-return' && vatReturnData() as vat" class="report-content">
           <div class="report-heading">
-            <h3>Federal Tax Authority — VAT 201 Return</h3>
-            <p>Period: {{ vat.fromDate }} to {{ vat.toDate }}</p>
+            <h3>{{ 'reports.vatReturnTitle' | translate }}</h3>
+            <p>{{ 'reports.filterPeriod' | translate }}: {{ vat.fromDate }} - {{ vat.toDate }}</p>
           </div>
 
           <table class="report-table">
             <thead>
               <tr>
-                <th>Box #</th>
-                <th>Description</th>
-                <th class="text-right">Taxable Amount (AED)</th>
-                <th class="text-right">VAT Amount (AED)</th>
+                <th>{{ 'reports.boxNo' | translate }}</th>
+                <th>{{ 'common.description' | translate }}</th>
+                <th class="text-right">{{ 'purchases.taxableAmount' | translate }} (AED)</th>
+                <th class="text-right">{{ 'common.tax' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="section-row"><td colspan="4">VAT ON SALES AND ALL OTHER OUTPUTS</td></tr>
+              <tr class="section-row"><td colspan="4">{{ 'reports.vatOnSales' | translate }}</td></tr>
               <tr>
                 <td><strong>Box 1a</strong></td>
-                <td>Standard rated supplies in Abu Dhabi & Northern Emirates (5%)</td>
+                <td>{{ 'reports.standardRatedSupplies' | translate }}</td>
                 <td class="text-right">{{ vat.standardRatedSalesAmount | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ vat.standardRatedSalesVat | number:'1.2-2' }}</td>
               </tr>
               <tr>
                 <td><strong>Box 2</strong></td>
-                <td>Supplies subject to the reverse charge provisions</td>
+                <td>{{ 'reports.reverseChargeSupplies' | translate }}</td>
                 <td class="text-right">0.00</td>
                 <td class="text-right">0.00</td>
               </tr>
               <tr>
                 <td><strong>Box 3</strong></td>
-                <td>Zero-rated supplies</td>
+                <td>{{ 'reports.zeroRatedSupplies' | translate }}</td>
                 <td class="text-right">{{ vat.zeroRatedSalesAmount | number:'1.2-2' }}</td>
                 <td class="text-right">-</td>
               </tr>
               <tr>
                 <td><strong>Box 4</strong></td>
-                <td>Exempt supplies</td>
+                <td>{{ 'reports.exemptSupplies' | translate }}</td>
                 <td class="text-right">{{ vat.exemptSalesAmount | number:'1.2-2' }}</td>
                 <td class="text-right">-</td>
               </tr>
               <tr class="subtotal-row">
-                <td colspan="3">Total Output VAT Due</td>
+                <td colspan="3">{{ 'reports.totalOutputVat' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ vat.totalOutputVat | number:'1.2-2' }}</td>
               </tr>
 
-              <tr class="section-row"><td colspan="4">VAT ON EXPENSES AND ALL OTHER INPUTS</td></tr>
+              <tr class="section-row"><td colspan="4">{{ 'reports.vatOnExpenses' | translate }}</td></tr>
               <tr>
                 <td><strong>Box 1g</strong></td>
-                <td>Standard rated expenses and purchases (5%)</td>
+                <td>{{ 'reports.standardRatedExpenses' | translate }}</td>
                 <td class="text-right">{{ vat.standardRatedPurchasesAmount | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ vat.standardRatedPurchasesVat | number:'1.2-2' }}</td>
               </tr>
               <tr class="subtotal-row">
-                <td colspan="3">Total Recoverable Input VAT</td>
+                <td colspan="3">{{ 'reports.totalInputVat' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ vat.totalInputVat | number:'1.2-2' }}</td>
               </tr>
 
               <tr class="grandtotal-row">
-                <td colspan="3"><strong>BOX 13: NET VAT PAYABLE / (RECOVERABLE)</strong></td>
+                <td colspan="3"><strong>{{ 'reports.box13NetVat' | translate }}</strong></td>
                 <td class="text-right font-weight-bold" [ngClass]="vat.netVatDue >= 0 ? 'text-primary' : 'text-success'">
                   {{ vat.netVatDue | number:'1.2-2' }}
                 </td>
@@ -408,20 +409,20 @@ import {
         <!-- 4. STOCK VALUATION -->
         <div *ngIf="reportType() === 'stock-valuation' && stockValuationData() as sv" class="report-content">
           <div class="report-heading">
-            <h3>Inventory Stock Valuation Report</h3>
-            <p>Warehouse: {{ sv.warehouseName }} | As of: {{ sv.asOfDate }}</p>
+            <h3>{{ 'reports.stockValuationTitle' | translate }}</h3>
+            <p>{{ 'inventory.warehouse' | translate }}: {{ sv.warehouseName }} | {{ 'reports.asOfDate' | translate }}: {{ sv.asOfDate }}</p>
           </div>
 
           <table class="report-table">
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Item Name</th>
-                <th>Category</th>
-                <th>Warehouse</th>
-                <th class="text-right">Qty On Hand</th>
-                <th class="text-right">Avg Cost</th>
-                <th class="text-right">Total Valuation (AED)</th>
+                <th>{{ 'inventory.sku' | translate }}</th>
+                <th>{{ 'inventory.itemName' | translate }}</th>
+                <th>{{ 'common.category' | translate }}</th>
+                <th>{{ 'inventory.warehouse' | translate }}</th>
+                <th class="text-right">{{ 'inventory.qtyOnHand' | translate }}</th>
+                <th class="text-right">{{ 'inventory.avgCost' | translate }}</th>
+                <th class="text-right">{{ 'inventory.totalValuation' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
@@ -435,7 +436,7 @@ import {
                 <td class="text-right font-weight-bold">{{ item.totalValue | number:'1.2-2' }}</td>
               </tr>
               <tr class="grandtotal-row">
-                <td colspan="6">GRAND TOTAL INVENTORY VALUATION ({{ sv.totalItems }} items)</td>
+                <td colspan="6">{{ 'inventory.grandTotalValuation' | translate:{ count: sv.totalItems } }}</td>
                 <td class="text-right font-weight-bold">{{ sv.totalValuation | number:'1.2-2' }}</td>
               </tr>
             </tbody>
@@ -445,18 +446,18 @@ import {
         <!-- 5. PIPELINE FORECAST -->
         <div *ngIf="reportType() === 'pipeline-forecast' && pipelineData() as pipe" class="report-content">
           <div class="report-heading">
-            <h3>CRM Sales Pipeline & Revenue Forecast</h3>
-            <p>Period: {{ pipe.fromDate }} to {{ pipe.toDate }}</p>
+            <h3>{{ 'reports.pipelineForecastTitle' | translate }}</h3>
+            <p>{{ 'reports.filterPeriod' | translate }}: {{ pipe.fromDate }} - {{ pipe.toDate }}</p>
           </div>
 
           <table class="report-table">
             <thead>
               <tr>
-                <th>Stage</th>
-                <th class="text-center">Deals</th>
-                <th class="text-center">Probability</th>
-                <th class="text-right">Total Value (AED)</th>
-                <th class="text-right">Weighted Forecast (AED)</th>
+                <th>{{ 'crm.stage' | translate }}</th>
+                <th class="text-center">{{ 'crm.deals' | translate }}</th>
+                <th class="text-center">{{ 'crm.probability' | translate }}</th>
+                <th class="text-right">{{ 'common.total' | translate }} (AED)</th>
+                <th class="text-right">{{ 'crm.weightedForecast' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
@@ -468,7 +469,7 @@ import {
                 <td class="text-right font-weight-bold">{{ stage.weightedValue | number:'1.2-2' }}</td>
               </tr>
               <tr class="grandtotal-row">
-                <td>TOTAL PIPELINE ({{ pipe.totalDeals }} open opportunities)</td>
+                <td>{{ 'crm.totalPipeline' | translate:{ count: pipe.totalDeals } }}</td>
                 <td colspan="2"></td>
                 <td class="text-right">{{ pipe.totalPipelineValue | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold text-success">{{ pipe.totalWeightedValue | number:'1.2-2' }}</td>
@@ -480,18 +481,18 @@ import {
         <!-- 6. EXPENSE ANALYSIS -->
         <div *ngIf="reportType() === 'expense-analysis' && expenseData() as exp" class="report-content">
           <div class="report-heading">
-            <h3>Operational Expense Analysis</h3>
-            <p>Grouped by: {{ exp.groupBy | titlecase }} | {{ exp.fromDate }} to {{ exp.toDate }}</p>
+            <h3>{{ 'reports.expenseAnalysisTitle' | translate }}</h3>
+            <p>{{ 'reports.groupBy' | translate }}: {{ exp.groupBy | titlecase }} | {{ exp.fromDate }} - {{ exp.toDate }}</p>
           </div>
 
           <table class="report-table">
             <thead>
               <tr>
-                <th>Category / Entity</th>
-                <th class="text-center">Claims</th>
-                <th class="text-right">Reimbursable (AED)</th>
-                <th class="text-right">Total Amount (AED)</th>
-                <th class="text-right">% of Total</th>
+                <th>{{ 'expenses.categoryEntity' | translate }}</th>
+                <th class="text-center">{{ 'expenses.claims' | translate }}</th>
+                <th class="text-right">{{ 'expenses.reimbursable' | translate }} (AED)</th>
+                <th class="text-right">{{ 'common.total' | translate }} (AED)</th>
+                <th class="text-right">{{ 'reports.percentOfTotal' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -503,7 +504,7 @@ import {
                 <td class="text-right">{{ g.percentageOfTotal | number:'1.1-1' }}%</td>
               </tr>
               <tr class="grandtotal-row">
-                <td>GRAND TOTAL OPERATING EXPENSES</td>
+                <td>{{ 'reports.grandTotalExpenses' | translate }}</td>
                 <td colspan="2"></td>
                 <td class="text-right font-weight-bold">{{ exp.grandTotal | number:'1.2-2' }}</td>
                 <td class="text-right">100.0%</td>
@@ -517,15 +518,15 @@ import {
           <div class="report-heading">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <h3>Trial Balance</h3>
-                <p>As of {{ tb.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
+                <h3>{{ 'reports.trialBalanceTitle' | translate }}</h3>
+                <p>{{ 'reports.asOfDate' | translate }}: {{ tb.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
               </div>
               <div>
                 <span *ngIf="tb.isBalanced" class="balance-badge badge-success" style="display: inline-block; margin-top: 0;">
-                  ✓ Balanced (Total Debits = Total Credits)
+                  {{ 'reports.tbBalanced' | translate }}
                 </span>
                 <span *ngIf="!tb.isBalanced" class="balance-badge badge-danger" style="display: inline-block; margin-top: 0;">
-                  ⚠ Out of Balance (Difference: {{ (tb.totalDebit - tb.totalCredit) | number:'1.2-2' }} AED)
+                  {{ 'reports.tbOutBalance' | translate:{ diff: ((tb.totalDebit - tb.totalCredit) | number:'1.2-2') } }}
                 </span>
               </div>
             </div>
@@ -534,11 +535,11 @@ import {
           <table class="report-table">
             <thead>
               <tr>
-                <th style="width: 140px;">Account Code</th>
-                <th>Account Name</th>
-                <th style="width: 140px;">Type</th>
-                <th class="text-right" style="width: 160px;">Debit (AED)</th>
-                <th class="text-right" style="width: 160px;">Credit (AED)</th>
+                <th style="width: 140px;">{{ 'accounting.code' | translate }}</th>
+                <th>{{ 'accounting.accountName' | translate }}</th>
+                <th style="width: 140px;">{{ 'common.type' | translate }}</th>
+                <th class="text-right" style="width: 160px;">{{ 'accounting.debit' | translate }} (AED)</th>
+                <th class="text-right" style="width: 160px;">{{ 'accounting.credit' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
@@ -550,12 +551,12 @@ import {
                 <td class="text-right">{{ line.creditBalance ? (line.creditBalance | number:'1.2-2') : '-' }}</td>
               </tr>
               <tr *ngIf="!tb.lines || tb.lines.length === 0">
-                <td colspan="5" class="text-center text-muted" style="padding: 2rem;">No posted journal entries found for this period.</td>
+                <td colspan="5" class="text-center text-muted" style="padding: 2rem;">{{ 'reports.noPostedJournals' | translate }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="grandtotal-row">
-                <td colspan="3">TOTAL</td>
+                <td colspan="3">{{ 'common.total' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ tb.totalDebit | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ tb.totalCredit | number:'1.2-2' }}</td>
               </tr>
@@ -568,22 +569,22 @@ import {
           <div class="report-heading">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <h3>General Ledger &mdash; {{ gl.accountCode }} {{ gl.accountName }}</h3>
-                <p>Period: {{ gl.fromDate | date:'dd-MMM-yyyy' }} to {{ gl.toDate | date:'dd-MMM-yyyy' }} &bull; Normal Balance: {{ gl.normalBalance }} &bull; Type: {{ gl.accountType }}</p>
+                <h3>{{ 'reports.generalLedgerTitle' | translate }} &mdash; {{ gl.accountCode }} {{ gl.accountName }}</h3>
+                <p>{{ 'reports.filterPeriod' | translate }}: {{ gl.fromDate | date:'dd-MMM-yyyy' }} - {{ gl.toDate | date:'dd-MMM-yyyy' }} &bull; {{ 'accounting.normalBalance' | translate }}: {{ gl.normalBalance }} &bull; {{ 'common.type' | translate }}: {{ gl.accountType }}</p>
               </div>
               <div class="gl-summary-cards">
                 <div class="gl-card">
-                  <span class="gl-card-label">Opening Balance</span>
+                  <span class="gl-card-label">{{ 'accounting.openingBalance' | translate }}</span>
                   <span class="gl-card-val">{{ gl.openingBalance | number:'1.2-2' }} AED</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Net Movement</span>
+                  <span class="gl-card-label">{{ 'reports.netMovement' | translate }}</span>
                   <span class="gl-card-val" [class.text-success]="gl.totalDebit > gl.totalCredit" [class.text-danger]="gl.totalCredit > gl.totalDebit">
                     {{ (gl.totalDebit - gl.totalCredit) | number:'1.2-2' }} AED
                   </span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Closing Balance</span>
+                  <span class="gl-card-label">{{ 'accounting.closingBalance' | translate }}</span>
                   <span class="gl-card-val font-weight-bold" style="color: #2563eb;">{{ gl.closingBalance | number:'1.2-2' }} AED</span>
                 </div>
               </div>
@@ -593,18 +594,18 @@ import {
           <table class="report-table">
             <thead>
               <tr>
-                <th style="width: 120px;">Date</th>
-                <th style="width: 130px;">Entry #</th>
-                <th style="width: 130px;">Reference</th>
-                <th>Description</th>
-                <th class="text-right" style="width: 130px;">Debit (AED)</th>
-                <th class="text-right" style="width: 130px;">Credit (AED)</th>
-                <th class="text-right" style="width: 150px;">Running Balance (AED)</th>
+                <th style="width: 120px;">{{ 'common.date' | translate }}</th>
+                <th style="width: 130px;">{{ 'accounting.voucherNo' | translate }}</th>
+                <th style="width: 130px;">{{ 'common.reference' | translate }}</th>
+                <th>{{ 'common.description' | translate }}</th>
+                <th class="text-right" style="width: 130px;">{{ 'accounting.debit' | translate }} (AED)</th>
+                <th class="text-right" style="width: 130px;">{{ 'accounting.credit' | translate }} (AED)</th>
+                <th class="text-right" style="width: 150px;">{{ 'accounting.runningBalance' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
               <tr class="subtotal-row">
-                <td colspan="4"><em>Opening Balance as of {{ gl.fromDate | date:'dd-MMM-yyyy' }}</em></td>
+                <td colspan="4"><em>{{ 'reports.openingBalanceAsOf' | translate:{ date: (gl.fromDate | date:'dd-MMM-yyyy') } }}</em></td>
                 <td class="text-right">-</td>
                 <td class="text-right">-</td>
                 <td class="text-right font-weight-bold">{{ gl.openingBalance | number:'1.2-2' }}</td>
@@ -619,12 +620,12 @@ import {
                 <td class="text-right font-weight-bold">{{ line.runningBalance | number:'1.2-2' }}</td>
               </tr>
               <tr *ngIf="!gl.lines || gl.lines.length === 0">
-                <td colspan="7" class="text-center text-muted" style="padding: 2rem;">No transactions recorded in this period for this account.</td>
+                <td colspan="7" class="text-center text-muted" style="padding: 2rem;">{{ 'accounting.noTransactionsPeriod' | translate }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="grandtotal-row">
-                <td colspan="4">TOTAL ACTIVITY &amp; CLOSING BALANCE</td>
+                <td colspan="4">{{ 'reports.totalActivityClosing' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ gl.totalDebit | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ gl.totalCredit | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold" style="color: #2563eb;">{{ gl.closingBalance | number:'1.2-2' }}</td>
@@ -638,24 +639,24 @@ import {
           <div class="report-heading">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <h3>Accounts Receivable Ageing Report</h3>
-                <p>Outstanding customer receivables as of {{ ar.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
+                <h3>{{ 'reports.arAgeingTitle' | translate }}</h3>
+                <p>{{ 'reports.outstandingArAsOf' | translate:{ date: (ar.asOfDate | date:'dd-MMM-yyyy') } }}</p>
               </div>
               <div class="gl-summary-cards">
                 <div class="gl-card">
-                  <span class="gl-card-label">Current (&le;0 Days)</span>
+                  <span class="gl-card-label">{{ 'reports.currentDays' | translate }}</span>
                   <span class="gl-card-val text-success">{{ ar.totalCurrent | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Overdue 1-60 Days</span>
+                  <span class="gl-card-label">{{ 'reports.overdue1To60' | translate }}</span>
                   <span class="gl-card-val" style="color: #d97706;">{{ (ar.total1To30 + ar.total31To60) | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Overdue &gt;60 Days</span>
+                  <span class="gl-card-label">{{ 'reports.overdueOver60' | translate }}</span>
                   <span class="gl-card-val text-danger">{{ (ar.total61To90 + ar.totalOver90) | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Grand Total AR</span>
+                  <span class="gl-card-label">{{ 'reports.grandTotalAr' | translate }}</span>
                   <span class="gl-card-val font-weight-bold" style="color: #2563eb;">{{ ar.grandTotal | number:'1.2-2' }}</span>
                 </div>
               </div>
@@ -665,14 +666,14 @@ import {
           <table class="report-table">
             <thead>
               <tr>
-                <th style="width: 120px;">Code</th>
-                <th>Customer Name</th>
-                <th class="text-right" style="width: 120px;">Current</th>
-                <th class="text-right" style="width: 120px;">1-30 Days</th>
-                <th class="text-right" style="width: 120px;">31-60 Days</th>
-                <th class="text-right" style="width: 120px;">61-90 Days</th>
-                <th class="text-right" style="width: 120px;">&gt;90 Days</th>
-                <th class="text-right" style="width: 140px;">Total Due</th>
+                <th style="width: 120px;">{{ 'common.code' | translate }}</th>
+                <th>{{ 'sales.customer' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.current' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.days1To30' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.days31To60' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.days61To90' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.daysOver90' | translate }}</th>
+                <th class="text-right" style="width: 140px;">{{ 'reports.totalDue' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -687,12 +688,12 @@ import {
                 <td class="text-right font-weight-bold">{{ c.totalOutstanding | number:'1.2-2' }}</td>
               </tr>
               <tr *ngIf="!ar.customers || ar.customers.length === 0">
-                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">No outstanding customer invoices found as of {{ ar.asOfDate | date:'dd-MMM-yyyy' }}.</td>
+                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">{{ 'reports.noOutstandingInvoices' | translate:{ date: (ar.asOfDate | date:'dd-MMM-yyyy') } }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="grandtotal-row">
-                <td colspan="2">TOTAL RECEIVABLES</td>
+                <td colspan="2">{{ 'reports.totalReceivables' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ ar.totalCurrent | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ ar.total1To30 | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ ar.total31To60 | number:'1.2-2' }}</td>
@@ -709,24 +710,24 @@ import {
           <div class="report-heading">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <h3>Accounts Payable Ageing Report</h3>
-                <p>Outstanding vendor payables as of {{ ap.asOfDate | date:'dd-MMM-yyyy' }} (AED)</p>
+                <h3>{{ 'reports.apAgeingTitle' | translate }}</h3>
+                <p>{{ 'reports.outstandingApAsOf' | translate:{ date: (ap.asOfDate | date:'dd-MMM-yyyy') } }}</p>
               </div>
               <div class="gl-summary-cards">
                 <div class="gl-card">
-                  <span class="gl-card-label">Current (&le;0 Days)</span>
+                  <span class="gl-card-label">{{ 'reports.currentDays' | translate }}</span>
                   <span class="gl-card-val text-success">{{ ap.totalCurrent | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Overdue 1-60 Days</span>
+                  <span class="gl-card-label">{{ 'reports.overdue1To60' | translate }}</span>
                   <span class="gl-card-val" style="color: #d97706;">{{ (ap.total1To30 + ap.total31To60) | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Overdue &gt;60 Days</span>
+                  <span class="gl-card-label">{{ 'reports.overdueOver60' | translate }}</span>
                   <span class="gl-card-val text-danger">{{ (ap.total61To90 + ap.totalOver90) | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Grand Total AP</span>
+                  <span class="gl-card-label">{{ 'reports.grandTotalAp' | translate }}</span>
                   <span class="gl-card-val font-weight-bold" style="color: #ef4444;">{{ ap.grandTotal | number:'1.2-2' }}</span>
                 </div>
               </div>
@@ -736,14 +737,14 @@ import {
           <table class="report-table">
             <thead>
               <tr>
-                <th style="width: 120px;">Code</th>
-                <th>Vendor / Supplier</th>
-                <th class="text-right" style="width: 120px;">Current</th>
-                <th class="text-right" style="width: 120px;">1-30 Days</th>
-                <th class="text-right" style="width: 120px;">31-60 Days</th>
-                <th class="text-right" style="width: 120px;">61-90 Days</th>
-                <th class="text-right" style="width: 120px;">&gt;90 Days</th>
-                <th class="text-right" style="width: 140px;">Total Due</th>
+                <th style="width: 120px;">{{ 'common.code' | translate }}</th>
+                <th>{{ 'purchases.vendor' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.current' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.days1To30' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.days31To60' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.days61To90' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'reports.daysOver90' | translate }}</th>
+                <th class="text-right" style="width: 140px;">{{ 'reports.totalDue' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -758,12 +759,12 @@ import {
                 <td class="text-right font-weight-bold">{{ v.totalOutstanding | number:'1.2-2' }}</td>
               </tr>
               <tr *ngIf="!ap.vendors || ap.vendors.length === 0">
-                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">No outstanding vendor bills found as of {{ ap.asOfDate | date:'dd-MMM-yyyy' }}.</td>
+                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">{{ 'reports.noOutstandingBills' | translate:{ date: (ap.asOfDate | date:'dd-MMM-yyyy') } }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="grandtotal-row">
-                <td colspan="2">TOTAL PAYABLES</td>
+                <td colspan="2">{{ 'reports.totalPayables' | translate }}</td>
                 <td class="text-right font-weight-bold">{{ ap.totalCurrent | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ ap.total1To30 | number:'1.2-2' }}</td>
                 <td class="text-right font-weight-bold">{{ ap.total31To60 | number:'1.2-2' }}</td>
@@ -780,16 +781,16 @@ import {
           <div class="report-heading">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <h3>Stock Movement Ledger &mdash; {{ sm.sku }} {{ sm.itemName }}</h3>
-                <p>Period: {{ sm.fromDate | date:'dd-MMM-yyyy' }} to {{ sm.toDate | date:'dd-MMM-yyyy' }}</p>
+                <h3>{{ 'reports.stockMovementTitle' | translate }} &mdash; {{ sm.sku }} {{ sm.itemName }}</h3>
+                <p>{{ 'reports.filterPeriod' | translate }}: {{ sm.fromDate | date:'dd-MMM-yyyy' }} - {{ sm.toDate | date:'dd-MMM-yyyy' }}</p>
               </div>
               <div class="gl-summary-cards">
                 <div class="gl-card">
-                  <span class="gl-card-label">Opening Qty</span>
+                  <span class="gl-card-label">{{ 'inventory.openingQty' | translate }}</span>
                   <span class="gl-card-val">{{ sm.openingQty | number:'1.2-2' }}</span>
                 </div>
                 <div class="gl-card">
-                  <span class="gl-card-label">Closing Qty</span>
+                  <span class="gl-card-label">{{ 'inventory.closingQty' | translate }}</span>
                   <span class="gl-card-val font-weight-bold" style="color: #2563eb;">{{ sm.closingQty | number:'1.2-2' }}</span>
                 </div>
               </div>
@@ -799,19 +800,19 @@ import {
           <table class="report-table">
             <thead>
               <tr>
-                <th style="width: 120px;">Date</th>
-                <th style="width: 140px;">Movement Type</th>
-                <th style="width: 140px;">Reference</th>
-                <th>Warehouse</th>
-                <th class="text-right" style="width: 110px;">Qty In</th>
-                <th class="text-right" style="width: 110px;">Qty Out</th>
-                <th class="text-right" style="width: 130px;">Running Balance</th>
-                <th class="text-right" style="width: 120px;">Unit Cost (AED)</th>
+                <th style="width: 120px;">{{ 'common.date' | translate }}</th>
+                <th style="width: 140px;">{{ 'inventory.movementType' | translate }}</th>
+                <th style="width: 140px;">{{ 'common.reference' | translate }}</th>
+                <th>{{ 'inventory.warehouse' | translate }}</th>
+                <th class="text-right" style="width: 110px;">{{ 'inventory.qtyIn' | translate }}</th>
+                <th class="text-right" style="width: 110px;">{{ 'inventory.qtyOut' | translate }}</th>
+                <th class="text-right" style="width: 130px;">{{ 'inventory.runningBalance' | translate }}</th>
+                <th class="text-right" style="width: 120px;">{{ 'common.unitPrice' | translate }} (AED)</th>
               </tr>
             </thead>
             <tbody>
               <tr class="subtotal-row">
-                <td colspan="4"><em>Opening Stock as of {{ sm.fromDate | date:'dd-MMM-yyyy' }}</em></td>
+                <td colspan="4"><em>{{ 'inventory.openingStockAsOf' | translate:{ date: (sm.fromDate | date:'dd-MMM-yyyy') } }}</em></td>
                 <td class="text-right">-</td>
                 <td class="text-right">-</td>
                 <td class="text-right font-weight-bold">{{ sm.openingQty | number:'1.2-2' }}</td>
@@ -828,12 +829,12 @@ import {
                 <td class="text-right">{{ m.unitCost ? (m.unitCost | number:'1.2-2') : '-' }}</td>
               </tr>
               <tr *ngIf="!sm.movements || sm.movements.length === 0">
-                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">No stock movements recorded for this item in this period.</td>
+                <td colspan="8" class="text-center text-muted" style="padding: 2rem;">{{ 'inventory.noStockMovements' | translate }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="grandtotal-row">
-                <td colspan="6">CLOSING STOCK QUANTITY</td>
+                <td colspan="6">{{ 'inventory.closingStockQty' | translate }}</td>
                 <td class="text-right font-weight-bold" style="color: #2563eb;">{{ sm.closingQty | number:'1.2-2' }}</td>
                 <td colspan="1"></td>
               </tr>
@@ -844,7 +845,7 @@ import {
         <!-- 12. GENERIC FALLBACK (FOR ANY UNMAPPED REPORTS) -->
         <div *ngIf="genericTableData() as gen" class="report-content">
           <div class="report-heading">
-            <h3>{{ reportTitle() }}</h3>
+            <h3>{{ reportTitleKey() | translate }}</h3>
           </div>
           <pre class="json-preview">{{ gen | json }}</pre>
         </div>
@@ -1132,6 +1133,23 @@ export class ReportViewerComponent implements OnInit {
 
   reportType = signal<string>('profit-loss');
   reportTitle = signal<string>('Profit & Loss Statement');
+  readonly reportTitleKey = computed(() => {
+    const type = this.reportType();
+    const keyMap: Record<string, string> = {
+      'profit-loss': 'reports.profitLossTitle',
+      'balance-sheet': 'reports.balanceSheetTitle',
+      'general-ledger': 'reports.generalLedgerTitle',
+      'trial-balance': 'reports.trialBalanceTitle',
+      'ar-ageing': 'reports.arAgeingTitle',
+      'ap-ageing': 'reports.apAgeingTitle',
+      'vat-return': 'reports.vatReturnTitle',
+      'stock-valuation': 'reports.stockValuationTitle',
+      'stock-movement': 'reports.stockMovementTitle',
+      'pipeline-forecast': 'reports.pipelineForecastTitle',
+      'expense-analysis': 'reports.expenseAnalysisTitle'
+    };
+    return keyMap[type] || 'nav.reports';
+  });
   loading = signal<boolean>(false);
 
   // Filter models

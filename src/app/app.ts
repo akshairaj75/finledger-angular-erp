@@ -38,6 +38,7 @@ export class App implements OnInit, OnDestroy {
   public showUserMenu = signal(false);
   public showChangePasswordModal = signal(false);
   public showCompanyMenu = signal(false);
+  public showLangMenu = signal(false);
   public sidebarOpen = signal(false);
 
   // Global Search State
@@ -130,17 +131,31 @@ export class App implements OnInit, OnDestroy {
   closeOverlays(): void {
     this.showUserMenu.set(false);
     this.showCompanyMenu.set(false);
+    this.showLangMenu.set(false);
     this.showSearchResults.set(false);
   }
 
   toggleCompanyMenu(): void {
     this.showCompanyMenu.update(open => !open);
     this.showUserMenu.set(false);
+    this.showLangMenu.set(false);
   }
 
   toggleUserMenu(): void {
     this.showUserMenu.update(open => !open);
     this.showCompanyMenu.set(false);
+    this.showLangMenu.set(false);
+  }
+
+  toggleLangMenu(): void {
+    this.showLangMenu.update(open => !open);
+    this.showUserMenu.set(false);
+    this.showCompanyMenu.set(false);
+  }
+
+  selectLocale(code: string): void {
+    this.localeService.setLocale(code);
+    this.showLangMenu.set(false);
   }
 
   openChangePassword(): void {

@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Account } from '../../../core/models/account.model';
 import { GeneralLedgerReport } from '../../../core/models/report.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { AccountService } from '../services/account.service';
 import { LedgerService } from '../services/ledger.service';
 
 @Component({
   selector: 'app-ledger',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
   templateUrl: './ledger.component.html',
   styleUrls: ['./ledger.component.css']
 })

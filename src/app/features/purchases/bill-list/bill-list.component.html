@@ -2,13 +2,13 @@
   <!-- Page Header -->
   <div class="header-section">
     <div>
-      <h1 class="page-title">Vendor Bills & Debit Notes</h1>
-      <p class="page-subtitle">Track supplier bills, record debit note adjustments, approve for GL posting, and manage payables</p>
+      <h1 class="page-title">{{ 'purchases.title' | translate }}</h1>
+      <p class="page-subtitle">{{ 'purchases.subtitle' | translate }}</p>
     </div>
     <div class="header-actions" *appHasPermission="'BILL_CREATE'">
       <a routerLink="/purchases/bills/new" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        New Vendor Bill
+        {{ 'purchases.newBill' | translate }}
       </a>
     </div>
   </div>
@@ -18,36 +18,36 @@
     <div class="summary-card card-draft">
       <div class="card-icon">📝</div>
       <div class="card-content">
-        <span class="card-label">Draft Bills</span>
+        <span class="card-label">{{ 'purchases.draftBills' | translate }}</span>
         <span class="card-value">{{ summary().draftCount }}</span>
-        <span class="card-subtext">Awaiting approval</span>
+        <span class="card-subtext">{{ 'purchases.awaitingApproval' | translate }}</span>
       </div>
     </div>
 
     <div class="summary-card card-unpaid">
       <div class="card-icon">⏳</div>
       <div class="card-content">
-        <span class="card-label">Unpaid Payables</span>
+        <span class="card-label">{{ 'purchases.unpaidPayables' | translate }}</span>
         <span class="card-value">{{ summary().unpaidTotal | number:'1.2-2' }} AED</span>
-        <span class="card-subtext">Open vendor balances</span>
+        <span class="card-subtext">{{ 'purchases.openVendorBalances' | translate }}</span>
       </div>
     </div>
 
     <div class="summary-card card-overdue">
       <div class="card-icon">⚠️</div>
       <div class="card-content">
-        <span class="card-label">Overdue Bills</span>
+        <span class="card-label">{{ 'purchases.overdueBills' | translate }}</span>
         <span class="card-value">{{ summary().overdueTotal | number:'1.2-2' }} AED</span>
-        <span class="card-subtext">Past due payment terms</span>
+        <span class="card-subtext">{{ 'purchases.pastDueTerms' | translate }}</span>
       </div>
     </div>
 
     <div class="summary-card card-paid">
       <div class="card-icon">💳</div>
       <div class="card-content">
-        <span class="card-label">Paid This Month</span>
+        <span class="card-label">{{ 'purchases.paidThisMonth' | translate }}</span>
         <span class="card-value">{{ summary().paidThisMonthTotal | number:'1.2-2' }} AED</span>
-        <span class="card-subtext">Monthly disbursements</span>
+        <span class="card-subtext">{{ 'purchases.monthlyDisbursements' | translate }}</span>
       </div>
     </div>
   </div>
@@ -56,39 +56,39 @@
   <div class="filter-card">
     <div class="filter-grid">
       <div class="form-group search-group">
-        <label for="searchQuery">Search</label>
+        <label for="searchQuery">{{ 'common.search' | translate }}</label>
         <input
           type="text"
           id="searchQuery"
           [ngModel]="searchQuery()"
           (ngModelChange)="searchQuery.set($event)"
           (keyup.enter)="applyFilters()"
-          placeholder="Search by bill #, vendor invoice #, or vendor name..."
+          [placeholder]="'common.search' | translate"
           class="form-control"
         />
       </div>
 
       <div class="form-group">
-        <label for="filterStatus">Status</label>
+        <label for="filterStatus">{{ 'common.status' | translate }}</label>
         <select id="filterStatus" [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)" class="form-control">
-          <option value="">All Statuses</option>
-          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          <option value="">{{ 'common.all' | translate }}</option>
+          <option *ngFor="let s of statuses" [value]="s">{{ 'status.' + s | translate }}</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label for="filterFrom">From Date</label>
+        <label for="filterFrom">{{ 'accounting.fromDate' | translate }}</label>
         <input type="date" id="filterFrom" [ngModel]="filterFrom()" (ngModelChange)="filterFrom.set($event)" class="form-control" />
       </div>
 
       <div class="form-group">
-        <label for="filterTo">To Date</label>
+        <label for="filterTo">{{ 'accounting.toDate' | translate }}</label>
         <input type="date" id="filterTo" [ngModel]="filterTo()" (ngModelChange)="filterTo.set($event)" class="form-control" />
       </div>
 
       <div class="filter-buttons">
-        <button (click)="applyFilters()" class="btn btn-secondary">Filter</button>
-        <button (click)="resetFilters()" class="btn btn-outline">Reset</button>
+        <button (click)="applyFilters()" class="btn btn-secondary">{{ 'common.filter' | translate }}</button>
+        <button (click)="resetFilters()" class="btn btn-outline">{{ 'common.reset' | translate }}</button>
       </div>
     </div>
   </div>
@@ -97,31 +97,31 @@
   <div class="table-card">
     <div *ngIf="loading()" class="loading-state">
       <div class="spinner"></div>
-      <p>Loading vendor bills...</p>
+      <p>{{ 'purchases.loadingBills' | translate }}</p>
     </div>
 
     <div *ngIf="!loading() && billsPage().content.length === 0" class="empty-state">
       <div class="empty-icon">📑</div>
-      <h3>No Bills Found</h3>
-      <p>Create your first vendor bill or adjust your search filters.</p>
-      <a routerLink="/purchases/bills/new" class="btn btn-primary mt-3">Create Bill</a>
+      <h3>{{ 'purchases.noBillsFound' | translate }}</h3>
+      <p>{{ 'purchases.noBillsSubtitle' | translate }}</p>
+      <a routerLink="/purchases/bills/new" class="btn btn-primary mt-3">{{ 'purchases.createBill' | translate }}</a>
     </div>
 
     <div *ngIf="!loading() && billsPage().content.length > 0" class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Bill #</th>
-            <th>Vendor Invoice #</th>
-            <th>Type</th>
-            <th>Vendor</th>
-            <th>Bill Date</th>
-            <th>Due Date</th>
-            <th class="text-right">Total</th>
-            <th class="text-right">Paid</th>
-            <th class="text-right">Balance Due</th>
-            <th>Status</th>
-            <th class="text-right">Actions</th>
+            <th>{{ 'purchases.billNumber' | translate }}</th>
+            <th>{{ 'purchases.reference' | translate }}</th>
+            <th>{{ 'common.type' | translate }}</th>
+            <th>{{ 'purchases.vendor' | translate }}</th>
+            <th>{{ 'purchases.billDate' | translate }}</th>
+            <th>{{ 'common.dueDate' | translate }}</th>
+            <th class="text-right">{{ 'common.total' | translate }}</th>
+            <th class="text-right">{{ 'purchases.amountPaid' | translate }}</th>
+            <th class="text-right">{{ 'purchases.balanceDue' | translate }}</th>
+            <th>{{ 'common.status' | translate }}</th>
+            <th class="text-right">{{ 'common.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -157,7 +157,7 @@
             </td>
             <td>
               <span class="chip" [ngClass]="getStatusClass(b.status)">
-                {{ b.status }}
+                {{ 'status.' + b.status | translate }}
               </span>
             </td>
             <td class="text-right actions-col" (click)="$event.stopPropagation()">
@@ -168,9 +168,9 @@
                   (click)="approveBill(b, $event)"
                   class="btn btn-primary btn-xs"
                   [disabled]="approvingId() === b.id"
-                  title="Approve & Post to GL"
+                  [title]="'accounting.postEntry' | translate"
                 >
-                  {{ approvingId() === b.id ? 'Approving...' : 'Approve' }}
+                  {{ approvingId() === b.id ? ('common.loading' | translate) : ('common.approve' | translate) }}
                 </button>
               </ng-container>
 
@@ -180,9 +180,9 @@
                   *ngIf="b.status !== 'VOID'"
                   (click)="openVoidModal(b, $event)"
                   class="btn btn-outline btn-xs btn-danger-hover ml-1"
-                  title="Void Bill"
+                  [title]="'common.void' | translate"
                 >
-                  Void
+                  {{ 'common.void' | translate }}
                 </button>
               </ng-container>
             </td>
@@ -193,9 +193,9 @@
       <!-- Pagination -->
       <div class="pagination-footer">
         <span class="pagination-info">
-          Showing {{ billsPage().page * billsPage().size + 1 }} to
+          {{ 'common.showing' | translate }} {{ billsPage().page * billsPage().size + 1 }} -
           {{ (billsPage().page + 1) * billsPage().size > billsPage().totalElements ? billsPage().totalElements : (billsPage().page + 1) * billsPage().size }}
-          of {{ billsPage().totalElements }} entries
+          {{ 'common.of' | translate }} {{ billsPage().totalElements }} {{ 'common.entries' | translate }}
         </span>
         <div class="pagination-buttons">
           <button
@@ -203,15 +203,15 @@
             [disabled]="billsPage().page === 0"
             (click)="goToPage(billsPage().page - 1)"
           >
-            Previous
+            {{ 'common.previous' | translate }}
           </button>
-          <span class="current-page-badge">Page {{ billsPage().page + 1 }} of {{ billsPage().totalPages || 1 }}</span>
+          <span class="current-page-badge">{{ 'common.page' | translate }} {{ billsPage().page + 1 }} {{ 'common.of' | translate }} {{ billsPage().totalPages || 1 }}</span>
           <button
             class="btn btn-outline btn-sm"
             [disabled]="billsPage().page >= billsPage().totalPages - 1"
             (click)="goToPage(billsPage().page + 1)"
           >
-            Next
+            {{ 'common.next' | translate }}
           </button>
         </div>
       </div>
@@ -239,38 +239,38 @@
         <div class="modal-body">
           <div class="detail-grid">
             <div class="detail-card">
-              <span class="detail-label">Vendor Profile</span>
+              <span class="detail-label">{{ 'purchases.vendorProfile' | translate }}</span>
               <span class="detail-main-text">{{ sb.vendorName }}</span>
-              <span class="detail-sub-text">Code: {{ sb.vendorCode }}</span>
+              <span class="detail-sub-text">{{ 'common.code' | translate }}: {{ sb.vendorCode }}</span>
             </div>
 
             <div class="detail-card">
-              <span class="detail-label">Bill Dates</span>
-              <span class="detail-main-text">Issued: {{ sb.billDate | date:'dd-MMM-yyyy' }}</span>
+              <span class="detail-label">{{ 'purchases.billDates' | translate }}</span>
+              <span class="detail-main-text">{{ 'purchases.issued' | translate }}: {{ sb.billDate | date:'dd-MMM-yyyy' }}</span>
               <span class="detail-sub-text" [ngClass]="{'overdue-due-date': isOverdue(sb)}">
-                Due: {{ sb.dueDate | date:'dd-MMM-yyyy' }}
+                {{ 'purchases.due' | translate }}: {{ sb.dueDate | date:'dd-MMM-yyyy' }}
               </span>
             </div>
 
             <div class="detail-card">
-              <span class="detail-label">Financial Overview</span>
+              <span class="detail-label">{{ 'purchases.financialOverview' | translate }}</span>
               <span class="detail-main-text">{{ sb.total | number:'1.2-2' }} {{ sb.currencyCode }}</span>
-              <span class="detail-sub-text text-danger font-bold">Balance: {{ sb.balanceDue | number:'1.2-2' }} {{ sb.currencyCode }}</span>
+              <span class="detail-sub-text text-danger font-bold">{{ 'common.balance' | translate }}: {{ sb.balanceDue | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
           </div>
 
           <!-- Line Items Table -->
-          <h4 class="section-heading mt-4">Bill Line Items</h4>
+          <h4 class="section-heading mt-4">{{ 'purchases.expenseAllocationLineItems' | translate }}</h4>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Description</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Unit Price</th>
-                  <th class="text-right">VAT Amount</th>
-                  <th class="text-right">Line Total</th>
+                  <th>{{ 'common.description' | translate }}</th>
+                  <th class="text-right">{{ 'common.quantity' | translate }}</th>
+                  <th class="text-right">{{ 'common.unitPrice' | translate }}</th>
+                  <th class="text-right">{{ 'common.vat' | translate }}</th>
+                  <th class="text-right">{{ 'common.lineTotal' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,23 +289,23 @@
           <!-- Total Calculation Breakdown -->
           <div class="totals-breakdown">
             <div class="totals-row">
-              <span>Subtotal:</span>
+              <span>{{ 'common.subtotal' | translate }}:</span>
               <span>{{ sb.subtotal | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row">
-              <span>Input VAT Total:</span>
+              <span>{{ 'purchases.totalTax' | translate }}:</span>
               <span>{{ sb.taxTotal | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row totals-grand">
-              <span>Grand Total:</span>
+              <span>{{ 'purchases.grandTotal' | translate }}:</span>
               <span>{{ sb.total | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row text-success">
-              <span>Amount Paid:</span>
+              <span>{{ 'purchases.amountPaid' | translate }}:</span>
               <span>{{ sb.amountPaid | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
             <div class="totals-row totals-balance text-danger font-bold">
-              <span>Balance Due:</span>
+              <span>{{ 'purchases.balanceDue' | translate }}:</span>
               <span>{{ sb.balanceDue | number:'1.2-2' }} {{ sb.currencyCode }}</span>
             </div>
           </div>
@@ -324,17 +324,17 @@
               class="btn btn-primary"
               [disabled]="approvingId() === sb.id"
             >
-              {{ approvingId() === sb.id ? 'Approving...' : 'Approve & Post to GL' }}
+              {{ approvingId() === sb.id ? ('common.loading' | translate) : ('purchases.postBill' | translate) }}
             </button>
             <button
               *ngIf="sb.status !== 'VOID'"
               (click)="openVoidModal(sb)"
               class="btn btn-outline btn-danger-hover ml-1"
             >
-              Void Bill
+              {{ 'purchases.voidBill' | translate }}
             </button>
           </div>
-          <button (click)="closeDetailModal()" class="btn btn-secondary">Close</button>
+          <button (click)="closeDetailModal()" class="btn btn-secondary">{{ 'common.close' | translate }}</button>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { BankAccount } from '../../../core/models/bank-account.model';
 import { Customer } from '../../../core/models/customer.model';
 import { OpenInvoice } from '../../../core/models/invoice.model';
 import { PaymentMethod, ReceiptAllocationRequest, ReceiptRequest } from '../../../core/models/receipt.model';
+import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 import { NotificationService } from '../../../core/services/notification.service';
 import { BankAccountService } from '../services/bank-account.service';
 import { CustomerService } from '../services/customer.service';
@@ -18,7 +19,7 @@ interface EditableOpenInvoice extends OpenInvoice {
 @Component({
   selector: 'app-receipt-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TranslatePipe],
   templateUrl: './receipt-form.component.html',
   styleUrls: ['./receipt-form.component.css']
 })
