@@ -47,4 +47,12 @@ export class InvoiceService {
   getInvoicePdf(id: number): Observable<Blob> {
     return this.http.get(`${this.base}/${id}/pdf`, { responseType: 'blob' });
   }
+
+  getBillableExpenses(customerId?: number): Observable<any[]> {
+    let params = new HttpParams();
+    if (customerId) {
+      params = params.set('customerId', customerId.toString());
+    }
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/expenses/billable`, { params });
+  }
 }

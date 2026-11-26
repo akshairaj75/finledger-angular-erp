@@ -142,6 +142,7 @@ import {
             <select [ngModel]="expenseGroupBy()" (ngModelChange)="expenseGroupBy.set($event)" class="form-control">
               <option value="category">{{ 'reports.category' | translate }}</option>
               <option value="employee">{{ 'reports.employee' | translate }}</option>
+              <option value="costCenter">{{ 'reports.costCenter' | translate }}</option>
             </select>
           </div>
 

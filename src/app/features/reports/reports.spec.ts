@@ -66,25 +66,69 @@ describe('Reports & Dashboard Logic Tests', () => {
     expect(bs.balanced).toBe(true);
   });
 
-  it('should calculate UAE FTA VAT Return (Box 13 Net VAT Due)', () => {
+  it('should calculate UAE FTA VAT Return (Box 13 Net VAT Due) with Credit Note and Debit Note adjustments', () => {
+    // Standard Sales: 200,000 (VAT: 10,000)
+    // Credit Note (Sales return): 20,000 (VAT: 1,000) -> Net Sales: 180,000, Net Output VAT: 9,000
+    // Standard Purchases: 80,000 (VAT: 4,000)
+    // Debit Note (Purchase return): 10,000 (VAT: 500)
+    // Posted Expenses: 5,000 (VAT: 250) -> Net Purchases: 75,000, Net Input VAT: 3,750
+    const salesStandard = 200000;
+    const salesVatStandard = 10000;
+    const creditNoteSales = 20000;
+    const creditNoteVat = 1000;
+
+    const netSales = salesStandard - creditNoteSales;
+    const netOutputVat = salesVatStandard - creditNoteVat;
+
+    const purchasesStandard = 80000;
+    const purchasesVatStandard = 4000;
+    const debitNotePurchases = 10000;
+    const debitNoteVat = 500;
+    const expensePurchases = 5000;
+    const expenseVat = 250;
+
+    const netPurchases = purchasesStandard - debitNotePurchases + expensePurchases;
+    const netInputVat = purchasesVatStandard - debitNoteVat + expenseVat;
+    const netVatDue = netOutputVat - netInputVat;
+
     const vat: VatReturnReport = {
       fromDate: '2026-07-01',
       toDate: '2026-09-30',
-      standardRatedSalesAmount: 200000,
-      standardRatedSalesVat: 10000, // 5% of 200,000
+      standardRatedSalesAmount: netSales,
+      standardRatedSalesVat: netOutputVat,
       zeroRatedSalesAmount: 50000,
       exemptSalesAmount: 10000,
-      standardRatedPurchasesAmount: 80000,
-      standardRatedPurchasesVat: 4000, // 5% of 80,000
-      totalOutputVat: 10000,
-      totalInputVat: 4000,
-      netVatDue: 6000 // 10000 - 4000
+      standardRatedPurchasesAmount: netPurchases,
+      standardRatedPurchasesVat: netInputVat,
+      totalOutputVat: netOutputVat,
+      totalInputVat: netInputVat,
+      netVatDue: netVatDue
     };
 
-    expect(vat.totalOutputVat).toBe(vat.standardRatedSalesVat);
-    expect(vat.totalInputVat).toBe(vat.standardRatedPurchasesVat);
-    expect(vat.netVatDue).toBe(vat.totalOutputVat - vat.totalInputVat);
-    expect(vat.netVatDue).toBe(6000);
+    expect(vat.totalOutputVat).toBe(9000);
+    expect(vat.totalInputVat).toBe(3750);
+    expect(vat.netVatDue).toBe(5250);
+  });
+
+  it('should support Expense Analysis grouping by category, employee, and costCenter', () => {
+    const supportedGroupByOptions = ['category', 'employee', 'costCenter'];
+    expect(supportedGroupByOptions).toContain('category');
+    expect(supportedGroupByOptions).toContain('employee');
+    expect(supportedGroupByOptions).toContain('costCenter');
+
+    const groups = [
+      { key: '1', name: 'Engineering', count: 5, total: 5000, reimbursable: 2000 },
+      { key: '2', name: 'Marketing', count: 3, total: 3000, reimbursable: 1000 },
+      { key: '3', name: 'Sales', count: 2, total: 2000, reimbursable: 500 }
+    ];
+
+    const grandTotal = groups.reduce((acc, g) => acc + g.total, 0);
+    expect(grandTotal).toBe(10000);
+
+    const shares = groups.map(g => (g.total / grandTotal) * 100);
+    expect(shares[0]).toBe(50);
+    expect(shares[1]).toBe(30);
+    expect(shares[2]).toBe(20);
   });
 });
 

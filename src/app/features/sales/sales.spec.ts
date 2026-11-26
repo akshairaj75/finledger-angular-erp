@@ -176,5 +176,34 @@ describe('Sales Module - InvoiceService HTTP Contract', () => {
     expect(req.request.body.send).toBe(true);
     req.flush({ id: 99, invoiceNo: 'INV-2026-0099', status: 'SENT' });
   });
+
+  it('should fetch billable expenses for a customer and convert to invoice line item', () => {
+    service.getBillableExpenses(10).subscribe(lines => {
+      expect(lines.length).toBe(1);
+      const expenseLine = lines[0];
+      expect(expenseLine.amount).toBe(250);
+      expect(expenseLine.categoryName).toBe('Travel');
+
+      // Conversion logic to invoice line
+      const convertedInvoiceLine = {
+        lineNo: 1,
+        description: `${expenseLine.categoryName}: ${expenseLine.description}`,
+        quantity: 1,
+        unitPrice: expenseLine.amount,
+        discountPct: 0,
+        taxRateId: expenseLine.taxRateId,
+        accountId: expenseLine.accountId
+      };
+
+      expect(convertedInvoiceLine.unitPrice).toBe(250);
+      expect(convertedInvoiceLine.description).toBe('Travel: Client site taxi');
+    });
+
+    const req = httpMock.expectOne(r => r.url.endsWith('/expenses/billable') && r.params.get('customerId') === '10');
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      { id: 101, categoryName: 'Travel', description: 'Client site taxi', amount: 250, taxRateId: 2, accountId: 4000 }
+    ]);
+  });
 });
 

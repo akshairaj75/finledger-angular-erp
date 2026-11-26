@@ -43,6 +43,8 @@ export class InvoiceFormComponent implements OnInit {
   warehouses = signal<Warehouse[]>([]);
   catalogItems = signal<Item[]>([]);
   stockBalances = signal<Map<string, number>>(new Map());
+  billableExpenses = signal<any[]>([]);
+  loadingBillableExpenses = signal(false);
 
   loadingData = signal(true);
   saving = signal(false);
@@ -275,7 +277,72 @@ export class InvoiceFormComponent implements OnInit {
         dueDate: computedDueDate,
         currencyCode: customer.currencyCode || 'AED'
       });
+
+      this.loadBillableExpenses(customer.id);
+    } else {
+      this.billableExpenses.set([]);
     }
+  }
+
+  loadBillableExpenses(customerId: number): void {
+    this.loadingBillableExpenses.set(true);
+    this.invoiceService.getBillableExpenses(customerId).subscribe({
+      next: (lines) => {
+        this.billableExpenses.set(lines || []);
+        this.loadingBillableExpenses.set(false);
+      },
+      error: () => {
+        this.billableExpenses.set([]);
+        this.loadingBillableExpenses.set(false);
+      }
+    });
+  }
+
+  addBillableExpenseLine(expLine: any): void {
+    let revenueAccountId = expLine.accountId;
+    if (!revenueAccountId && this.accounts().length > 0) {
+      const revAcc = this.accounts().find(a => (a as any).type === 'INCOME' || (a as any).accountType === 'INCOME') || this.accounts()[0];
+      revenueAccountId = revAcc.id;
+    }
+
+    const desc = expLine.categoryName
+      ? `${expLine.categoryName}: ${expLine.description || 'Billable Expense'}`
+      : (expLine.description || 'Billable Expense');
+
+    const firstLine = this.linesArray.at(0);
+    const isFirstLineEmpty = this.linesArray.length === 1 &&
+      !firstLine.get('itemId')?.value &&
+      !firstLine.get('description')?.value &&
+      Number(firstLine.get('unitPrice')?.value || 0) === 0;
+
+    if (isFirstLineEmpty) {
+      firstLine.patchValue({
+        description: desc,
+        accountId: revenueAccountId,
+        quantity: 1,
+        unitPrice: expLine.amount || 0,
+        taxRateId: expLine.taxRateId || null
+      });
+    } else {
+      const newLine = this.createLineGroup();
+      newLine.patchValue({
+        description: desc,
+        accountId: revenueAccountId,
+        quantity: 1,
+        unitPrice: expLine.amount || 0,
+        taxRateId: expLine.taxRateId || null
+      });
+      this.linesArray.push(newLine);
+    }
+
+    this.billableExpenses.update(list => list.filter(item => item.id !== expLine.id));
+    this.recalculateAllTotals();
+    this.notificationService.success('Billable expense added to invoice lines');
+  }
+
+  addAllBillableExpenses(): void {
+    const items = [...this.billableExpenses()];
+    items.forEach(item => this.addBillableExpenseLine(item));
   }
 
   onInvoiceDateOrTermsChange(): void {
